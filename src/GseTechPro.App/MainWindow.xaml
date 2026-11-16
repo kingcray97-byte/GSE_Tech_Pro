@@ -1,0 +1,882 @@
+<Window
+    x:Class="GseTechPro.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:GseTechPro.App.ViewModels"
+    xmlns:models="using:GseTechPro.Core.Models"
+    xmlns:contracts="using:GseTechPro.Core.Contracts"
+    mc:Ignorable="d"
+    Title="GSE Tech Pro — Ground Support Equipment &amp; Heavy-Duty Diagnostics">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid x:Name="RootGrid" Background="{ThemeResource AppBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <!-- Row 0: Menu Bar -->
+            <RowDefinition Height="Auto" />
+            <!-- Row 1: Main Toolbar (Icon + Label buttons, Current Technician, Tool Buttons) -->
+            <RowDefinition Height="Auto" />
+            <!-- Row 2: Document Tabs (One per open work order / visit) -->
+            <RowDefinition Height="Auto" />
+            <!-- Row 3: Left Navigation Rail + Right Main Content -->
+            <RowDefinition Height="*" />
+            <!-- Row 4: Status Bar -->
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- =================================================================== -->
+        <!-- ROW 0: MENU BAR (Matches Screenshot 01 top menu)                     -->
+        <!-- =================================================================== -->
+        <Grid Grid.Row="0" Background="{ThemeResource AppSurfaceBrush}" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <MenuBar Grid.Column="0" Height="44">
+                <MenuBarItem Title="File">
+                    <MenuFlyoutItem Text="New Work Order" Click="OnNewWorkOrderMenuClick" />
+                    <MenuFlyoutItem Text="Open Work Order Browser" Click="OnOpenWorkOrdersMenuClick" />
+                    <MenuFlyoutItem Text="Equipment &amp; Asset Registry" Click="OnOpenAssetsMenuClick" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="Refresh Local SQLite Database" Click="OnReloadDbMenuClick" />
+                </MenuBarItem>
+                <MenuBarItem Title="Edit">
+                    <MenuFlyoutItem Text="Add Work Order Note" Click="OnNotesMenuClick" />
+                </MenuBarItem>
+                <MenuBarItem Title="View">
+                    <MenuFlyoutItem Text="Follow Windows Theme (Light / Dark)" Click="OnFollowSystemThemeClick" />
+                    <MenuFlyoutItem Text="Force Light Theme" Click="OnLightThemeClick" />
+                    <MenuFlyoutItem Text="Force Dark Theme" Click="OnDarkThemeClick" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="Toggle Sunlight High-Contrast Mode (Ramp)" Click="OnToggleSunlightMenuClick" />
+                    <MenuFlyoutItem Text="Toggle Imperial / Metric Display Units" Click="OnToggleUnitsMenuClick" />
+                </MenuBarItem>
+                <MenuBarItem Title="Tools">
+                    <MenuFlyoutItem Text="Connect Simulator (Selected Protocol)" Click="OnConnectSimulatorClick" />
+                    <MenuFlyoutItem Text="Disconnect Adapter" Click="OnDisconnectSimulatorClick" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="Read DTCs &amp; Freeze Frame" Click="OnRefreshDiagnosticsClick" />
+                    <MenuFlyoutItem Text="Clear Active/Pending DTCs" Click="OnClearDtcsClick" />
+                </MenuBarItem>
+                <MenuBarItem Title="Help">
+                    <MenuFlyoutItem Text="About GSE Tech Pro (Offline First)" Click="OnAboutMenuClick" />
+                </MenuBarItem>
+            </MenuBar>
+
+            <!-- Quick Ramp Toggles: Units + Sunlight High-Contrast Mode -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Padding="8,0" VerticalAlignment="Center">
+                <Button Style="{StaticResource ActionTouchButtonStyle}"
+                        Command="{x:Bind ViewModel.ToggleUnitSystemCommand}"
+                        Content="{x:Bind ViewModel.UnitSystemLabel, Mode=OneWay}"
+                        ToolTipService.ToolTip="Switch display units between Imperial and Metric (canonical SI preserved)" />
+                <ToggleButton x:Name="SunlightToggleButton"
+                              MinHeight="44"
+                              MinWidth="128"
+                              Padding="12,8"
+                              CornerRadius="{StaticResource AppCornerRadius}"
+                              Click="OnSunlightToggleButtonClick"
+                              ToolTipService.ToolTip="High-contrast pure-white ramp mode for direct outdoor sunlight">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE706;" FontSize="16" />
+                        <TextBlock Text="Sunlight Mode" VerticalAlignment="Center" FontWeight="SemiBold" />
+                    </StackPanel>
+                </ToggleButton>
+            </StackPanel>
+        </Grid>
+
+        <!-- =================================================================== -->
+        <!-- ROW 1: MAIN TOOLBAR (Exact Screenshot 01 / 04 button sequence)       -->
+        <!-- Order: RO List / Work Orders, New, Open, Search, Save, Print,        -->
+        <!-- Home, Notes, Current Technician drop-down, then tool buttons:        -->
+        <!-- J2534 · Heavy Duty · OBD II · Scope · CAN Capture · Camera · AI Chat -->
+        <!-- =================================================================== -->
+        <Border Grid.Row="1"
+                Background="{ThemeResource AppToolbarBrush}"
+                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="6,4">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" HorizontalScrollMode="Enabled">
+                <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+
+                    <!-- 1. RO List / Work Orders -->
+                    <Button Style="{StaticResource ToolbarButtonStyle}" Tag="WorkOrders" Click="OnToolbarButtonClick"
+                            ToolTipService.ToolTip="RO List / Work Orders Browser">
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8FD;" FontSize="18" />
+                            <TextBlock Text="Work Orders" FontSize="11" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- 2. New -->
+                    <Button Style="{StaticResource ToolbarButtonStyle}" Tag="New" Click="OnToolbarButtonClick"
+                            ToolTipService.ToolTip="New Work Order Tab">
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE710;" FontSize="18" />
+                            <TextBlock Text="New" FontSize="11" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- 3. Open -->
+                    <Button Style="{StaticResource ToolbarButtonStyle}" Tag="Open" Click="OnToolbarButtonClick"
+                            ToolTipService.ToolTip="Open Work Order">
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8E5;" FontSize="18" />
+                            <TextBlock Text="Open" FontSize="11" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- 4. Search -->
+                    <Button Style="{StaticResource ToolbarButtonStyle}" Tag="Search" Click="OnToolbarButtonClick"
+                            ToolTipService.ToolTip="Search Work Orders &amp; Files">
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE721;" FontSize="18" />
+                            <TextBlock Text="Search" FontSize="11" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- 5. Save -->
+                    <Button Style="{StaticResource ToolbarButtonStyle}" Tag="Save" Click="OnToolbarButtonClick"
+                            ToolTipService.ToolTip="Save Current Work Order Snapshot">
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE74E;" FontSize="18" />
+                            <TextBlock Text="Save" FontSize="11" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- 6. Print -->
+                    <Button Style="{StaticResource ToolbarButtonStyle}" Tag="Print" Click="OnToolbarButtonClick"
+                            ToolTipService.ToolTip="Print Diagnostic Report">
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE749;" FontSize="18" />
+                            <TextBlock Text="Print" FontSize="11" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- 7. Home -->
+                    <Button Style="{StaticResource ToolbarButtonStyle}" Tag="Home" Click="OnToolbarButtonClick"
+                            ToolTipService.ToolTip="Home / Equipment Registry">
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE80F;" FontSize="18" />
+                            <TextBlock Text="Home" FontSize="11" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- 8. Notes -->
+                    <Button Style="{StaticResource ToolbarButtonStyle}" Tag="Notes" Click="OnToolbarButtonClick"
+                            ToolTipService.ToolTip="Technician &amp; Work Order Notes">
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE70B;" FontSize="18" />
+                            <TextBlock Text="Notes" FontSize="11" />
+                        </StackPanel>
+                    </Button>
+
+                    <AppBarSeparator Margin="4,0" />
+
+                    <!-- 9. Current Technician Drop-Down -->
+                    <StackPanel VerticalAlignment="Center" Margin="6,0" Spacing="2">
+                        <TextBlock Text="Current Technician" FontSize="11" Foreground="{ThemeResource AppTextSecondaryBrush}" HorizontalAlignment="Center" />
+                        <ComboBox MinWidth="185"
+                                  MinHeight="44"
+                                  ItemsSource="{x:Bind ViewModel.AvailableTechnicians, Mode=OneWay}"
+                                  SelectedItem="{x:Bind ViewModel.SelectedTechnician, Mode=TwoWay}" />
+                    </StackPanel>
+
+                    <AppBarSeparator Margin="4,0" />
+
+                    <!-- 10. Tool Buttons: J2534 · Heavy Duty · OBD II · Scope · CAN Capture · Camera · AI Tech Chat -->
+                    <Button Style="{StaticResource ToolToggleButtonStyle}" Tag="J2534" Click="OnToolbarButtonClick"
+                            ToolTipService.ToolTip="J2534 Pass-Thru Diagnostics">
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE950;" FontSize="18" />
+                            <TextBlock Text="J2534" FontSize="11" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource ToolToggleButtonStyle}" Tag="HeavyDuty" Click="OnToolbarButtonClick"
+                            ToolTipService.ToolTip="Heavy Duty J1939 / J1708 / RP1210 Diagnostics">
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE7EC;" FontSize="18" />
+                            <TextBlock Text="Heavy Duty" FontSize="11" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource ToolToggleButtonStyle}" Tag="OBDII" Click="OnToolbarButtonClick"
+                            ToolTipService.ToolTip="Global OBD II Diagnostics">
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE9D9;" FontSize="18" />
+                            <TextBlock Text="OBD II" FontSize="11" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource ToolToggleButtonStyle}" Tag="Scope" Click="OnToolbarButtonClick"
+                            ToolTipService.ToolTip="Oscilloscope (PicoScope / Hantek)">
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE9D2;" FontSize="18" />
+                            <TextBlock Text="Scope" FontSize="11" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource ToolToggleButtonStyle}" Tag="CanCapture" Click="OnToolbarButtonClick"
+                            ToolTipService.ToolTip="CAN / J1939 / J1708 Bus Capture">
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8EE;" FontSize="18" />
+                            <TextBlock Text="CAN Capture" FontSize="11" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource ToolToggleButtonStyle}" Tag="Camera" Click="OnToolbarButtonClick"
+                            ToolTipService.ToolTip="Camera, Pen Annotation &amp; Dataplate OCR">
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE722;" FontSize="18" />
+                            <TextBlock Text="Camera" FontSize="11" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource ToolToggleButtonStyle}" Tag="AiTechChat" Click="OnToolbarButtonClick"
+                            ToolTipService.ToolTip="Offline AI Tech Chat (Ollama + lfm3-omni)">
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8BD;" FontSize="18" />
+                            <TextBlock Text="AI Tech Chat" FontSize="11" />
+                        </StackPanel>
+                    </Button>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!-- =================================================================== -->
+        <!-- ROW 2: DOCUMENT TABS AREA (One tab per open work order / visit)      -->
+        <!-- Matches Screenshot 01 / 04 Document Toolbar strip                    -->
+        <!-- =================================================================== -->
+        <Border Grid.Row="2"
+                Background="{ThemeResource AppSurfaceBrush}"
+                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="8,4">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <ListView Grid.Column="0"
+                          ItemsSource="{x:Bind ViewModel.OpenTabs, Mode=OneWay}"
+                          SelectedItem="{x:Bind ViewModel.SelectedTab, Mode=TwoWay}"
+                          SelectionMode="Single"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                          ScrollViewer.HorizontalScrollMode="Enabled"
+                          ScrollViewer.VerticalScrollMode="Disabled">
+                    <ListView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <ItemsStackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListView.ItemsPanel>
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:OpenWorkOrderTab">
+                            <Border MinHeight="40"
+                                    Padding="12,6"
+                                    Margin="0,0,6,0"
+                                    CornerRadius="6,6,0,0"
+                                    BorderBrush="{ThemeResource AppFocusBorderBrush}"
+                                    BorderThickness="1,1,1,2"
+                                    Background="{ThemeResource AppToolbarBrush}">
+                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8A5;" FontSize="14" />
+                                    <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Text="{x:Bind AssetNumber}" Foreground="{ThemeResource AppTextSecondaryBrush}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+
+                <Button Grid.Column="1"
+                        Style="{StaticResource ActionTouchButtonStyle}"
+                        Tag="New"
+                        Click="OnToolbarButtonClick"
+                        ToolTipService.ToolTip="Open a new Work Order document tab">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE710;" FontSize="14" />
+                        <TextBlock Text="New WO Tab" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- =================================================================== -->
+        <!-- ROW 3: MAIN BODY — Left Navigation Rail + Right Content Pane         -->
+        <!-- =================================================================== -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <!-- Left Navigation Rail (Shop Foreman Pro Vertical Toolbar) -->
+                <ColumnDefinition Width="172" />
+                <!-- Main Content Area -->
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT NAVIGATION RAIL (Screenshot 01 / 04 vertical toolbar order) -->
+            <Border Grid.Column="0"
+                    Background="{ThemeResource AppRailBrush}"
+                    BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                    BorderThickness="0,0,1,0"
+                    Padding="4,8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="{x:Bind ViewModel.ActiveTool, Mode=OneWay}"
+                               Foreground="{ThemeResource AppRailTextBrush}"
+                               FontWeight="Bold"
+                               FontSize="13"
+                               Margin="12,4,12,8" />
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{x:Bind ViewModel.NavRailItems, Mode=OneWay}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:NavRailItem">
+                                    <Button Style="{StaticResource NavRailButtonStyle}"
+                                            Tag="{x:Bind Key}"
+                                            Click="OnNavRailButtonClick">
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}"
+                                                      Glyph="{x:Bind Glyph}"
+                                                      FontSize="18" />
+                                            <TextBlock Text="{x:Bind Label}"
+                                                       VerticalAlignment="Center"
+                                                       FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <Border Grid.Row="2"
+                            Margin="6,8,6,4"
+                            Padding="8"
+                            CornerRadius="{StaticResource AppCornerRadius}"
+                            BorderBrush="{ThemeResource AppRailTextBrush}"
+                            BorderThickness="1">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Shop:" FontSize="11" Foreground="{ThemeResource AppRailTextBrush}" Opacity="0.8" />
+                            <TextBlock Text="{x:Bind ViewModel.ShopNameText, Mode=OneWay}"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="{ThemeResource AppRailTextBrush}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- RIGHT CONTENT AREA (Breadcrumb + Simulator Bar + Active View) -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <!-- Breadcrumb Bar (Equipment Selection >> Main Menu >> Equipment Health) -->
+                    <RowDefinition Height="Auto" />
+                    <!-- Simulator Connection & Action Bar -->
+                    <RowDefinition Height="Auto" />
+                    <!-- Active Screen Content -->
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- 1. BREADCRUMB BAR (Matches Screenshot 04 header bar) -->
+                <Border Grid.Row="0"
+                        Background="{ThemeResource AppToolbarBrush}"
+                        BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                        BorderThickness="0,0,0,1"
+                        Padding="14,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <HyperlinkButton Content="{x:Bind ViewModel.BreadcrumbRoot, Mode=OneWay}"
+                                             MinHeight="44"
+                                             Padding="6,4"
+                                             Click="OnBreadcrumbRootClick" />
+                            <TextBlock Text="&gt;&gt;" VerticalAlignment="Center" FontWeight="Bold" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                            <TextBlock Text="{x:Bind ViewModel.BreadcrumbCategory, Mode=OneWay}"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Foreground="{ThemeResource AppAccentBrush}" />
+                            <TextBlock Text="&gt;&gt;" VerticalAlignment="Center" FontWeight="Bold" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                            <TextBlock Text="{x:Bind ViewModel.BreadcrumbLeaf, Mode=OneWay}"
+                                       VerticalAlignment="Center"
+                                       FontWeight="Bold"
+                                       FontSize="15"
+                                       Foreground="{ThemeResource AppTextPrimaryBrush}" />
+                        </StackPanel>
+
+                        <TextBlock Grid.Column="1"
+                                   Text="{x:Bind ViewModel.StatusBannerMessage, Mode=OneWay}"
+                                   VerticalAlignment="Center"
+                                   FontSize="12"
+                                   Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                    </Grid>
+                </Border>
+
+                <!-- 2. SIMULATOR CONNECTION & DIAGNOSTIC ACTION BAR -->
+                <Border Grid.Row="1"
+                        Background="{ThemeResource AppSurfaceBrush}"
+                        BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                        BorderThickness="0,0,0,1"
+                        Padding="14,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                            <TextBlock Text="Simulator Protocol:" VerticalAlignment="Center" FontWeight="SemiBold" />
+                            <ComboBox MinWidth="150"
+                                      MinHeight="44"
+                                      ItemsSource="{x:Bind ViewModel.SimulatorProtocols}"
+                                      SelectedItem="{x:Bind ViewModel.SelectedProtocol, Mode=TwoWay}" />
+
+                            <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                    Command="{x:Bind ViewModel.ConnectSimulatorCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE703;" FontSize="16" />
+                                    <TextBlock Text="Connect Simulator" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                    Command="{x:Bind ViewModel.DisconnectSimulatorCommand}"
+                                    IsEnabled="{x:Bind ViewModel.IsConnected, Mode=OneWay}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE711;" FontSize="16" />
+                                    <TextBlock Text="Disconnect" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                    Command="{x:Bind ViewModel.RefreshDiagnosticsCommand}"
+                                    IsEnabled="{x:Bind ViewModel.IsConnected, Mode=OneWay}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE72C;" FontSize="16" />
+                                    <TextBlock Text="Read DTCs &amp; Snapshot" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                    Command="{x:Bind ViewModel.ClearDtcsCommand}"
+                                    IsEnabled="{x:Bind ViewModel.IsConnected, Mode=OneWay}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE74D;" FontSize="16" />
+                                    <TextBlock Text="Clear DTCs" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- 3A. DIAGNOSTICS / EQUIPMENT HEALTH & LIVE DATA VIEW (Screenshot 04 Layout) -->
+                <ScrollViewer Grid.Row="2"
+                              Padding="14,12"
+                              Visibility="{x:Bind ViewModel.DiagnosticsViewVisibility, Mode=OneWay}">
+                    <StackPanel Spacing="14">
+
+                        <!-- DTC TABLE: Red = Active/Confirmed, Blue = Pending/Inactive -->
+                        <Border Background="{ThemeResource AppSurfaceBrush}"
+                                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource CardCornerRadius}">
+                            <StackPanel>
+                                <!-- Table Header Bar -->
+                                <Grid Background="{ThemeResource AppToolbarBrush}" Padding="12,10" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="170" />
+                                        <ColumnDefinition Width="55" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="100" />
+                                        <ColumnDefinition Width="170" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="DTC" FontWeight="Bold" />
+                                    <TextBlock Grid.Column="1" Text="FF" FontWeight="Bold" />
+                                    <TextBlock Grid.Column="2" Text="Trouble Codes (SIMULATED Bus Readout)" FontWeight="Bold" />
+                                    <TextBlock Grid.Column="3" Text="Severity" FontWeight="Bold" />
+                                    <TextBlock Grid.Column="4" Text="DTC Type / Status" FontWeight="Bold" HorizontalAlignment="Right" />
+                                </Grid>
+
+                                <!-- Empty State when not connected -->
+                                <TextBlock Text="No DTCs loaded. Click 'Connect Simulator' above to read simulated J1939, J1708, or OBD II trouble codes."
+                                           Padding="14,16"
+                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                           Visibility="{x:Bind ViewModel.NoDtcsVisibility, Mode=OneWay}" />
+
+                                <!-- DTC Rows (Colored per Shop Foreman Pro convention: Red = Active, Blue = Pending/Stored) -->
+                                <ItemsControl ItemsSource="{x:Bind ViewModel.Dtcs, Mode=OneWay}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:DtcRowViewModel">
+                                            <Grid Padding="12,10" MinHeight="44" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="170" />
+                                                    <ColumnDefinition Width="55" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="100" />
+                                                    <ColumnDefinition Width="170" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{x:Bind Code}" Foreground="{x:Bind RowBrush}" FontWeight="Bold" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{x:Bind HasFreezeFrame}" Foreground="{x:Bind RowBrush}" FontWeight="Bold" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Text="{x:Bind Description}" Foreground="{x:Bind RowBrush}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                                <TextBlock Grid.Column="3" Text="{x:Bind Severity}" Foreground="{x:Bind RowBrush}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="4" Text="{x:Bind StatusLabel}" Foreground="{x:Bind RowBrush}" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- LIVE DATA TABLE (Dense Value / Units columns, streaming at 10 Hz from IDiagnosticAdapter.LiveDataReceived) -->
+                        <Border Background="{ThemeResource AppSurfaceBrush}"
+                                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource CardCornerRadius}">
+                            <StackPanel>
+                                <Grid Background="{ThemeResource AppToolbarBrush}" Padding="12,10" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="110" />
+                                        <ColumnDefinition Width="210" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Live Data Parameter (PID / SPN)" FontWeight="Bold" />
+                                    <TextBlock Grid.Column="1" Text="Value" FontWeight="Bold" HorizontalAlignment="Right" />
+                                    <TextBlock Grid.Column="2" Text="Units" FontWeight="Bold" Margin="16,0,0,0" />
+                                    <TextBlock Grid.Column="3" Text="Canonical SI Source" FontWeight="Bold" HorizontalAlignment="Right" />
+                                </Grid>
+
+                                <TextBlock Text="No live data streaming. Connect to the simulator to receive 10 Hz PID updates."
+                                           Padding="14,16"
+                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                           Visibility="{x:Bind ViewModel.NoLivePidsVisibility, Mode=OneWay}" />
+
+                                <ItemsControl ItemsSource="{x:Bind ViewModel.LivePids, Mode=OneWay}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:LivePidRowViewModel">
+                                            <Grid Padding="12,8" MinHeight="44" Background="{ThemeResource AppRowAltBrush}" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="150" />
+                                                    <ColumnDefinition Width="110" />
+                                                    <ColumnDefinition Width="210" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{x:Bind Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{x:Bind DisplayValue, Mode=OneWay}" FontWeight="Bold" FontSize="15" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Text="{x:Bind DisplayUnit, Mode=OneWay}" FontWeight="SemiBold" Margin="16,0,0,0" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="3" Text="{x:Bind CanonicalSourceDisplay, Mode=OneWay}" Foreground="{ThemeResource AppTextSecondaryBrush}" FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- FREEZE FRAME SNAPSHOT TABLE (Matches bottom half of Screenshot 04) -->
+                        <Border Background="{ThemeResource AppSurfaceBrush}"
+                                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource CardCornerRadius}">
+                            <StackPanel>
+                                <Grid Background="{ThemeResource AppToolbarBrush}" Padding="12,10" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="110" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="Freeze Frame Snapshot" FontWeight="Bold" />
+                                        <TextBlock Text="{x:Bind ViewModel.FreezeFrameTimestamp, Mode=OneWay}" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="Value" FontWeight="Bold" HorizontalAlignment="Right" />
+                                    <TextBlock Grid.Column="2" Text="Units" FontWeight="Bold" Margin="16,0,0,0" />
+                                </Grid>
+
+                                <ItemsControl ItemsSource="{x:Bind ViewModel.FreezeFramePids, Mode=OneWay}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:LivePidRowViewModel">
+                                            <Grid Padding="12,8" MinHeight="40" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="150" />
+                                                    <ColumnDefinition Width="110" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{x:Bind Name}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{x:Bind DisplayValue, Mode=OneWay}" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Text="{x:Bind DisplayUnit, Mode=OneWay}" Margin="16,0,0,0" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- DIAGNOSTIC LOG / AUDIT NOTES (e.g. DTC clear audit trail) -->
+                        <Border Background="{ThemeResource AppSurfaceBrush}"
+                                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource CardCornerRadius}">
+                            <StackPanel>
+                                <Grid Background="{ThemeResource AppToolbarBrush}" Padding="12,10" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Diagnostic Log / Audit Notes" FontWeight="Bold" />
+                                    <TextBlock Grid.Column="1" Text="Visible audit trail (DB persistence is Phase 4)" FontSize="12" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                </Grid>
+
+                                <TextBlock Text="No diagnostic log entries yet."
+                                           Padding="14,16"
+                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                           Visibility="{x:Bind ViewModel.NoDiagnosticLogVisibility, Mode=OneWay}" />
+
+                                <ItemsControl ItemsSource="{x:Bind ViewModel.DiagnosticLog, Mode=OneWay}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:DiagnosticLogEntry">
+                                            <Grid Padding="12,8" MinHeight="44" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="230" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{x:Bind Timestamp}" Foreground="{ThemeResource AppTextSecondaryBrush}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                                <TextBlock Grid.Column="1" Text="{x:Bind Message}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- 3B. MINIMAL EQUIPMENT / ASSET LIST (Wired to DataServices.Assets) -->
+                <Grid Grid.Row="2"
+                      Padding="14,12"
+                      Visibility="{x:Bind ViewModel.AssetsViewVisibility, Mode=OneWay}">
+                    <Border Background="{ThemeResource AppSurfaceBrush}"
+                            BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource CardCornerRadius}"
+                            Padding="16">
+                        <StackPanel Spacing="12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Equipment &amp; Vehicle Asset Registry (SQLite Repository)" FontSize="18" FontWeight="Bold" />
+                                    <TextBlock Text="Reads from GseTechPro.Data.DataServices.Assets" FontSize="12" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                </StackPanel>
+                                <Button Grid.Column="1"
+                                        Style="{StaticResource ActionTouchButtonStyle}"
+                                        Command="{x:Bind ViewModel.ReloadDatabaseRecordsCommand}"
+                                        Content="Refresh Repository" />
+                            </Grid>
+
+                            <Border Background="{ThemeResource AppRowAltBrush}"
+                                    BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="{StaticResource AppCornerRadius}"
+                                    Padding="16"
+                                    Visibility="{x:Bind ViewModel.NoAssetsVisibility, Mode=OneWay}">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="No equipment or vehicle assets registered yet." FontWeight="SemiBold" FontSize="15" />
+                                    <TextBlock Text="The local SQLite database is initialized and seeded with the shop record. Assets added in the Equipment Registry will appear here."
+                                               Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <ListView ItemsSource="{x:Bind ViewModel.Assets, Mode=OneWay}" SelectionMode="Single">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="models:Asset">
+                                        <Grid Padding="12,10" MinHeight="48">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="150" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="140" />
+                                                <ColumnDefinition Width="140" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{x:Bind AssetNumber}" FontWeight="Bold" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{x:Bind Name}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="2" Text="{x:Bind AssetKind}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="3" Text="{x:Bind Status}" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- 3C. MINIMAL WORK ORDER BROWSER PLACEHOLDER (Wired to DataServices.WorkOrders, Screenshot 03) -->
+                <Grid Grid.Row="2"
+                      Padding="14,12"
+                      Visibility="{x:Bind ViewModel.WorkOrdersViewVisibility, Mode=OneWay}">
+                    <Border Background="{ThemeResource AppSurfaceBrush}"
+                            BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource CardCornerRadius}"
+                            Padding="16">
+                        <StackPanel Spacing="12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Work Order / Repair Order (RO) Browser" FontSize="18" FontWeight="Bold" />
+                                    <TextBlock Text="Reads from GseTechPro.Data.DataServices.WorkOrders (Full tree + preview pane in next phase)" FontSize="12" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                </StackPanel>
+                                <Button Grid.Column="1"
+                                        Style="{StaticResource ActionTouchButtonStyle}"
+                                        Command="{x:Bind ViewModel.ReloadDatabaseRecordsCommand}"
+                                        Content="Refresh Work Orders" />
+                            </Grid>
+
+                            <Border Background="{ThemeResource AppRowAltBrush}"
+                                    BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="{StaticResource AppCornerRadius}"
+                                    Padding="16"
+                                    Visibility="{x:Bind ViewModel.NoWorkOrdersVisibility, Mode=OneWay}">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="No saved Work Orders in the local database yet." FontWeight="SemiBold" FontSize="15" />
+                                    <TextBlock Text="Connected to GseTechPro.Data.WorkOrderRepository. Click 'New' in the toolbar to open a draft Work Order tab or connect to the Simulator to inspect live vehicle health."
+                                               Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <ListView ItemsSource="{x:Bind ViewModel.WorkOrders, Mode=OneWay}" SelectionMode="Single">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="models:WorkOrder">
+                                        <Grid Padding="12,10" MinHeight="48">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="220" />
+                                                <ColumnDefinition Width="140" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="180" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{x:Bind Id}" FontWeight="Bold" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{x:Bind Status}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="2" Text="{x:Bind ComplaintSummary}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="3" Text="{x:Bind OpenedAt}" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- 3D. TOOL PLACEHOLDER VIEW (Scope, CAN Capture, Camera, AI Tech Chat) -->
+                <Grid Grid.Row="2"
+                      Padding="14,12"
+                      Visibility="{x:Bind ViewModel.ToolPlaceholderVisibility, Mode=OneWay}">
+                    <Border Background="{ThemeResource AppSurfaceBrush}"
+                            BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource CardCornerRadius}"
+                            Padding="24">
+                        <StackPanel Spacing="12" MaxWidth="680" HorizontalAlignment="Left">
+                            <TextBlock Text="{x:Bind ViewModel.PlaceholderTitle, Mode=OneWay}" FontSize="20" FontWeight="Bold" />
+                            <TextBlock Text="{x:Bind ViewModel.PlaceholderSubtitle, Mode=OneWay}"
+                                       FontSize="14"
+                                       Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                       TextWrapping="Wrap" />
+                            <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                    Tag="HeavyDuty"
+                                    Click="OnToolbarButtonClick"
+                                    Content="Return to Diagnostics &amp; Simulator" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+            </Grid>
+        </Grid>
+
+        <!-- =================================================================== -->
+        <!-- ROW 4: STATUS BAR (Matches Screenshot 01 / 04 bottom status bar)     -->
+        <!-- Shows: Adapter/Device, MIL indicator, VIN, Protocol, Connection      -->
+        <!-- =================================================================== -->
+        <Border Grid.Row="4"
+                Background="{ThemeResource AppToolbarBrush}"
+                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="12,6"
+                MinHeight="40">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Adapter / Device Name (Left) -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE950;" FontSize="14" />
+                    <TextBlock Text="{x:Bind ViewModel.AdapterDeviceName, Mode=OneWay}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- MIL Status Badge -->
+                <Border Grid.Column="1"
+                        Margin="12,0"
+                        Padding="8,2"
+                        CornerRadius="4"
+                        BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                        BorderThickness="1">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="MIL:" FontWeight="SemiBold" FontSize="12" />
+                        <TextBlock Text="{x:Bind ViewModel.MilStatusText, Mode=OneWay}" FontWeight="Bold" FontSize="12" />
+                    </StackPanel>
+                </Border>
+
+                <!-- VIN -->
+                <TextBlock Grid.Column="2"
+                           Text="{x:Bind ViewModel.VehicleVinText, Mode=OneWay}"
+                           Margin="12,0"
+                           VerticalAlignment="Center"
+                           FontSize="12" />
+
+                <!-- Protocol -->
+                <TextBlock Grid.Column="3"
+                           Text="{x:Bind ViewModel.ActiveProtocolText, Mode=OneWay}"
+                           Margin="12,0"
+                           VerticalAlignment="Center"
+                           FontWeight="SemiBold"
+                           FontSize="12" />
+
+                <!-- Connection Status -->
+                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Status:" FontSize="12" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                    <TextBlock Text="{x:Bind ViewModel.ConnectionStatusText, Mode=OneWay}" FontWeight="Bold" FontSize="12" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+    </Grid>
+</Window>

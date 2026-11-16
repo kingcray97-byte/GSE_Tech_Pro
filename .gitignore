@@ -1,0 +1,34 @@
+# Vendor drivers, SDKs, and reference apps: large, third-party, never shipped
+Reference/
+
+# Seed manual library: large third-party PDFs (use Git LFS or a share if they must be versioned)
+docs/Manuals/
+
+# Office/Windows junk
+Thumbs.db
+~$*
+desktop.ini
+
+# .NET
+bin/
+obj/
+*.user
+.vs/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Local data and logs
+*.db
+*.db-wal
+*.db-shm
+logs/
+
+# Trademarked vehicle-make logos: reference only, never shipped or published
+docs/logos/
+
+# Old draft of the spec: ignore
+docs/PROMPT.original.md

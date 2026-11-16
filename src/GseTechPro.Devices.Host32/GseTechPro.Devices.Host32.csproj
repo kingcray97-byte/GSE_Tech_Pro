@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <!-- 32-bit helper process: loads x86 J2534/RP1210 vendor DLLs (Phase 2). -->
+    <PlatformTarget>x86</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <RootNamespace>GseTechPro.Devices.Host32</RootNamespace>
+    <AssemblyName>GseTechPro.Devices.Host32</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GseTechPro.Core\GseTechPro.Core.csproj" />
+    <ProjectReference Include="..\GseTechPro.Devices\GseTechPro.Devices.csproj" />
+  </ItemGroup>
+
+</Project>

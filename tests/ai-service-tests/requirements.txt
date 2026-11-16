@@ -1,0 +1,4 @@
+# Placeholder requirements for AI service tests (Phase 3)
+# Actual dependencies will be added when the Python FastAPI service is built.
+
+pytest>=7.0,<9.0
