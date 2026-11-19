@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\src\GseTechPro.Data\GseTechPro.Data.csproj" />
     <ProjectReference Include="..\..\src\GseTechPro.Devices\GseTechPro.Devices.csproj" />
     <ProjectReference Include="..\..\src\GseTechPro.Devices.Host32\GseTechPro.Devices.Host32.csproj" />
+    <ProjectReference Include="..\..\src\GseTechPro.Scope\GseTechPro.Scope.csproj" />
   </ItemGroup>
 
 </Project>

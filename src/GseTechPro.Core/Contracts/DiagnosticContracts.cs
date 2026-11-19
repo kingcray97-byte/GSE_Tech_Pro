@@ -13,6 +13,13 @@ public sealed record DtcReadout
     public DtcStatus Status { get; init; } = DtcStatus.Active;
     public string? Description { get; init; }
     public string? Severity { get; init; }
+    /// <summary>
+    /// Data provenance: <c>true</c> when this code came from the simulator rather than real
+    /// hardware. Defaults to <c>false</c> (real) so real adapters need not set it; the simulator
+    /// must explicitly opt in. Carried over the IPC boundary so the app can badge/refuse simulated
+    /// data even when it did not construct the adapter itself.
+    /// </summary>
+    public bool IsSimulated { get; init; }
 }
 
 /// <summary>A single live-data parameter (PID) value as reported by the adapter.</summary>
@@ -28,6 +35,13 @@ public sealed record PidValue
     public string Unit { get; init; } = "";
     /// <summary>ISO-8601 UTC.</summary>
     public string Timestamp { get; init; } = Clock.UtcNow;
+    /// <summary>
+    /// Data provenance: <c>true</c> when this reading came from the simulator rather than real
+    /// hardware. Defaults to <c>false</c> (real) so real adapters need not set it; the simulator
+    /// must explicitly opt in. Crosses the IPC boundary with the value so a recording of simulated
+    /// data stays marked simulated even when replayed later.
+    /// </summary>
+    public bool IsSimulated { get; init; }
 }
 
 /// <summary>A freeze-frame snapshot: capture time + the PIDs captured at that moment.</summary>

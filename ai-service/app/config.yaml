@@ -1,0 +1,23 @@
+# ai-service default config (ADR-008). Owned by ai-engineer.
+# The app launches the service with --port/--token (CLI overrides this file). These service.* values
+# are standalone-run defaults only (dev/test: `python -m app.main`). installer-deploy relocates a
+# production copy to ai-service/config/config.yaml in Phase 8; the loader accepts any path via --config.
+service:
+  host: 127.0.0.1            # never 0.0.0.0
+  port: 8765                 # standalone default; the App overrides via --port at runtime
+  token: "dev-local-token"   # standalone default; the App overrides via --token at runtime
+
+ollama:
+  host: "127.0.0.1:11434"    # no scheme: rag.config adds http:// (base_url); the scheme form is also accepted
+  no_cloud: true             # sets OLLAMA_NO_CLOUD=1 for the Ollama process/client
+
+models:
+  chat: "lfm3-omni"          # config-only; never hardcoded in code
+  embedding: "nomic-embed-text"
+  embedding_dim: 768         # MUST match the vec0 dimension (fixed at 768); changing it means re-embedding
+
+idle_unload_minutes: 10      # unload models after idle (RAM budget)
+
+degradation:
+  offline_chat_message: "AI assistant is unavailable (Ollama not reachable). Manual search remains available."
+  fallback_search: "bm25"    # when no embedding model: rank by FTS5 BM25 only (deterministic, no model)

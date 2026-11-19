@@ -14,7 +14,7 @@ public sealed record DatabaseOptions
 
     /// <summary>
     /// Optional path to the trusted sqlite-vec extension (normally vec0.dll). When omitted,
-    /// the initializer probes the application directory and SQLite's normal "vec0" lookup.
+    /// only application-local vec0.dll and runtimes/win-x64/native/vec0.dll are probed.
     /// </summary>
     public string? SqliteVecExtensionPath { get; init; }
 

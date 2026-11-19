@@ -47,6 +47,12 @@ public sealed record Reading : EntityBase
     public string? SpecSource { get; init; }
     public PassFail? PassFail { get; init; }
     public ReadingSource Source { get; init; } = ReadingSource.Manual;
+    /// <summary>
+    /// True when the value came from a simulated source (ADR-009). Derived at write time:
+    /// a reading saved from a replay/scan copies <c>recordings.source == 'simulated'</c>; a
+    /// manually typed or voice-entered reading is <c>false</c>. Column: <c>readings.is_simulated</c>.
+    /// </summary>
+    public bool IsSimulated { get; init; }
     public string EnteredAt { get; init; } = Clock.UtcNow;
     public string? EnteredBy { get; init; }
     public string? Notes { get; init; }

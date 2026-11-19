@@ -65,6 +65,20 @@ public enum SymptomCategory
     [EnumMember(Value = "hvac")] Hvac,
 }
 
+/// <summary>
+/// Category of a safety warning shown before a diagnostic step or test-point procedure
+/// (content authored by gse-domain-expert; table <c>safety_warnings.category</c>). Drives the
+/// icon/severity styling the app renders and the order warnings are surfaced (ADR-009).
+/// </summary>
+public enum SafetyWarningCategory
+{
+    [EnumMember(Value = "hydraulic_pressure")] HydraulicPressure,
+    [EnumMember(Value = "lockout_tagout")] LockoutTagout,
+    [EnumMember(Value = "high_voltage")] HighVoltage,
+    [EnumMember(Value = "aircraft_proximity")] AircraftProximity,
+    [EnumMember(Value = "general")] General,
+}
+
 /// <summary>How a complaint was captured.</summary>
 public enum RecordedBy
 {

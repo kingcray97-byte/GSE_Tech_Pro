@@ -47,6 +47,16 @@ public sealed class DatabaseBackup
         await using var destination = new SqliteConnection(destinationConnectionString);
         await destination.OpenAsync(cancellationToken).ConfigureAwait(false);
         await Task.Run(() => source.BackupDatabase(destination), cancellationToken).ConfigureAwait(false);
+
+        // Phase 8: Verify backup integrity before returning success
+        await using (var verifyCommand = destination.CreateCommand())
+        {
+            verifyCommand.CommandText = "PRAGMA integrity_check";
+            var result = await verifyCommand.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+            if (result?.ToString() != "ok")
+                throw new InvalidOperationException($"Backup integrity check failed: {result}");
+        }
+
         return targetPath;
     }
 

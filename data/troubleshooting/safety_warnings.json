@@ -1,0 +1,50 @@
+[
+  {
+    "id": "sw-hydraulic-stored-pressure",
+    "category": "hydraulic_pressure",
+    "text": "Hydraulic oil and raised components can retain energy after shutdown. Lower the conveyor/loading head where possible, stop the engine or pump, isolate energy, and relieve pressure only by the manufacturer procedure. Install the specified safety props before working beneath a raised assembly. Never use your hand to find a pinhole leak and never loosen a fitting to see whether a circuit is pressurized.",
+    "source_citation": "TUG Model 660-28 Operation Manual CD397-Oper, Safety-1-4, PDF page 34 (pilot-operated checks and safety props); model-specific pressure-release procedure: TODO: needs spec from manual"
+  },
+  {
+    "id": "sw-lockout-tagout",
+    "category": "lockout_tagout",
+    "text": "Before service, park on level ground, apply the parking brake, switch off, remove the key, and isolate battery and other energy sources as applicable. Apply lockout/tagout and verify zero energy before opening a circuit. A live diagnostic requires a deliberate controlled-test plan: reconnect only what the procedure requires, keep clear of moving parts, and restore isolation before disconnecting tools or making repairs.",
+    "source_citation": "TUG Model 660-28 Operation Manual CD397-Oper, Table Safety-1-4 Mechanic Safety Responsibilities, PDF page 36"
+  },
+  {
+    "id": "sw-high-voltage",
+    "category": "high_voltage",
+    "text": "Battery systems are high-current energy sources even when their voltage is low. Identify every battery pack and isolation device before work; do not assume an auxiliary pack is low voltage. Remove jewelry, use insulated tools and meter leads with intact ratings, prevent short circuits, and keep sparks and flames away from charging batteries. Do not disconnect a battery while the engine or charging system is running unless the manufacturer procedure explicitly requires it.",
+    "source_citation": "Power Stow 600i Maintenance Manual Rev E (Delta), PDF page 4 (12 V battery maintenance); TUG Model 660-28 Operation Manual CD397-Oper, Table Safety-1-4, PDF page 36"
+  },
+  {
+    "id": "sw-aircraft-proximity",
+    "category": "aircraft_proximity",
+    "text": "Move the equipment to an approved service area before testing whenever possible. If work must occur on the ramp, follow airport/airline rules, remain outside aircraft engine inlet, exhaust, propeller, and control-surface danger areas, and maintain required clearance. Use a marshaller for any movement near an aircraft; do not perform diagnostic drive, conveyor, or loading-head movements in the aircraft restraint area.",
+    "source_citation": "TUG Model 660-28 Operation Manual CD397-Oper, Safety-2-1 Ramp Safety in Aircraft Handling, PDF pages 47-54"
+  },
+  {
+    "id": "sw-hot-surface",
+    "category": "general",
+    "text": "The engine, exhaust, coolant system, hydraulic oil, and nearby components can cause burns. Let the machine cool before opening access panels or routing test leads near these parts. Never open a hot coolant cap or pressurized reservoir; use the manufacturer cooling and depressurization procedure and appropriate gloves and eye protection.",
+    "source_citation": "TUG Model 660-28 Operation Manual CD397-Oper, Figure Safety-2-7 Hot Surface, PDF page 60; Table Safety-1-4, PDF page 36"
+  },
+  {
+    "id": "sw-moving-machinery",
+    "category": "general",
+    "text": "Keep people, hands, clothing, leads, and tools clear of the conveyor, Rollertrack, lift arms, loading head, belts, chains, fans, and other pinch/crush points. Confirm emergency stops are functional before a controlled motion test, station an observer where required, and never bypass an interlock or guard to make the mechanism run.",
+    "source_citation": "TUG Model 660-28 Operation Manual CD397-Oper, Safety-1-4, PDF page 34; Power Stow 600i Maintenance Manual Rev E (Delta), PDF page 4 (emergency-stop functional test)"
+  },
+  {
+    "id": "sw-wheel-chocks",
+    "category": "general",
+    "text": "Park on level ground, apply the parking brake, place the transmission in the manufacturer-required service position, and chock the wheels before cranking, running, or working around the unit. Treat a parking-brake indication as an inspection item, not proof that the machine cannot move. Keep a clear exit path and never stand in the travel path during a functional test.",
+    "source_citation": "TUG Model 660-28 Operation Manual CD397-Oper, Figure Operation-4-12 Chocked Wheels, PDF page 113; Safety-2-1, PDF pages 52-54"
+  },
+  {
+    "id": "sw-fuel-lpg",
+    "category": "general",
+    "text": "Gasoline and LPG create fire, explosion, and inhalation hazards. Work in a ventilated area, eliminate ignition sources, and stop immediately for a fuel smell, visible leak, or damaged fuel line. Do not crank an engine to investigate a fuel leak. LPG work requires the manufacturer isolation, bleed-down, and emergency procedures; do not improvise a fuel-system test.",
+    "source_citation": "TUG Model 660-28 Operation Manual CD397-Oper, LP and CNG Safety Information, PDF page 37; Emergency Procedures, PDF pages 38-43"
+  }
+]

@@ -4,46 +4,75 @@
 
     <!-- ======================================================================= -->
     <!-- Sunlight High-Contrast Override Dictionary (ARCHITECTURE.md §5.3)        -->
-    <!-- Loaded dynamically into MergedDictionaries when Sunlight mode is active  -->
+    <!-- Loaded dynamically into MergedDictionaries when Sunlight mode is active. -->
+    <!-- Wrapped in ThemeDictionaries[Light] so {ThemeResource} bindings resolve  -->
+    <!-- under RootGrid.RequestedTheme = ElementTheme.Light.                      -->
     <!-- ======================================================================= -->
-    <Color x:Key="AppBackgroundColor">#FFFFFF</Color>
-    <Color x:Key="AppSurfaceColor">#FFFFFF</Color>
-    <Color x:Key="AppToolbarColor">#FFFFFF</Color>
-    <Color x:Key="AppRailColor">#1E2FB8</Color>
-    <Color x:Key="AppRailTextColor">#FFFFFF</Color>
-    <Color x:Key="AppTextPrimaryColor">#000000</Color>
-    <Color x:Key="AppTextSecondaryColor">#1A1A1A</Color>
-    <Color x:Key="AppAccentColor">#1E2FB8</Color>
-    <Color x:Key="AppAccentHoverColor">#16228A</Color>
-    <Color x:Key="AppOnAccentTextColor">#FFFFFF</Color>
-    <Color x:Key="AppSuccessColor">#007100</Color>
-    <Color x:Key="AppWarningColor">#8A5200</Color>
-    <Color x:Key="AppDangerColor">#B30000</Color>
-    <Color x:Key="DtcActiveColor">#B30000</Color>
-    <Color x:Key="DtcPendingColor">#1E2FB8</Color>
-    <Color x:Key="DtcStoredColor">#1A1A1A</Color>
-    <Color x:Key="AppFocusBorderColor">#000000</Color>
-    <Color x:Key="AppSubtleBorderColor">#000000</Color>
-    <Color x:Key="AppRowAltColor">#EEF1FF</Color>
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+            <Color x:Key="AppBackgroundColor">#FFFFFF</Color>
+            <Color x:Key="AppSurfaceColor">#FFFFFF</Color>
+            <Color x:Key="AppToolbarColor">#FFFFFF</Color>
+            <Color x:Key="AppRailColor">#1E2FB8</Color>
+            <Color x:Key="AppRailTextColor">#FFFFFF</Color>
+            <Color x:Key="AppTextPrimaryColor">#000000</Color>
+            <Color x:Key="AppTextSecondaryColor">#1A1A1A</Color>
+            <Color x:Key="AppAccentColor">#1E2FB8</Color>
+            <Color x:Key="AppAccentHoverColor">#16228A</Color>
+            <Color x:Key="AppOnAccentTextColor">#FFFFFF</Color>
+            <Color x:Key="AppSuccessColor">#007100</Color>
+            <Color x:Key="AppWarningColor">#8A5200</Color>
+            <Color x:Key="AppDangerColor">#B30000</Color>
+            <Color x:Key="DtcActiveColor">#B30000</Color>
+            <Color x:Key="DtcPendingColor">#1E2FB8</Color>
+            <Color x:Key="DtcStoredColor">#1A1A1A</Color>
+            <Color x:Key="AppFocusBorderColor">#000000</Color>
+            <Color x:Key="AppSubtleBorderColor">#000000</Color>
+            <Color x:Key="AppRowAltColor">#EEF1FF</Color>
 
-    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="AppSurfaceBrush" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="AppToolbarBrush" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="AppRailBrush" Color="#1E2FB8" />
-    <SolidColorBrush x:Key="AppRailTextBrush" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#000000" />
-    <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#1A1A1A" />
-    <SolidColorBrush x:Key="AppAccentBrush" Color="#1E2FB8" />
-    <SolidColorBrush x:Key="AppAccentHoverBrush" Color="#16228A" />
-    <SolidColorBrush x:Key="AppOnAccentTextBrush" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="AppSuccessBrush" Color="#007100" />
-    <SolidColorBrush x:Key="AppWarningBrush" Color="#8A5200" />
-    <SolidColorBrush x:Key="AppDangerBrush" Color="#B30000" />
-    <SolidColorBrush x:Key="DtcActiveBrush" Color="#B30000" />
-    <SolidColorBrush x:Key="DtcPendingBrush" Color="#1E2FB8" />
-    <SolidColorBrush x:Key="DtcStoredBrush" Color="#1A1A1A" />
-    <SolidColorBrush x:Key="AppFocusBorderBrush" Color="#000000" />
-    <SolidColorBrush x:Key="AppSubtleBorderBrush" Color="#000000" />
-    <SolidColorBrush x:Key="AppRowAltBrush" Color="#EEF1FF" />
+            <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="AppSurfaceBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="AppToolbarBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="AppRailBrush" Color="#1E2FB8" />
+            <SolidColorBrush x:Key="AppRailTextBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#000000" />
+            <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#1A1A1A" />
+            <SolidColorBrush x:Key="AppAccentBrush" Color="#1E2FB8" />
+            <SolidColorBrush x:Key="AppAccentHoverBrush" Color="#16228A" />
+            <SolidColorBrush x:Key="AppOnAccentTextBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="AppSuccessBrush" Color="#007100" />
+            <SolidColorBrush x:Key="AppWarningBrush" Color="#8A5200" />
+            <SolidColorBrush x:Key="AppDangerBrush" Color="#B30000" />
+            <SolidColorBrush x:Key="DtcActiveBrush" Color="#B30000" />
+            <SolidColorBrush x:Key="DtcPendingBrush" Color="#1E2FB8" />
+            <SolidColorBrush x:Key="DtcStoredBrush" Color="#1A1A1A" />
+            <SolidColorBrush x:Key="AppFocusBorderBrush" Color="#000000" />
+            <SolidColorBrush x:Key="AppSubtleBorderBrush" Color="#000000" />
+            <SolidColorBrush x:Key="AppRowAltBrush" Color="#EEF1FF" />
+            <SolidColorBrush x:Key="SimBadgeBackgroundBrush" Color="#FFF4CE" />
+            <SolidColorBrush x:Key="SimBadgeBorderBrush" Color="#000000" />
+            <SolidColorBrush x:Key="SimBadgeTextBrush" Color="#000000" />
+            <SolidColorBrush x:Key="RealBadgeBackgroundBrush" Color="#DFF6DD" />
+            <SolidColorBrush x:Key="RealBadgeBorderBrush" Color="#000000" />
+            <SolidColorBrush x:Key="RealBadgeTextBrush" Color="#000000" />
+            <SolidColorBrush x:Key="AiSuggestionBadgeBackgroundBrush" Color="#EEF1FF" />
+            <SolidColorBrush x:Key="AiSuggestionBadgeBorderBrush" Color="#000000" />
+            <SolidColorBrush x:Key="AiSuggestionBadgeTextBrush" Color="#000000" />
+            <SolidColorBrush x:Key="SafetyWarningBannerBackgroundBrush" Color="#FFE5E5" />
+            <SolidColorBrush x:Key="SafetyWarningBannerBorderBrush" Color="#000000" />
+            <SolidColorBrush x:Key="SafetyWarningBannerTextBrush" Color="#000000" />
+            <SolidColorBrush x:Key="ScopeGridBackgroundBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="ScopeGridLineBrush" Color="#666666" />
+            <SolidColorBrush x:Key="ScopeGridZeroLineBrush" Color="#000000" />
+            <SolidColorBrush x:Key="ScopeChannel1Brush" Color="#1E2FB8" />
+            <SolidColorBrush x:Key="ScopeChannel2Brush" Color="#B30000" />
+            <SolidColorBrush x:Key="ScopeChannel3Brush" Color="#007100" />
+            <SolidColorBrush x:Key="ScopeChannel4Brush" Color="#8A5200" />
+            <SolidColorBrush x:Key="ScopeReferenceOverlayBrush" Color="#5A008A" />
+            <SolidColorBrush x:Key="ScopeCursorABrush" Color="#1E2FB8" />
+            <SolidColorBrush x:Key="ScopeCursorBBrush" Color="#007100" />
+            <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="#1E2FB8" />
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
 
 </ResourceDictionary>

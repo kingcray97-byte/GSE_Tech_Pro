@@ -8,23 +8,32 @@ public sealed record DatabaseInitializationResult(
     bool VectorSearchAvailable,
     IReadOnlyList<string> Notices);
 
-/// <summary>Runs relational migrations, first-run seed data, and the optional vector-table probe.</summary>
+/// <summary>Runs relational migrations, first-run seeds, and the optional vector-table probe.</summary>
 public sealed class DatabaseInitializer
 {
     private readonly Migrations.SqliteMigrator _migrator;
     private readonly IDbSeeder _seeder;
+    private readonly IDtcLibrarySeeder _dtcLibrarySeeder;
+    private readonly ITroubleshootingSeeder _troubleshootingSeeder;
+    private readonly IScopeSeeder _scopeSeeder;
     private readonly ISqliteConnectionFactory _connectionFactory;
     private readonly DatabaseOptions _options;
 
     public DatabaseInitializer(
         ISqliteConnectionFactory connectionFactory,
         DatabaseOptions? options = null,
-        IDbSeeder? seeder = null)
+        IDbSeeder? seeder = null,
+        IDtcLibrarySeeder? dtcLibrarySeeder = null,
+        ITroubleshootingSeeder? troubleshootingSeeder = null,
+        IScopeSeeder? scopeSeeder = null)
     {
         _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
         _options = options ?? new DatabaseOptions { DatabasePath = connectionFactory.DatabasePath };
         _migrator = new Migrations.SqliteMigrator(connectionFactory);
         _seeder = seeder ?? new SeedData(connectionFactory);
+        _dtcLibrarySeeder = dtcLibrarySeeder ?? new DtcLibrarySeeder(connectionFactory);
+        _troubleshootingSeeder = troubleshootingSeeder ?? new TroubleshootingSeeder(connectionFactory);
+        _scopeSeeder = scopeSeeder ?? new ScopeSeeder(connectionFactory);
     }
 
     public async Task<DatabaseInitializationResult> InitializeAsync(CancellationToken cancellationToken = default)
@@ -36,15 +45,21 @@ public sealed class DatabaseInitializer
                 .ConfigureAwait(false);
         }
 
-        var applied = await _migrator.MigrateAsync(cancellationToken).ConfigureAwait(false);
-        await _seeder.SeedAsync(cancellationToken).ConfigureAwait(false);
-
         var notices = new List<string>();
+        var applied = await _migrator.MigrateAsync(cancellationToken).ConfigureAwait(false);
+        foreach (var notice in _migrator.Notices)
+            AddNotice(notices, notice);
+
+        await _seeder.SeedAsync(cancellationToken).ConfigureAwait(false);
+        await _dtcLibrarySeeder.SeedAsync(cancellationToken).ConfigureAwait(false);
+        await _troubleshootingSeeder.SeedAsync(cancellationToken).ConfigureAwait(false);
+        await _scopeSeeder.SeedAsync(cancellationToken).ConfigureAwait(false);
+
         var vectorAvailable = false;
         if (_options.EnableVectorSearch)
         {
-            vectorAvailable = await TryCreateVectorTableAsync(notices.Add, cancellationToken)
-                .ConfigureAwait(false);
+            vectorAvailable = await TryCreateVectorTableAsync(
+                message => AddNotice(notices, message), cancellationToken).ConfigureAwait(false);
         }
 
         return new DatabaseInitializationResult(applied, vectorAvailable, notices);
@@ -54,72 +69,39 @@ public sealed class DatabaseInitializer
         Action<string> notice,
         CancellationToken cancellationToken)
     {
-        // TODO Phase 3: bundle sqlite-vec with both the .NET data layer and Python AI service.
         await using var connection = await _connectionFactory.OpenAsync(cancellationToken).ConfigureAwait(false);
 
-        await using (var exists = connection.CreateCommand())
+        // Migration 3 normally creates this. Retrying here also repairs the intentionally skipped
+        // vec-absent case without rerunning or editing any released migration.
+        if (!await SqliteVecExtension.IsVec0AvailableAsync(connection, cancellationToken).ConfigureAwait(false))
         {
-            exists.CommandText = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'embeddings';";
-            var result = await exists.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-            if (result is not null)
-                return true;
-        }
-
-        var extensionPath = ResolveExtensionPath();
-        var extensionsEnabled = false;
-        try
-        {
-            connection.EnableExtensions(true);
-            extensionsEnabled = true;
-
-            await using (var load = connection.CreateCommand())
-            {
-                load.CommandText = "SELECT load_extension($extensionPath);";
-                load.Parameters.AddWithValue("$extensionPath", extensionPath);
-                await load.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-            }
-
-            await using (var create = connection.CreateCommand())
-            {
-                create.CommandText = """
-                    CREATE VIRTUAL TABLE IF NOT EXISTS embeddings USING vec0(
-                      chunk_id INTEGER PRIMARY KEY,
-                      embedding float[768]
-                    );
-                    """;
-                await create.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-            }
-
-            return true;
-        }
-        catch (Exception ex) when (ex is SqliteException
-            or InvalidOperationException
-            or DllNotFoundException
-            or EntryPointNotFoundException
-            or NotSupportedException)
-        {
-            var message = $"sqlite-vec is unavailable; vector search is disabled for this run. {ex.Message}";
-            notice(message);
-            _options.LogNotice?.Invoke(message);
+            notice("sqlite-vec is unavailable; embeddings was not created. FTS5 search remains available.");
             return false;
         }
-        finally
+
+        try
         {
-            if (extensionsEnabled)
-                connection.EnableExtensions(false);
+            await using var create = connection.CreateCommand();
+            create.CommandText = """
+                CREATE VIRTUAL TABLE IF NOT EXISTS embeddings USING vec0(
+                  chunk_id INTEGER PRIMARY KEY,
+                  embedding float[768]
+                );
+                """;
+            await create.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (SqliteException ex) when (SqliteVecExtension.IsMissingVec0(ex))
+        {
+            notice("sqlite-vec became unavailable while creating embeddings; FTS5 search remains available.");
+            return false;
         }
     }
 
-    private string ResolveExtensionPath()
+    private void AddNotice(List<string> notices, string message)
     {
-        if (!string.IsNullOrWhiteSpace(_options.SqliteVecExtensionPath))
-            return _options.SqliteVecExtensionPath;
-
-        var bundledCandidates = new[]
-        {
-            Path.Combine(AppContext.BaseDirectory, "vec0.dll"),
-            Path.Combine(AppContext.BaseDirectory, "runtimes", "win-x64", "native", "vec0.dll"),
-        };
-        return bundledCandidates.FirstOrDefault(File.Exists) ?? "vec0";
+        if (!notices.Contains(message, StringComparer.Ordinal))
+            notices.Add(message);
+        _options.LogNotice?.Invoke(message);
     }
 }

@@ -9,9 +9,6 @@ internal static class DbValueConverter
     private static readonly MethodInfo ToCodeDefinition = typeof(DbEnum)
         .GetMethods(BindingFlags.Public | BindingFlags.Static)
         .Single(m => m.Name == nameof(DbEnum.ToCode) && m.IsGenericMethodDefinition);
-    private static readonly MethodInfo ParseDefinition = typeof(DbEnum)
-        .GetMethods(BindingFlags.Public | BindingFlags.Static)
-        .Single(m => m.Name == nameof(DbEnum.Parse) && m.IsGenericMethodDefinition);
 
     public static object ToDatabase(object? value)
     {
@@ -39,7 +36,14 @@ internal static class DbValueConverter
         if (type.IsEnum)
         {
             var code = Convert.ToString(value, CultureInfo.InvariantCulture);
-            return ParseDefinition.MakeGenericMethod(type).Invoke(null, [code]);
+            if (DbEnum.TryParse(type, code, out var parsed))
+                return parsed;
+
+            // Forward compatibility: a newer tablet may write an enum code this build does not
+            // know. Preserve the row and degrade to the Core enum's zero value instead of making
+            // an entire repository query fail. RecordingSource.Simulated = 0 is deliberately the
+            // conservative unknown-value default, so unrecognized provenance is treated as simulated.
+            return Activator.CreateInstance(type);
         }
 
         if (type == typeof(string))

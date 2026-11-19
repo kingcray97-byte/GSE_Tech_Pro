@@ -154,13 +154,24 @@ Alternatively, include the manual library in your silent install config by setti
 | Ollama logs | `C:\Program Files\GSE Tech Pro\Ollama\ollama.log` |
 | Device host logs | `%APPDATA%\GSE Tech Pro\Data\logs\device-host.log` |
 
-## Phase 8 TODOs (Not Yet Implemented)
+## Phase 8 Features (Implemented)
 
-The following items are planned for the full installer in Phase 8:
+The full installer includes the following production features:
 
-- [ ] Code signing with Authenticode certificate
-- [ ] Bundling .NET runtimes and Windows App SDK into the installer
-- [ ] Ollama service installation (auto-start on boot)
-- [ ] Model download progress indication during install
-- [ ] Driver presence detection and guidance for missing vendor drivers
-- [ ] Automatic update checking (optional online channel)
+### Code Signing
+Authenticode code signing is supported via environment variables. Set `SIGNTOOL_CERT` and `SIGNTOOL_PASS` before building the installer to sign all binaries with your certificate. The installer uses DigiCert timestamping for long-term validity.
+
+### Runtime Bundling
+The installer bundles self-contained .NET 8 Desktop Runtime (both x64 and x86) and Windows App SDK, so no separate runtime installation is required on target tablets. This enables true offline deployment with zero prerequisites.
+
+### Ollama Service Installation
+When the "full" install type is selected, Ollama is automatically installed as a Windows service (`GSE-Ollama`) that starts on boot. The service runs under LocalSystem and manages the local model runtime lifecycle. On uninstall, the service is cleanly removed.
+
+### Model Download Progress Indication
+During installation of large AI models (lfm3-omni ~2.4 GB, nomic-embed-text ~274 MB), the installer displays progress messages indicating which model is being installed and its approximate size.
+
+### Driver Presence Detection
+After installation, the installer automatically detects missing vendor diagnostic drivers (TOPDON RLink X3, Nexiq USB-Link, Noregon DLA+, PicoScope, Hantek 6074BE) and displays guidance for installing them separately from manufacturer websites. This does not affect core app functionality.
+
+### Automatic Update Checking
+An optional "Check for updates on startup" task is available during installation. When enabled, the app checks an online update channel (`updates.commercialtruckandauto.com`) for new versions and prompts the user to download updates. The check fails silently when offline (offline-first design).

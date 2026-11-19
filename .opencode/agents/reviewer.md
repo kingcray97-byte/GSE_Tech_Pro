@@ -1,7 +1,7 @@
 ---
 description: Code reviewer. Read-only review of changes for bugs, safety, offline rules, tablet performance, folder ownership, and AI safety rules. Use on any change touching devices, the database, AI, installer, or safety content.
 mode: subagent
-model: opencode-go/gemini-4-argon
+model: lmstudio/nvidia/nemotron-3-nano-omni
 color: "#A4262C"
 permissions:
   - action: edit

@@ -8,17 +8,36 @@
     <AssemblyName>GseTechPro.App</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x64</Platforms>
+    <Platform Condition="'$(Platform)' == '' or '$(Platform)' == 'AnyCPU' or '$(Platform)' == 'Any CPU'">x64</Platform>
+    <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
-    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <WindowsAppSdkBootstrapInitialize>false</WindowsAppSdkBootstrapInitialize>
+    <WindowsAppSdkUndockedRegFreeWinRTInitialize>true</WindowsAppSdkUndockedRegFreeWinRTInitialize>
     <EnableCoreMrtTooling>false</EnableCoreMrtTooling>
     <EnablePriGenTooling>false</EnablePriGenTooling>
     <EnableDefaultPageItems>false</EnableDefaultPageItems>
+    <PriIndexName></PriIndexName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
+
+  <!-- When EnableCoreMrtTooling is false (required for CLI dotnet build without Visual Studio AppxPackage tasks),
+       restore the merged resources.pri from the WindowsAppRuntime MSIX after ExtractMicrosoftWindowsAppSDKMsixFiles
+       deletes it, so AddMicrosoftWindowsAppSDKPayloadFiles copies resources.pri to the output directory. -->
+  <Target Name="RestoreWindowsAppSdkMergedPri"
+          AfterTargets="ExtractMicrosoftWindowsAppSDKMsixFiles"
+          BeforeTargets="AddMicrosoftWindowsAppSDKPayloadFiles"
+          DependsOnTargets="GetExtractMicrosoftWindowsAppSDKMsixFilesInputs"
+          Condition="'$(WindowsAppSDKSelfContained)' == 'true' and '$(EnableCoreMrtTooling)' == 'false' and !Exists('$(MicrosoftWindowsAppSDKMsixContent)\resources.pri')">
+    <Unzip SourceFiles="@(MicrosoftWindowsAppSDKMsix)"
+           DestinationFolder="$(MicrosoftWindowsAppSDKMsixContent)"
+           SkipUnchangedFiles="true"
+           OverwriteReadOnlyFiles="true" />
+  </Target>
 
   <ItemGroup>
     <Page Include="MainWindow.xaml" />
@@ -35,6 +54,7 @@
     <ProjectReference Include="..\GseTechPro.Core\GseTechPro.Core.csproj" />
     <ProjectReference Include="..\GseTechPro.Data\GseTechPro.Data.csproj" />
     <ProjectReference Include="..\GseTechPro.Devices\GseTechPro.Devices.csproj" />
+    <ProjectReference Include="..\GseTechPro.Scope\GseTechPro.Scope.csproj" />
   </ItemGroup>
 
 </Project>

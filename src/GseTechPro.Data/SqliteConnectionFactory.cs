@@ -18,6 +18,14 @@ public interface ISqliteConnectionFactory
 public sealed class SqliteConnectionFactory : ISqliteConnectionFactory
 {
     private readonly string _connectionString;
+    private readonly DatabaseOptions _options;
+    private readonly object _vecPathLock = new();
+    private bool _vecPathResolved;
+    private string? _vecExtensionPath;
+
+    // Native loadability is cached per factory/application startup. A negative result must not
+    // cause a file probe and a caught SqliteException on every repository connection.
+    private int _vecUnavailable;
 
     public SqliteConnectionFactory(DatabaseOptions options)
     {
@@ -25,6 +33,7 @@ public sealed class SqliteConnectionFactory : ISqliteConnectionFactory
         if (string.IsNullOrWhiteSpace(options.DatabasePath))
             throw new ArgumentException("A SQLite database path is required.", nameof(options));
 
+        _options = options;
         DatabasePath = options.DatabasePath;
 
         var builder = new SqliteConnectionStringBuilder
@@ -54,6 +63,27 @@ public sealed class SqliteConnectionFactory : ISqliteConnectionFactory
         {
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
+            // vec0 must be registered before migration 3. Any failure is non-fatal and cached
+            // for this factory lifetime; relational storage and FTS5 continue without it.
+            if (_options.EnableVectorSearch && Volatile.Read(ref _vecUnavailable) == 0)
+            {
+                var extensionPath = ResolveVecExtensionPath();
+                if (extensionPath is null)
+                {
+                    ReportVecUnavailable(
+                        "sqlite-vec is unavailable: no trusted vec0.dll was found in the application " +
+                        "directory or runtimes/win-x64/native. Vector search is disabled; FTS5 remains available.");
+                }
+                else
+                {
+                    await SqliteVecExtension.TryLoadAsync(
+                        connection,
+                        extensionPath,
+                        ReportVecUnavailable,
+                        cancellationToken).ConfigureAwait(false);
+                }
+            }
+
             await using var command = connection.CreateCommand();
             command.CommandText = "PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;";
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
@@ -64,5 +94,24 @@ public sealed class SqliteConnectionFactory : ISqliteConnectionFactory
             await connection.DisposeAsync().ConfigureAwait(false);
             throw;
         }
+    }
+
+    private string? ResolveVecExtensionPath()
+    {
+        lock (_vecPathLock)
+        {
+            if (!_vecPathResolved)
+            {
+                _vecExtensionPath = SqliteVecExtension.ResolveExtensionPath(_options.SqliteVecExtensionPath);
+                _vecPathResolved = true;
+            }
+            return _vecExtensionPath;
+        }
+    }
+
+    private void ReportVecUnavailable(string message)
+    {
+        if (Interlocked.Exchange(ref _vecUnavailable, 1) == 0)
+            _options.LogNotice?.Invoke(message);
     }
 }

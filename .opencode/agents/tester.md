@@ -1,7 +1,7 @@
 ---
 description: Test engineer. Builds the solution, runs and writes tests (xUnit for C#, pytest for Python), runs simulator end-to-end checks, and reports failures with exact details. Use after every change before it is marked done.
 mode: subagent
-model: lmstudio/qwen3.8-27b-turbo-fable-cold-fusion-735-882-heretic-uncensored-neo-coder-max-mtp
+model: lmstudio/nvidia/nemotron-3-nano-omni
 color: "#038387"
 permissions:
   - action: edit

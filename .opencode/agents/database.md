@@ -1,7 +1,7 @@
 ---
 description: Database engineer. Builds the SQLite database (schema, migrations, FTS5 full-text, sqlite-vec vectors), repositories for fleet/asset/work order/repair history data, backups, and sync-ready design. Use for any data storage or query work.
 mode: subagent
-model: opencode-go/kimi-k3.1-pro
+model: lmstudio/nvidia/nemotron-3-nano-omni
 color: "#8764B8"
 permissions:
   - action: edit

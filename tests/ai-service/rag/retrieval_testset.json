@@ -1,0 +1,22 @@
+{
+  "description": "Retrieval test set: question -> expected PDF page(s) in the 600i maintenance manual. A hit = an expected page appears in the top-k results. IMPORTANT: these 15 queries are SELF-AUTHORED from the same 600i PDF text layer that was used to tune the chunking and chunk-kind heuristics. This is an in-sample regression sanity check, NOT an out-of-sample generalization benchmark; a 100% score here does not predict performance on other manuals. Expected pages were read from the PDF text layer (pypdf); page index = the 'Page N of 29' label.",
+  "manual": "4  740-774 Maintenance manual 600i  (Delta).pdf",
+  "top_k": 5,
+  "cases": [
+    {"question": "How often do I lubricate the flexramp axle?", "expected_pages": [2, 10]},
+    {"question": "What is the torque for the 6 mm nuts on the Rollertrack?", "expected_pages": [2]},
+    {"question": "How do I change the hydraulic pressure filter?", "expected_pages": [4]},
+    {"question": "How do I enter service mode?", "expected_pages": [6]},
+    {"question": "What is the chain gap adjustment for the chain drive?", "expected_pages": [4]},
+    {"question": "Test the 12V batteries, replace in pairs", "expected_pages": [4]},
+    {"question": "Test all emergency stops", "expected_pages": [4]},
+    {"question": "Clean the suspension rails under the belt boom", "expected_pages": [5]},
+    {"question": "Reset the preventive maintenance counter", "expected_pages": [5, 6]},
+    {"question": "Autolevel sensor test boom height flexramp", "expected_pages": [4]},
+    {"question": "Monthly cleaning of the chain drive area", "expected_pages": [8]},
+    {"question": "Replace damaged skate wheels", "expected_pages": [2, 3, 15]},
+    {"question": "Fatigue inspection of critical parts and lifting devices", "expected_pages": [4]},
+    {"question": "Daily inspection during the first operation", "expected_pages": [7]},
+    {"question": "Functional test of loading head belt alignment", "expected_pages": [3, 17]}
+  ]
+}

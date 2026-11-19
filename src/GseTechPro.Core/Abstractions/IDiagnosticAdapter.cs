@@ -23,6 +23,18 @@ public interface IDiagnosticAdapter
     /// <summary>True once <see cref="ConnectAsync"/> has completed successfully.</summary>
     bool IsConnected { get; }
 
+    /// <summary>
+    /// True when this adapter produces simulated/demo data rather than real hardware readings.
+    /// Real adapters (J2534/RP1210 behind the 32-bit host) keep the default <c>false</c>. This is a
+    /// default interface member (not abstract) only so the Phase-1 <c>SimulatedDiagnosticAdapter</c>
+    /// keeps compiling until device-comms overrides it in Phase 2 — <b>the simulator MUST override
+    /// this to <c>true</c></b> (one line: <c>public bool IsSimulated =&gt; true;</c>). Consumers use it
+    /// to badge simulated data in the UI and to stop simulated values being persisted as if real
+    /// (see <see cref="PidValue.IsSimulated"/> / <see cref="DtcReadout.IsSimulated"/> for the
+    /// per-value flag that crosses the process boundary).
+    /// </summary>
+    bool IsSimulated => false;
+
     /// <summary>Protocols this adapter can speak.</summary>
     IReadOnlyList<ProtocolType> SupportedProtocols { get; }
 

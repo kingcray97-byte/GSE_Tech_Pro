@@ -1,0 +1,22 @@
+[
+  {
+    "id": "eqm-tug-660-28",
+    "make": "TUG",
+    "model": "660-28",
+    "category": "belt_loader",
+    "engine_make": "Ford",
+    "engine_model": "MSG-425 2.5 L",
+    "transmission": "GM 4L70 or 4LHD automatic with torque converter (configuration dependent)",
+    "fuel_type": "Gasoline or LPG (configuration dependent)",
+    "system_notes": "Keep this model separate from the Power Stow 600i configuration. Confirm engine, transmission, and fuel configuration from the asset data plate. Configuration source: TUG Model 660-28 Operation Manual CD397-Oper, Operation-1-1 (PDF page 65) and Operation-3-8 (PDF page 100). The 660-28 is a belt loader per TUG Model 660-28 Operation Manual CD397-Oper, cover and §1.2 (PDF pages 1 and 65).",
+    "default_unit_system": "imperial"
+  },
+  {
+    "id": "eqm-tug-600i",
+    "make": "TUG",
+    "model": "600i",
+    "category": "belt_loader",
+    "system_notes": "Power Stow Rollertrack installation covered by the Delta 740-774 document set. This is a distinct configuration, not an alias for the 660-28 row. Identify the base chassis and Power Stow serial numbers before service; do not inherit base-chassis engine, pressure, or electrical limits without a matching manual citation.",
+    "default_unit_system": "imperial"
+  }
+]

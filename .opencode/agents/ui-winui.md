@@ -1,7 +1,7 @@
 ---
 description: WinUI 3 / Windows 11 UI developer. Builds screens, styles, and view models that copy Shop Foreman Pro's layout in Windows 11 Fluent style, touch-friendly for a rugged tablet. Use for any screen, control, theme, or navigation work.
 mode: subagent
-model: opencode-go/gemini-4-argon
+model: lmstudio/nvidia/nemotron-3-nano-omni
 color: "#00B7C3"
 permissions:
   - action: edit

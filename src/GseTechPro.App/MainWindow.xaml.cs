@@ -1,31 +1,66 @@
+using GseTechPro.App.Services;
 using GseTechPro.App.ViewModels;
+using GseTechPro.Core.Abstractions;
+using GseTechPro.Core.Enums;
 using GseTechPro.Data;
 using GseTechPro.Devices.Abstractions;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
+using Windows.System;
 
 namespace GseTechPro.App;
 
 public sealed partial class MainWindow : Window
 {
     private ResourceDictionary? _sunlightDictionary;
+    private bool _suppressSliderSeek;
 
-    public MainWindow(DataServices dataServices, IDiagnosticAdapterFactory adapterFactory)
+    public MainWindow(
+        DataServices dataServices,
+        IDiagnosticAdapterFactory adapterFactory,
+        IAiClient? aiClient = null,
+        AiServiceLauncher? aiLauncher = null,
+        IScopeDeviceFactory? scopeDeviceFactory = null)
     {
-        ViewModel = new MainShellViewModel(dataServices, adapterFactory, DispatcherQueue);
+        ViewModel = new MainShellViewModel(
+            dataServices,
+            adapterFactory,
+            DispatcherQueue,
+            aiClient,
+            aiLauncher,
+            aiStateService: null,
+            scopeDeviceFactory: scopeDeviceFactory);
         InitializeComponent();
 
+        RootGrid.DataContext = ViewModel;
+
         // Hand the view model the live XamlRoot once loaded so it can host confirmation
-        // and error dialogs (e.g. the Clear DTCs confirmation).
+        // and error dialogs (e.g. Clear DTCs confirmation, Trigger Setup, Device Setup).
         RootGrid.Loaded += (_, _) => ViewModel.DialogXamlRoot = RootGrid.XamlRoot;
 
         RootGrid.ActualThemeChanged += (_, _) => SyncThemeStateToViewModel();
         SyncThemeStateToViewModel();
+
+        Closed += OnMainWindowClosed;
     }
 
     public MainShellViewModel ViewModel { get; }
 
     public Task InitializeShellAsync() => ViewModel.InitializeAsync();
+
+    private async void OnMainWindowClosed(object sender, WindowEventArgs args)
+    {
+        try
+        {
+            await ViewModel.DisposeAsync();
+        }
+        catch
+        {
+            // Ignore shutdown disposal exceptions
+        }
+    }
 
     private void OnToolbarButtonClick(object sender, RoutedEventArgs e)
     {
@@ -62,6 +97,21 @@ public sealed partial class MainWindow : Window
     private void OnOpenAssetsMenuClick(object sender, RoutedEventArgs e) =>
         ViewModel.SelectToolbarAction("Assets");
 
+    private async void OnVehicleHealthMenuClick(object sender, RoutedEventArgs e) =>
+        await ViewModel.SelectNavRailItem("Back");
+
+    private async void OnLiveSnaplistMenuClick(object sender, RoutedEventArgs e) =>
+        await ViewModel.SelectNavRailItem("LiveData");
+
+    private async void OnEditSnaplistMenuClick(object sender, RoutedEventArgs e) =>
+        await ViewModel.SelectNavRailItem("EditSnaplist");
+
+    private async void OnCustomDisplayMenuClick(object sender, RoutedEventArgs e) =>
+        await ViewModel.SelectNavRailItem("CustomDisplay");
+
+    private async void OnLineGraphMenuClick(object sender, RoutedEventArgs e) =>
+        await ViewModel.SelectNavRailItem("GraphView");
+
     private async void OnReloadDbMenuClick(object sender, RoutedEventArgs e)
     {
         try
@@ -77,6 +127,18 @@ public sealed partial class MainWindow : Window
     private void OnNotesMenuClick(object sender, RoutedEventArgs e) =>
         ViewModel.SelectToolbarAction("Notes");
 
+    private async void OnDiscoverDevicesClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await ViewModel.DiscoverDevicesAsync();
+        }
+        catch (Exception ex)
+        {
+            ViewModel.ReportError("Discover devices failed", ex);
+        }
+    }
+
     private async void OnConnectSimulatorClick(object sender, RoutedEventArgs e)
     {
         try
@@ -85,7 +147,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            ViewModel.ReportError("Connect simulator failed", ex);
+            ViewModel.ReportError("Connect adapter failed", ex);
         }
     }
 
@@ -97,7 +159,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            ViewModel.ReportError("Disconnect simulator failed", ex);
+            ViewModel.ReportError("Disconnect adapter failed", ex);
         }
     }
 
@@ -122,6 +184,262 @@ public sealed partial class MainWindow : Window
         catch (Exception ex)
         {
             ViewModel.ReportError("Clear DTCs failed", ex);
+        }
+    }
+
+    private async void OnPlaybackSliderValueChanged(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_suppressSliderSeek || ViewModel.PlaybackState == PlaybackState.Live || ViewModel.PlaybackState == PlaybackState.Playing)
+            return;
+
+        long targetSeq = (long)Math.Round(e.NewValue);
+        if (targetSeq == ViewModel.PlaybackSequence)
+            return;
+
+        try
+        {
+            _suppressSliderSeek = true;
+            await ViewModel.SeekPlaybackToSequenceAsync(targetSeq, PlaybackState.Paused);
+        }
+        catch (Exception ex)
+        {
+            ViewModel.ReportError("Playback seek failed", ex);
+        }
+        finally
+        {
+            _suppressSliderSeek = false;
+        }
+    }
+
+    // =========================================================================
+    // Trigger Setup Dialog (Matches Screenshot 18)
+    // =========================================================================
+
+    private async void OnOpenTriggerSetupClick(object sender, RoutedEventArgs e)
+    {
+        var kindCombo = new ComboBox
+        {
+            Header = "Trigger Mode (Manual / On-DTC / On-PID Threshold)",
+            MinHeight = 44,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            ItemsSource = ViewModel.TriggerKinds,
+            SelectedItem = ViewModel.TriggerKind,
+        };
+
+        var dtcBox = new TextBox
+        {
+            Header = "Target DTC Code (OnDtc mode — leave blank for any DTC)",
+            PlaceholderText = "e.g. SPN 94 FMI 3 or P0118",
+            MinHeight = 44,
+            Text = ViewModel.TriggerDtcCode,
+        };
+
+        var pidCombo = new ComboBox
+        {
+            Header = "Monitored Parameter (OnPidThreshold mode)",
+            MinHeight = 44,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            ItemsSource = ViewModel.AvailablePidNames,
+            SelectedItem = ViewModel.TriggerPidName ?? ViewModel.AvailablePidNames.FirstOrDefault(),
+        };
+
+        var comparisonCombo = new ComboBox
+        {
+            Header = "Threshold Comparison",
+            MinHeight = 44,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            ItemsSource = ViewModel.ThresholdComparisons,
+            SelectedItem = ViewModel.TriggerComparison,
+        };
+
+        var thresholdBox = new NumberBox
+        {
+            Header = "Threshold Value",
+            MinHeight = 44,
+            Value = ViewModel.TriggerThresholdValue,
+            SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline,
+        };
+
+        var unitBox = new TextBox
+        {
+            Header = "Threshold Unit (canonicalized via UnitConverter when known)",
+            PlaceholderText = "e.g. °C, °F, psi, bar, kPa, V, rpm",
+            MinHeight = 44,
+            Text = ViewModel.TriggerThresholdUnit,
+        };
+
+        var preSlider = new Slider
+        {
+            Header = "Before Trigger Pre-Buffer Duration (seconds)",
+            Minimum = 0,
+            Maximum = 30,
+            StepFrequency = 0.5,
+            Value = ViewModel.PreTriggerSeconds,
+        };
+
+        var postSlider = new Slider
+        {
+            Header = "After Trigger Post-Capture Duration (seconds)",
+            Minimum = 1,
+            Maximum = 60,
+            StepFrequency = 0.5,
+            Value = ViewModel.PostTriggerSeconds,
+        };
+
+        var autoStopCheck = new CheckBox
+        {
+            Content = "Auto-stop recording when post-trigger duration elapses",
+            MinHeight = 44,
+            IsChecked = ViewModel.TriggerAutoStop,
+        };
+
+        var panel = new StackPanel
+        {
+            Spacing = 10,
+            MinWidth = 460,
+            Children =
+            {
+                kindCombo,
+                dtcBox,
+                pidCombo,
+                comparisonCombo,
+                thresholdBox,
+                unitBox,
+                preSlider,
+                postSlider,
+                autoStopCheck,
+            },
+        };
+
+        var dialog = new ContentDialog
+        {
+            Title = "Trigger Setup — Live Data Recording (Screen 18)",
+            Content = new ScrollViewer { Content = panel, MaxHeight = 520 },
+            PrimaryButtonText = "Accept",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = RootGrid.XamlRoot,
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            if (kindCombo.SelectedItem is TriggerKind selectedKind)
+                ViewModel.TriggerKind = selectedKind;
+
+            ViewModel.TriggerDtcCode = dtcBox.Text ?? "";
+            ViewModel.TriggerPidName = pidCombo.SelectedItem as string;
+
+            if (comparisonCombo.SelectedItem is ThresholdComparison selectedComp)
+                ViewModel.TriggerComparison = selectedComp;
+
+            if (!double.IsNaN(thresholdBox.Value))
+                ViewModel.TriggerThresholdValue = thresholdBox.Value;
+
+            ViewModel.TriggerThresholdUnit = string.IsNullOrWhiteSpace(unitBox.Text) ? "°C" : unitBox.Text.Trim();
+            ViewModel.PreTriggerSeconds = preSlider.Value;
+            ViewModel.PostTriggerSeconds = postSlider.Value;
+            ViewModel.TriggerAutoStop = autoStopCheck.IsChecked ?? true;
+
+            ViewModel.RecordingStatusLabel = $"Trigger Ready ({ViewModel.TriggerKind} · Pre {ViewModel.PreTriggerSeconds:F1}s / Post {ViewModel.PostTriggerSeconds:F1}s)";
+            ViewModel.StatusBannerMessage = $"Updated recording trigger: {ViewModel.TriggerKind} (Pre {ViewModel.PreTriggerSeconds:F1}s, Post {ViewModel.PostTriggerSeconds:F1}s).";
+        }
+    }
+
+    // =========================================================================
+    // Scan Tool / J2534 & RP1210 Device Setup Dialog (Matches Screenshots 26 & 28)
+    // =========================================================================
+
+    private async void OnOpenDeviceSetupDialogClick(object sender, RoutedEventArgs e)
+    {
+        await ViewModel.DiscoverDevicesAsync();
+
+        var deviceListView = new ListView
+        {
+            ItemsSource = ViewModel.AvailableDevices,
+            SelectedItem = ViewModel.SelectedDevice,
+            SelectionMode = ListViewSelectionMode.Single,
+            MinHeight = 160,
+            MaxHeight = 240,
+            BorderThickness = new Thickness(1),
+        };
+
+        var protocolCombo = new ComboBox
+        {
+            Header = "Target Protocol (J1939, J1708/J1587, OBD II)",
+            MinHeight = 44,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            ItemsSource = ViewModel.SimulatorProtocols,
+            SelectedItem = ViewModel.SelectedProtocol,
+        };
+
+        var detailsBlock = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 12,
+        };
+
+        void UpdateDetails()
+        {
+            if (deviceListView.SelectedItem is SelectableDeviceItem item)
+            {
+                detailsBlock.Text =
+                    $"Device ID: {item.Id}\n" +
+                    $"Device Class: {item.KindLabel} ({(item.IsInProcessSimulator ? "In-Process Simulator" : "32-Bit Host Process IPC")})\n" +
+                    $"Provenance: {item.ProvenanceBadge}\n" +
+                    $"Protocols Supported: {item.ProtocolsSummary}";
+            }
+        }
+
+        deviceListView.SelectionChanged += (_, _) => UpdateDetails();
+        UpdateDetails();
+
+        var panel = new StackPanel
+        {
+            Spacing = 12,
+            MinWidth = 500,
+            Children =
+            {
+                new TextBlock
+                {
+                    Text = "Select the vehicle/equipment interface adapter to use with J2534, RP1210 Heavy-Duty, or Global OBD II functions:",
+                    TextWrapping = TextWrapping.Wrap,
+                },
+                deviceListView,
+                protocolCombo,
+                detailsBlock,
+            },
+        };
+
+        var dialog = new ContentDialog
+        {
+            Title = "Scan Tool & J2534 / RP1210 Device Setup (Screens 26 & 28)",
+            Content = panel,
+            PrimaryButtonText = "Connect Selected Device",
+            SecondaryButtonText = "Select Only",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = RootGrid.XamlRoot,
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result is ContentDialogResult.Primary or ContentDialogResult.Secondary)
+        {
+            if (deviceListView.SelectedItem is SelectableDeviceItem chosen)
+                ViewModel.SelectedDevice = chosen;
+            if (protocolCombo.SelectedItem is ProtocolType proto)
+                ViewModel.SelectedProtocol = proto;
+
+            if (result == ContentDialogResult.Primary)
+            {
+                try
+                {
+                    await ViewModel.ConnectSimulatorAsync();
+                }
+                catch (Exception ex)
+                {
+                    ViewModel.ReportError("Device connection failed", ex);
+                }
+            }
         }
     }
 
@@ -178,6 +496,8 @@ public sealed partial class MainWindow : Window
                 RootGrid.Resources.MergedDictionaries.Add(_sunlightDictionary);
             }
 
+            // Force WinUI to re-evaluate {ThemeResource} bindings against the newly merged Light ThemeDictionary
+            RootGrid.RequestedTheme = ElementTheme.Dark;
             RootGrid.RequestedTheme = ElementTheme.Light;
         }
         else
@@ -186,6 +506,8 @@ public sealed partial class MainWindow : Window
             {
                 RootGrid.Resources.MergedDictionaries.Remove(_sunlightDictionary);
             }
+
+            RootGrid.RequestedTheme = ElementTheme.Dark;
             RootGrid.RequestedTheme = ElementTheme.Default;
         }
 
@@ -206,10 +528,218 @@ public sealed partial class MainWindow : Window
             Title = "GSE Tech Pro — Offline Diagnostic Suite",
             Content = "Ground Support Equipment & Heavy-Duty Fleet Diagnostics.\n" +
                       "by Commercial Truck and Auto\n\n" +
-                      "Phase 1 Shell: WinUI 3 (Windows App SDK), Local SQLite + Simulator.",
+                      "Phases 1–3: WinUI 3 (Windows App SDK), Local SQLite, DTC Library Enrichment, Multi-View Live Data, VCR Recording/Playback, 32-Bit Host IPC, Local AI Tech Chat, Guided Troubleshooting & Hybrid Manual RAG.",
             CloseButtonText = "Close",
             XamlRoot = RootGrid.XamlRoot,
         };
         await dialog.ShowAsync();
+    }
+
+    // =========================================================================
+    // Phase 3: AI Tech Chat, Citations, Guided Troubleshooting & Manual RAG
+    // =========================================================================
+
+    private void OnOpenAiTechChatMenuClick(object sender, RoutedEventArgs e) =>
+        ViewModel.SelectToolbarAction("AiTechChat");
+
+    private async void OnOpenGuidedTreeMenuClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            ViewModel.SelectToolbarAction("AiTechChat");
+            await ViewModel.SelectNavRailItem("GuidedTree");
+        }
+        catch (Exception ex)
+        {
+            ViewModel.ReportError("Open guided troubleshooting failed", ex);
+        }
+    }
+
+    private async void OnOpenReadingsMenuClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await ViewModel.SelectNavRailItem("Readings");
+        }
+        catch (Exception ex)
+        {
+            ViewModel.ReportError("Open manual readings failed", ex);
+        }
+    }
+
+    private async void OnOpenManualSearchMenuClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            ViewModel.SelectToolbarAction("AiTechChat");
+            await ViewModel.SelectNavRailItem("ManualSearch");
+        }
+        catch (Exception ex)
+        {
+            ViewModel.ReportError("Open manual search failed", ex);
+        }
+    }
+
+    private async void OnQuickPromptButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string prompt })
+            return;
+
+        try
+        {
+            await ViewModel.SendQuickPromptAsync(prompt);
+        }
+        catch (Exception ex)
+        {
+            ViewModel.ReportError("AI chat request failed", ex);
+        }
+    }
+
+    private async void OnChatInputKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key != VirtualKey.Enter)
+            return;
+
+        e.Handled = true;
+        try
+        {
+            await ViewModel.SendChatMessageAsync();
+        }
+        catch (Exception ex)
+        {
+            ViewModel.ReportError("AI chat request failed", ex);
+        }
+    }
+
+    private async void OnCitationButtonClick(object sender, RoutedEventArgs e)
+    {
+        var citation = (sender as FrameworkElement)?.Tag as CitationItemViewModel
+                       ?? (sender as FrameworkElement)?.DataContext as CitationItemViewModel;
+        if (citation is null)
+            return;
+
+        try
+        {
+            await ViewModel.OpenCitationAsync(citation);
+        }
+        catch (Exception ex)
+        {
+            ViewModel.ReportError("Open citation failed", ex);
+        }
+    }
+
+    private async void OnGuidedVerdictButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string verdictToken })
+            return;
+
+        try
+        {
+            await ViewModel.NextGuidedStepAsync(verdictToken);
+        }
+        catch (Exception ex)
+        {
+            ViewModel.ReportError("Advance guided step failed", ex);
+        }
+    }
+
+    private void OnSelectManualSearchResultClick(object sender, RoutedEventArgs e)
+    {
+        var hit = (sender as FrameworkElement)?.Tag as ManualSearchResultViewModel
+                  ?? (sender as FrameworkElement)?.DataContext as ManualSearchResultViewModel;
+        if (hit is not null)
+        {
+            ViewModel.SelectManualSearchResult(hit);
+        }
+    }
+
+    private async void OnManualSearchKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key != VirtualKey.Enter)
+            return;
+
+        e.Handled = true;
+        try
+        {
+            await ViewModel.SearchManualsAsync();
+        }
+        catch (Exception ex)
+        {
+            ViewModel.ReportError("Manual search failed", ex);
+        }
+    }
+
+    // =========================================================================
+    // Phase 5: Repair Recommendations, Outcomes & Comeback Confirmation (ADR-010)
+    // =========================================================================
+
+    private async void OnOpenRecommendationsMenuClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            ViewModel.SelectToolbarAction("AiTechChat");
+            await ViewModel.SelectNavRailItem("Recommendations");
+        }
+        catch (Exception ex)
+        {
+            ViewModel.ReportError("Open repair recommendations failed", ex);
+        }
+    }
+
+    private async void OnRecommendationQueryKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key != VirtualKey.Enter)
+            return;
+
+        e.Handled = true;
+        try
+        {
+            await ViewModel.LoadRepairRecommendationsAsync();
+        }
+        catch (Exception ex)
+        {
+            ViewModel.ReportError("Repair history search failed", ex);
+        }
+    }
+
+    private async void OnAcceptRecommendationButtonClick(object sender, RoutedEventArgs e)
+    {
+        var item = (sender as FrameworkElement)?.Tag as RepairCandidateItemViewModel
+                   ?? (sender as FrameworkElement)?.DataContext as RepairCandidateItemViewModel;
+        if (item is null)
+            return;
+
+        try
+        {
+            await ViewModel.AcceptRecommendationAsync(item);
+        }
+        catch (Exception ex)
+        {
+            ViewModel.ReportError("Accept recommendation failed", ex);
+        }
+    }
+
+    // =========================================================================
+    // Phase 6: Oscilloscope (PicoScope / Hantek / Simulator Workflow — ADR-011)
+    // =========================================================================
+
+    private void OnOpenScopeMenuClick(object sender, RoutedEventArgs e) =>
+        ViewModel.SelectToolbarAction("Scope");
+
+    private async void OnLoadSavedWaveformButtonClick(object sender, RoutedEventArgs e)
+    {
+        var item = (sender as FrameworkElement)?.Tag as SavedWaveformRowViewModel
+                   ?? (sender as FrameworkElement)?.DataContext as SavedWaveformRowViewModel;
+        if (item is null)
+            return;
+
+        try
+        {
+            await ViewModel.LoadSavedWaveformAsync(item);
+        }
+        catch (Exception ex)
+        {
+            ViewModel.ReportError("Load saved waveform failed", ex);
+        }
     }
 }

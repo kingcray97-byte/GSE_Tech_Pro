@@ -1,0 +1,141 @@
+[
+  {
+    "id": "rw-crank-sensor",
+    "name": "Crank Sensor (CKP) — known-good",
+    "equipment_model_id": null,
+    "system": "engine",
+    "test_name": "Crank sensor signal",
+    "expected_json": {
+      "measurements": [
+        {
+          "kind": "frequency",
+          "channel": 1,
+          "is_todo": true
+        },
+        {
+          "kind": "peak_to_peak",
+          "channel": 1,
+          "is_todo": true
+        }
+      ]
+    },
+    "source": "manual",
+    "citation": "TODO: needs spec from manual",
+    "data_path": null
+  },
+  {
+    "id": "rw-injector-current",
+    "name": "Injector Current (peak-and-hold) — known-good",
+    "equipment_model_id": null,
+    "system": "engine",
+    "test_name": "Injector current (peak-and-hold)",
+    "expected_json": {
+      "measurements": [
+        {
+          "kind": "current",
+          "channel": 2,
+          "is_todo": true
+        },
+        {
+          "kind": "rise_time",
+          "channel": 2,
+          "is_todo": true
+        }
+      ]
+    },
+    "source": "manual",
+    "citation": "TODO: needs spec from manual",
+    "data_path": null
+  },
+  {
+    "id": "rw-alternator-ripple",
+    "name": "Alternator Ripple — known-good",
+    "equipment_model_id": null,
+    "system": "electrical",
+    "test_name": "Alternator ripple",
+    "expected_json": {
+      "measurements": [
+        {
+          "kind": "ripple",
+          "channel": 1,
+          "is_todo": true
+        },
+        {
+          "kind": "frequency",
+          "channel": 1,
+          "is_todo": true
+        }
+      ]
+    },
+    "source": "manual",
+    "citation": "TODO: needs spec from manual",
+    "data_path": null
+  },
+  {
+    "id": "rw-starter-current",
+    "name": "Starter Current (inrush) — known-good",
+    "equipment_model_id": null,
+    "system": "electrical",
+    "test_name": "Starter current (inrush)",
+    "expected_json": {
+      "measurements": [
+        {
+          "kind": "current",
+          "channel": 2,
+          "is_todo": true
+        }
+      ]
+    },
+    "source": "manual",
+    "citation": "TODO: needs spec from manual",
+    "data_path": null
+  },
+  {
+    "id": "rw-can-signal-quality",
+    "name": "CAN Bus Signal Quality — known-good",
+    "equipment_model_id": null,
+    "system": "electrical",
+    "test_name": "CAN bus signal quality",
+    "expected_json": {
+      "measurements": [
+        {
+          "kind": "peak_to_peak",
+          "channel": 1,
+          "is_todo": true
+        },
+        {
+          "kind": "duty_cycle",
+          "channel": 1,
+          "is_todo": true
+        }
+      ]
+    },
+    "source": "manual",
+    "citation": "TODO: needs spec from manual",
+    "data_path": null
+  },
+  {
+    "id": "rw-solenoid-current",
+    "name": "Solenoid/Valve Current — known-good",
+    "equipment_model_id": null,
+    "system": "hydraulic",
+    "test_name": "Solenoid/valve current",
+    "expected_json": {
+      "measurements": [
+        {
+          "kind": "current",
+          "channel": 2,
+          "is_todo": true
+        },
+        {
+          "kind": "rise_time",
+          "channel": 2,
+          "is_todo": true
+        }
+      ]
+    },
+    "source": "manual",
+    "citation": "TODO: needs spec from manual",
+    "data_path": null
+  }
+]

@@ -30,6 +30,28 @@
                     <SolidColorBrush x:Key="AppFocusBorderBrush" Color="#2E3391" />
                     <SolidColorBrush x:Key="AppSubtleBorderBrush" Color="#D6D6D6" />
                     <SolidColorBrush x:Key="AppRowAltBrush" Color="#F5F7FC" />
+                    <SolidColorBrush x:Key="SimBadgeBackgroundBrush" Color="#FFF4CE" />
+                    <SolidColorBrush x:Key="SimBadgeBorderBrush" Color="#9D5D00" />
+                    <SolidColorBrush x:Key="SimBadgeTextBrush" Color="#5C3600" />
+                    <SolidColorBrush x:Key="RealBadgeBackgroundBrush" Color="#DFF6DD" />
+                    <SolidColorBrush x:Key="RealBadgeBorderBrush" Color="#0F7B0F" />
+                    <SolidColorBrush x:Key="RealBadgeTextBrush" Color="#0A520A" />
+                    <SolidColorBrush x:Key="AiSuggestionBadgeBackgroundBrush" Color="#EBF0FF" />
+                    <SolidColorBrush x:Key="AiSuggestionBadgeBorderBrush" Color="#2E3391" />
+                    <SolidColorBrush x:Key="AiSuggestionBadgeTextBrush" Color="#1F246B" />
+                    <SolidColorBrush x:Key="SafetyWarningBannerBackgroundBrush" Color="#FDE7E9" />
+                    <SolidColorBrush x:Key="SafetyWarningBannerBorderBrush" Color="#C42B1C" />
+                    <SolidColorBrush x:Key="SafetyWarningBannerTextBrush" Color="#8A1C12" />
+                    <SolidColorBrush x:Key="ScopeGridBackgroundBrush" Color="#FAFAFA" />
+                    <SolidColorBrush x:Key="ScopeGridLineBrush" Color="#DCDCDC" />
+                    <SolidColorBrush x:Key="ScopeGridZeroLineBrush" Color="#B0B0B0" />
+                    <SolidColorBrush x:Key="ScopeChannel1Brush" Color="#1E56C9" />
+                    <SolidColorBrush x:Key="ScopeChannel2Brush" Color="#C42B1C" />
+                    <SolidColorBrush x:Key="ScopeChannel3Brush" Color="#0F7B0F" />
+                    <SolidColorBrush x:Key="ScopeChannel4Brush" Color="#9D5D00" />
+                    <SolidColorBrush x:Key="ScopeReferenceOverlayBrush" Color="#7A3E9D" />
+                    <SolidColorBrush x:Key="ScopeCursorABrush" Color="#2E3391" />
+                    <SolidColorBrush x:Key="ScopeCursorBBrush" Color="#0F7B0F" />
                     <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="#2E3391" />
                 </ResourceDictionary>
 
@@ -54,23 +76,95 @@
                     <SolidColorBrush x:Key="AppFocusBorderBrush" Color="#8C93F0" />
                     <SolidColorBrush x:Key="AppSubtleBorderBrush" Color="#3D3D3D" />
                     <SolidColorBrush x:Key="AppRowAltBrush" Color="#232533" />
+                    <SolidColorBrush x:Key="SimBadgeBackgroundBrush" Color="#433519" />
+                    <SolidColorBrush x:Key="SimBadgeBorderBrush" Color="#FCE100" />
+                    <SolidColorBrush x:Key="SimBadgeTextBrush" Color="#FCE100" />
+                    <SolidColorBrush x:Key="RealBadgeBackgroundBrush" Color="#1B3B1B" />
+                    <SolidColorBrush x:Key="RealBadgeBorderBrush" Color="#6CCB5F" />
+                    <SolidColorBrush x:Key="RealBadgeTextBrush" Color="#6CCB5F" />
+                    <SolidColorBrush x:Key="AiSuggestionBadgeBackgroundBrush" Color="#22264A" />
+                    <SolidColorBrush x:Key="AiSuggestionBadgeBorderBrush" Color="#8C93F0" />
+                    <SolidColorBrush x:Key="AiSuggestionBadgeTextBrush" Color="#D6DAFF" />
+                    <SolidColorBrush x:Key="SafetyWarningBannerBackgroundBrush" Color="#3E1D20" />
+                    <SolidColorBrush x:Key="SafetyWarningBannerBorderBrush" Color="#FF99A4" />
+                    <SolidColorBrush x:Key="SafetyWarningBannerTextBrush" Color="#FFCCD2" />
+                    <SolidColorBrush x:Key="ScopeGridBackgroundBrush" Color="#14161E" />
+                    <SolidColorBrush x:Key="ScopeGridLineBrush" Color="#2C3040" />
+                    <SolidColorBrush x:Key="ScopeGridZeroLineBrush" Color="#484E66" />
+                    <SolidColorBrush x:Key="ScopeChannel1Brush" Color="#60A5FA" />
+                    <SolidColorBrush x:Key="ScopeChannel2Brush" Color="#FF8080" />
+                    <SolidColorBrush x:Key="ScopeChannel3Brush" Color="#6CCB5F" />
+                    <SolidColorBrush x:Key="ScopeChannel4Brush" Color="#FCE100" />
+                    <SolidColorBrush x:Key="ScopeReferenceOverlayBrush" Color="#D099FF" />
+                    <SolidColorBrush x:Key="ScopeCursorABrush" Color="#8C93F0" />
+                    <SolidColorBrush x:Key="ScopeCursorBBrush" Color="#6CCB5F" />
                     <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="#8C93F0" />
+                </ResourceDictionary>
+
+                <!-- HighContrast / Sunlight Mode (ARCHITECTURE.md §5.3) -->
+                <ResourceDictionary x:Key="HighContrast">
+                    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="AppSurfaceBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="AppToolbarBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="AppRailBrush" Color="#1E2FB8" />
+                    <SolidColorBrush x:Key="AppRailTextBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#1A1A1A" />
+                    <SolidColorBrush x:Key="AppAccentBrush" Color="#1E2FB8" />
+                    <SolidColorBrush x:Key="AppAccentHoverBrush" Color="#16228A" />
+                    <SolidColorBrush x:Key="AppOnAccentTextBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="AppSuccessBrush" Color="#007100" />
+                    <SolidColorBrush x:Key="AppWarningBrush" Color="#8A5200" />
+                    <SolidColorBrush x:Key="AppDangerBrush" Color="#B30000" />
+                    <SolidColorBrush x:Key="DtcActiveBrush" Color="#B30000" />
+                    <SolidColorBrush x:Key="DtcPendingBrush" Color="#1E2FB8" />
+                    <SolidColorBrush x:Key="DtcStoredBrush" Color="#1A1A1A" />
+                    <SolidColorBrush x:Key="AppFocusBorderBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="AppSubtleBorderBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="AppRowAltBrush" Color="#EEF1FF" />
+                    <SolidColorBrush x:Key="SimBadgeBackgroundBrush" Color="#FFF4CE" />
+                    <SolidColorBrush x:Key="SimBadgeBorderBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="SimBadgeTextBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="RealBadgeBackgroundBrush" Color="#DFF6DD" />
+                    <SolidColorBrush x:Key="RealBadgeBorderBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="RealBadgeTextBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="AiSuggestionBadgeBackgroundBrush" Color="#EEF1FF" />
+                    <SolidColorBrush x:Key="AiSuggestionBadgeBorderBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="AiSuggestionBadgeTextBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="SafetyWarningBannerBackgroundBrush" Color="#FFE5E5" />
+                    <SolidColorBrush x:Key="SafetyWarningBannerBorderBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="SafetyWarningBannerTextBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="ScopeGridBackgroundBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ScopeGridLineBrush" Color="#666666" />
+                    <SolidColorBrush x:Key="ScopeGridZeroLineBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="ScopeChannel1Brush" Color="#1E2FB8" />
+                    <SolidColorBrush x:Key="ScopeChannel2Brush" Color="#B30000" />
+                    <SolidColorBrush x:Key="ScopeChannel3Brush" Color="#007100" />
+                    <SolidColorBrush x:Key="ScopeChannel4Brush" Color="#8A5200" />
+                    <SolidColorBrush x:Key="ScopeReferenceOverlayBrush" Color="#5A008A" />
+                    <SolidColorBrush x:Key="ScopeCursorABrush" Color="#1E2FB8" />
+                    <SolidColorBrush x:Key="ScopeCursorBBrush" Color="#007100" />
+                    <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="#1E2FB8" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
             <FontFamily x:Key="AppFontFamily">Segoe UI Variable, Segoe UI</FontFamily>
             <FontFamily x:Key="IconFontFamily">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+            <FontFamily x:Key="MonoFontFamily">Cascadia Mono, Consolas, Courier New</FontFamily>
 
             <x:Double x:Key="MinTouchSize">44</x:Double>
             <Thickness x:Key="TouchButtonPadding">12,8</Thickness>
             <Thickness x:Key="ToolbarButtonMargin">2,2</Thickness>
             <CornerRadius x:Key="AppCornerRadius">6</CornerRadius>
             <CornerRadius x:Key="CardCornerRadius">8</CornerRadius>
+            <CornerRadius x:Key="BadgeCornerRadius">4</CornerRadius>
 
+            <x:Double x:Key="FontSizeBadge">10</x:Double>
             <x:Double x:Key="FontSizeSmall">12</x:Double>
             <x:Double x:Key="FontSizeBody">14</x:Double>
             <x:Double x:Key="FontSizeSubtitle">16</x:Double>
             <x:Double x:Key="FontSizeHeader">20</x:Double>
+            <x:Double x:Key="FontSizeMeterValue">28</x:Double>
 
             <Style x:Key="ToolbarButtonStyle" TargetType="Button">
                 <Setter Property="MinWidth" Value="54" />
@@ -120,6 +214,17 @@
                 <Setter Property="CornerRadius" Value="{StaticResource AppCornerRadius}" />
                 <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
                 <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+            </Style>
+
+            <Style x:Key="VcrTransportButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="{StaticResource MinTouchSize}" />
+                <Setter Property="MinWidth" Value="{StaticResource MinTouchSize}" />
+                <Setter Property="Padding" Value="10,8" />
+                <Setter Property="CornerRadius" Value="{StaticResource AppCornerRadius}" />
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+                <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
             </Style>
         </ResourceDictionary>
     </Application.Resources>

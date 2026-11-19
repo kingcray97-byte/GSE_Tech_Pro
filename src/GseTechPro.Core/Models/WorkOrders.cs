@@ -5,6 +5,9 @@ namespace GseTechPro.Core.Models;
 /// <summary>One per equipment/vehicle visit (Shop Foreman Pro "event file"). Table: work_orders.</summary>
 public sealed record WorkOrder : EntityBase
 {
+    /// <summary>Human-readable work-order number (e.g. "004471"). Null for pre-numbering rows.</summary>
+    public string? Number { get; init; }
+
     public string AssetId { get; init; } = "";
     public string? TechnicianId { get; init; }
     public WorkOrderStatus Status { get; init; } = WorkOrderStatus.Open;

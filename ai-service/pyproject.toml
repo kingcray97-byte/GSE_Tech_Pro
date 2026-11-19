@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-service"
+version = "0.3.0"
+description = "GSE Tech Pro local AI service (FastAPI on 127.0.0.1): technician chat, manual RAG, ingestion, tools. Offline only."
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "litellm>=1.40",
+    "httpx>=0.27",
+    "pydantic>=2.6",
+    "sqlite-vec>=0.1.6",
+    "pypdf>=4.0",
+    "pyyaml>=6.0",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[project.scripts]
+gse-ai = "app.main:main"
+
+[tool.setuptools]
+# Import roots shipped with the service. rag/ and ingest/ are owned by rag-ingest; app/ and tools/ by ai-engineer.
+packages = ["app", "tools", "rag", "ingest"]
+
+[tool.setuptools.package-data]
+app = ["config.yaml"]
+
+[tool.pytest.ini_options]
+# Lets `rag`, `ingest`, `app`, `tools` import when pytest runs from ai-service/.
+pythonpath = ["."]

@@ -1,0 +1,130 @@
+[
+  {
+    "id": "sym-engine-no-crank",
+    "code": "ENG_NO_CRANK",
+    "name": "Engine will not crank",
+    "category": "engine",
+    "system": "Engine / Starting",
+    "description": "Operator says: 'Turn the key and nothing happens,' 'just a click,' or 'the starter will not spin.' Use this when the starter does not rotate the engine; do not confuse it with an engine that cranks but does not fire."
+  },
+  {
+    "id": "sym-engine-no-start",
+    "code": "ENG_CRANK_NO_START",
+    "name": "Engine cranks but will not start",
+    "category": "engine",
+    "system": "Engine / Combustion",
+    "description": "Starter turns the engine normally or nearly normally, but it will not fire and run. Operators may say 'it turns over but won't start.' Starting speed, fuel, spark or diesel combustion, air, and immobilizer/interlock status still need separation."
+  },
+  {
+    "id": "sym-engine-stalls",
+    "code": "ENG_STALLS",
+    "name": "Engine starts then stalls",
+    "category": "engine",
+    "system": "Engine / Combustion",
+    "description": "Engine fires but dies immediately, at idle, after warming, or when a load is applied. Record when it happens, whether it restarts, and whether an alarm or interlock is active."
+  },
+  {
+    "id": "sym-engine-low-power",
+    "code": "ENG_LOW_POWER",
+    "name": "Engine lacks power or bogs down",
+    "category": "engine",
+    "system": "Engine / Performance",
+    "description": "Operators report 'no power,' 'bogs down,' 'won't pull,' or weak operation under drive or hydraulic load. Note load, engine speed, temperature, recent service, and whether the complaint is actually a drivetrain or hydraulic problem."
+  },
+  {
+    "id": "sym-engine-overheats",
+    "code": "ENG_OVERHEATS",
+    "name": "Engine runs hot or overheats",
+    "category": "engine",
+    "system": "Engine / Cooling",
+    "description": "High temperature indication, coolant boiling, repeated hot shutdown, or operator says 'runs hot.' Stop for an overheat warning; do not open a hot cooling system. Record gauge reading, ambient conditions, coolant level evidence, and load."
+  },
+  {
+    "id": "sym-hydraulic-no-lift",
+    "code": "HYD_NO_LIFT",
+    "name": "Conveyor or loading head will not lift",
+    "category": "hydraulic",
+    "system": "Hydraulic / Lift",
+    "description": "Operator commands raise and the affected conveyor or loading head does not move, tries to move without rising, or lifts only with assistance. Identify which end or cylinder is affected and whether the pump runs."
+  },
+  {
+    "id": "sym-hydraulic-slow-lift",
+    "code": "HYD_SLOW_LIFT",
+    "name": "Conveyor or loading head lifts slowly",
+    "category": "hydraulic",
+    "system": "Hydraulic / Lift",
+    "description": "Lift motion occurs but is slower than normal, labors, pauses, or becomes slower warm or under load. Record loaded versus unloaded behavior, pump sound, oil condition, and whether lowering is normal."
+  },
+  {
+    "id": "sym-hydraulic-drifts-down",
+    "code": "HYD_DRIFTS_DOWN",
+    "name": "Conveyor or loading head drifts down",
+    "category": "hydraulic",
+    "system": "Hydraulic / Lift Holding",
+    "description": "A raised conveyor or loading head settles, creeps, or will not hold position after the control is released. Keep people clear and use the specified mechanical safety props; do not rely on a check valve or trapped oil for access."
+  },
+  {
+    "id": "sym-hydraulic-low-pressure",
+    "code": "HYD_LOW_PRESSURE",
+    "name": "Low hydraulic pressure",
+    "category": "hydraulic",
+    "system": "Hydraulic / Pressure Supply",
+    "description": "A measured pressure is below the applicable manual specification, or several hydraulic functions are weak. Preserve the actual reading, test port, oil temperature, command, and operating speed so it can be compared with the correct specification."
+  },
+  {
+    "id": "sym-hydraulic-noisy-pump",
+    "code": "HYD_PUMP_NOISE",
+    "name": "Hydraulic pump whines, rattles, or cavitates",
+    "category": "hydraulic",
+    "system": "Hydraulic / Pump and Inlet",
+    "description": "New or excessive pump whine, rattling, aerated oil, or a pump that becomes noisy during lift. Common operator wording is 'the pump is screaming.' Check level, inlet restriction and aeration before condemning the pump."
+  },
+  {
+    "id": "sym-hydraulic-leak",
+    "code": "HYD_EXTERNAL_LEAK",
+    "name": "Hydraulic oil leak",
+    "category": "hydraulic",
+    "system": "Hydraulic / Hoses and Seals",
+    "description": "Oil is seen on the machine, ground, hose, fitting, valve, or cylinder rod. Operators may report 'dripping oil' or 'wet around the ram.' Do not search by hand near a pressurized leak; record location and clean the area only after isolating pressure."
+  },
+  {
+    "id": "sym-charging-ripple",
+    "code": "ELEC_CHARGING_RIPPLE",
+    "name": "Charging ripple or unstable voltage",
+    "category": "electrical",
+    "system": "Electrical / Charging",
+    "description": "Lights flicker, a gauge pulses, accessories behave erratically while charging, or ripple was observed on a scope/meter. Save DC voltage and AC ripple evidence with engine/load conditions; a meter average alone does not prove alternator health."
+  },
+  {
+    "id": "sym-battery-discharges",
+    "code": "ELEC_BATTERY_DISCHARGES",
+    "name": "Battery repeatedly goes dead",
+    "category": "electrical",
+    "system": "Electrical / Battery and Charging",
+    "description": "Battery is flat after sitting or after normal use, requires repeated jumps or charging, or operator says 'it won't stay charged.' Separate a weak battery, charging fault, parasitic draw, poor connections, and repeated deep discharge."
+  },
+  {
+    "id": "sym-charging-low",
+    "code": "ELEC_NOT_CHARGING",
+    "name": "Not charging or low charging voltage",
+    "category": "electrical",
+    "system": "Electrical / Charging",
+    "description": "Charge warning indication, voltage does not rise as expected after starting, or measured charging performance is outside the manual specification. Record battery rest voltage, running voltage, engine speed, and electrical loads before replacing the alternator."
+  },
+  {
+    "id": "sym-electrical-intermittent",
+    "code": "ELEC_INTERMITTENT",
+    "name": "Electrical power cuts out intermittently",
+    "category": "electrical",
+    "system": "Electrical / Power Distribution",
+    "description": "Dash, controls, pump, or the whole machine loses power randomly, over bumps, or when connectors are disturbed. Record what remains powered and inspect for loose power/ground connections before using a parts-replacement approach."
+  },
+  {
+    "id": "sym-starter-slow-crank",
+    "code": "ELEC_SLOW_CRANK",
+    "name": "Starter cranks slowly",
+    "category": "electrical",
+    "system": "Electrical / Starting",
+    "description": "Starter turns the engine slower than normal, drags, or labors with a sluggish sound. Operators may say 'barely turns over.' Battery charge, battery condition, positive and ground voltage drop, and mechanical drag must be separated."
+  }
+]

@@ -218,6 +218,25 @@ public class SimulatorTests : IAsyncLifetime
         Assert.NotEmpty(frame.Pids);
     }
 
+    [Fact]
+    public async Task SimulatorAdapterAndValues_ReportIsSimulated()
+    {
+        await _adapter!.ConnectAsync();
+
+        // Adapter itself must report simulated
+        Assert.True(_adapter.IsSimulated);
+
+        // All live-data values from the simulator must be marked simulated
+        var pids = new[] { "Engine Speed", "Battery Voltage" };
+        var values = await _adapter.ReadLiveDataAsync(pids);
+        Assert.All(values, v => Assert.True(v.IsSimulated));
+
+        // All DTC readouts from the simulator must be marked simulated
+        var dtcs = await _adapter.ReadDTCsAsync();
+        Assert.NotEmpty(dtcs);
+        Assert.All(dtcs, d => Assert.True(d.IsSimulated));
+    }
+
     [Theory]
     [InlineData(ProtocolType.J1939)]
     [InlineData(ProtocolType.J1708)]

@@ -4,6 +4,7 @@ using GseTechPro.Core.Contracts;
 using GseTechPro.Core.Enums;
 using GseTechPro.Core.Models;
 using GseTechPro.Core.Units;
+using GseTechPro.Devices.Protocols;
 
 namespace GseTechPro.Devices;
 
@@ -15,8 +16,11 @@ namespace GseTechPro.Devices;
 ///
 /// Behavior:
 /// <list type="bullet">
-/// <item>Reproducible: values are a slow sine (or ramp) plus seeded noise, keyed by a tick counter
-/// so the sequence is the same for a given <c>seed</c> across runs.</item>
+/// <item>Reproducible: streaming values are a slow sine (or ramp) plus seeded noise, keyed by a tick
+/// counter so the sequence is the same for a given <c>seed</c> across runs. One-shot reads
+/// (<c>ReadLiveDataAsync</c>/<c>ReadFreezeFrameAsync</c>) are deterministic per <c>(seed, pid)</c> —
+/// they use their own seed-derived noise and a fixed sample time, so they never depend on stream
+/// timing.</item>
 /// <item>Async-honest: connect/stream use <c>Task.Delay</c>/<c>PeriodicTimer</c> and never block;
 /// the streaming loop runs on a background task and honors a cancellation token.</item>
 /// <item>Canonical SI units: pressure → Pa, temperature → °C, voltage → V, flow → L/min
@@ -27,6 +31,13 @@ namespace GseTechPro.Devices;
 public sealed class SimulatedDiagnosticAdapter : IDiagnosticAdapter
 {
     private const double SamplePeriodSeconds = 0.1;
+
+    /// <summary>
+    /// Fixed sample time (seconds) used by one-shot reads (<see cref="ReadLiveDataAsync"/> and
+    /// <see cref="ReadFreezeFrameAsync"/>). Kept at zero so a read's wave value is a stable snapshot
+    /// rather than advancing with the streaming tick counter.
+    /// </summary>
+    private const double ReadSampleTimeSeconds = 0.0;
 
     private static readonly ProtocolType[] SimulatedProtocols =
     {
@@ -39,11 +50,18 @@ public sealed class SimulatedDiagnosticAdapter : IDiagnosticAdapter
     private readonly int _seed;
     private readonly IReadOnlyList<SimPid> _pids;
 
+    // Stream RNG: consumed only by the background StreamLoopAsync for per-tick PID noise. The
+    // one-shot read path (ReadLiveDataAsync / ReadFreezeFrameAsync) never touches this, so a read's
+    // value cannot depend on how many stream ticks have already consumed NextDouble().
     private readonly object _randomLock = new();
     private Random _random;
 
+    // Deterministic noise for the one-shot read path, indexed by PID position in _pids. Derived once
+    // from (seed, pidIndex) so reads are reproducible per seed and independent of stream timing.
+    private readonly double[] _readNoiseUnits;
+
     private volatile bool _connected;
-    private long _tick;              // simulation sample counter; SimTimeSeconds = _tick * SamplePeriodSeconds
+    private long _tick;              // simulation sample counter; stream time seconds = _tick * SamplePeriodSeconds
     private bool _cleared;           // set by ClearDTCsAsync (active/pending codes suppressed)
 
     private CancellationTokenSource? _streamCts;
@@ -61,6 +79,7 @@ public sealed class SimulatedDiagnosticAdapter : IDiagnosticAdapter
         _seed = seed;
         _random = new Random(seed);
         _pids = BuildPids(protocol);
+        _readNoiseUnits = BuildReadNoiseUnits(seed, _pids.Count);
         Name = protocol switch
         {
             ProtocolType.J1939 => "Simulator (J1939)",
@@ -74,6 +93,9 @@ public sealed class SimulatedDiagnosticAdapter : IDiagnosticAdapter
 
     /// <inheritdoc />
     public bool IsConnected => _connected;
+
+    /// <inheritdoc />
+    public bool IsSimulated => true;
 
     /// <inheritdoc />
     public IReadOnlyList<ProtocolType> SupportedProtocols => SimulatedProtocols;
@@ -152,9 +174,15 @@ public sealed class SimulatedDiagnosticAdapter : IDiagnosticAdapter
     public Task<IReadOnlyList<PidValue>> ReadLiveDataAsync(IReadOnlyList<string> pidNames, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var selected = SelectPids(pidNames);
-        var t = SimTimeSeconds;
-        var values = selected.Select(p => BuildPidValue(p, t)).ToList();
+        var wanted = BuildNameFilter(pidNames);
+        var values = new List<PidValue>();
+        for (int i = 0; i < _pids.Count; i++)
+        {
+            var pid = _pids[i];
+            if (wanted is not null && !wanted.Contains(pid.Name))
+                continue;
+            values.Add(BuildReadPidValue(pid, i));
+        }
         return Task.FromResult<IReadOnlyList<PidValue>>(values);
     }
 
@@ -162,12 +190,15 @@ public sealed class SimulatedDiagnosticAdapter : IDiagnosticAdapter
     public Task<FreezeFrameData?> ReadFreezeFrameAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var t = SimTimeSeconds;
         var names = FreezeFrameNames;
-        var pids = _pids
-            .Where(p => names.Contains(p.Name))
-            .Select(p => BuildPidValue(p, t))
-            .ToList();
+        var pids = new List<PidValue>();
+        for (int i = 0; i < _pids.Count; i++)
+        {
+            var pid = _pids[i];
+            if (!names.Contains(pid.Name))
+                continue;
+            pids.Add(BuildReadPidValue(pid, i));
+        }
         return Task.FromResult<FreezeFrameData?>(new FreezeFrameData { CapturedAt = Clock.UtcNow, Pids = pids });
     }
 
@@ -186,16 +217,12 @@ public sealed class SimulatedDiagnosticAdapter : IDiagnosticAdapter
     /// <inheritdoc />
     public event EventHandler<LiveDataUpdateEventArgs>? LiveDataReceived;
 
-    /// <summary>Current simulated time in seconds (deterministic: tick counter × sample period).</summary>
-    private double SimTimeSeconds => Interlocked.Read(ref _tick) * SamplePeriodSeconds;
-
-    private IReadOnlyList<SimPid> SelectPids(IReadOnlyList<string> pidNames)
+    private static HashSet<string>? BuildNameFilter(IReadOnlyList<string> pidNames)
     {
         if (pidNames is null || pidNames.Count == 0)
-            return _pids;
+            return null; // null => the adapter's full default set
 
-        var wanted = pidNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return _pids.Where(p => wanted.Contains(p.Name)).ToList();
+        return pidNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     private async Task StreamLoopAsync(CancellationToken ct)
@@ -240,12 +267,34 @@ public sealed class SimulatedDiagnosticAdapter : IDiagnosticAdapter
 
     private PidValue BuildPidValue(SimPid pid, double t)
     {
-        var raw = ComputeValue(pid, t);
-        var value = Math.Round(raw, pid.Decimals, MidpointRounding.AwayFromZero);
-        return new PidValue { Name = pid.Name, Value = value, Unit = pid.Unit, Timestamp = Clock.UtcNow };
+        // Stream path: pull the next noise sample from the shared stream RNG (under the lock).
+        double noiseUnit = 0;
+        if (pid.NoiseAmplitude > 0)
+        {
+            lock (_randomLock)
+                noiseUnit = _random.NextDouble();
+        }
+
+        return BuildPidValue(pid, t, noiseUnit);
     }
 
-    private double ComputeValue(SimPid pid, double t)
+    /// <summary>
+    /// One-shot read path: value at a fixed sample time with noise derived deterministically from
+    /// <c>(seed, pidIndex)</c>. Deliberately does not consult the streaming tick counter or the
+    /// stream RNG, so a read is reproducible for a given seed no matter how many stream ticks have
+    /// elapsed (or whether streaming is running at all).
+    /// </summary>
+    private PidValue BuildReadPidValue(SimPid pid, int pidIndex) =>
+        BuildPidValue(pid, ReadSampleTimeSeconds, _readNoiseUnits[pidIndex]);
+
+    private static PidValue BuildPidValue(SimPid pid, double t, double noiseUnit)
+    {
+        var raw = ComputeValue(pid, t, noiseUnit);
+        var value = Math.Round(raw, pid.Decimals, MidpointRounding.AwayFromZero);
+        return new PidValue { Name = pid.Name, Value = value, Unit = pid.Unit, Timestamp = Clock.UtcNow, IsSimulated = true };
+    }
+
+    private static double ComputeValue(SimPid pid, double t, double noiseUnit)
     {
         double v = pid.Wave switch
         {
@@ -255,24 +304,37 @@ public sealed class SimulatedDiagnosticAdapter : IDiagnosticAdapter
         };
 
         if (pid.NoiseAmplitude > 0)
-        {
-            double noise;
-            lock (_randomLock)
-                noise = (_random.NextDouble() - 0.5) * pid.NoiseAmplitude;
-            v += noise;
-        }
+            v += (noiseUnit - 0.5) * pid.NoiseAmplitude;
 
         if (pid.Min is double min) v = Math.Max(min, v);
         if (pid.Max is double max) v = Math.Min(max, v);
         return v;
     }
 
-    private IReadOnlyList<DtcReadout> BuildDtcList() => _protocol switch
+    private static double[] BuildReadNoiseUnits(int seed, int count)
+    {
+        var rng = new Random(seed);
+        var units = new double[count];
+        for (int i = 0; i < count; i++)
+            units[i] = rng.NextDouble();
+        return units;
+    }
+
+    private IReadOnlyList<DtcReadout> BuildDtcList() => (_protocol switch
     {
         ProtocolType.J1939 => J1939Dtcs,
         ProtocolType.J1708 => J1708Dtcs,
         _ => Obd2Dtcs,
-    };
+    }).Select(d => d with
+    {
+        // Regenerate the J1939 code string from its structured SPN/FMI fields via the same canonical
+        // formatter the real J1939 decoders use, so simulated and real DTCs share one code format
+        // (data/dtc/README.md §1). J1708/OBD2 literals below are already written in canonical form.
+        Code = d.Protocol == ProtocolType.J1939 && d.Spn is int spn && d.Fmi is int fmi
+            ? DtcCodes.J1939(spn, fmi)
+            : d.Code,
+        IsSimulated = true,
+    }).ToList();
 
     private IReadOnlyList<EcuInfo> BuildEcus() => _protocol switch
     {

@@ -7,15 +7,30 @@ namespace GseTechPro.Data.Migrations;
 /// <summary>Small, forward-only migration runner for embedded, versioned SQL scripts.</summary>
 public sealed class SqliteMigrator
 {
-    public const int LatestVersion = 1;
+    public const int LatestVersion = 6;
+    public const int VectorMigrationVersion = 3;
     private const string InitialMigrationResource = "GseTechPro.Data.Migrations.001_Initial.sql";
+    private const string RecordingsMigrationResource = "GseTechPro.Data.Migrations.002_Recordings.sql";
+    private const string ManualsSearchMigrationResource = "GseTechPro.Data.Migrations.003_ManualsSearch.sql";
+    private const string GseTroubleshootingMigrationResource = "GseTechPro.Data.Migrations.004_GseTroubleshooting.sql";
+    private const string RepairHistoryMigrationResource = "GseTechPro.Data.Migrations.005_RepairHistory.sql";
+    private const string ScopeMigrationResource = "GseTechPro.Data.Migrations.006_Scope.sql";
 
     private static readonly IReadOnlyList<EmbeddedMigration> Migrations =
     [
         new(1, InitialMigrationResource),
+        new(2, RecordingsMigrationResource),
+        new(3, ManualsSearchMigrationResource),
+        new(4, GseTroubleshootingMigrationResource),
+        new(5, RepairHistoryMigrationResource),
+        new(6, ScopeMigrationResource),
     ];
 
     private readonly ISqliteConnectionFactory _connectionFactory;
+    private readonly List<string> _notices = new();
+
+    /// <summary>Non-fatal migration conditions from the most recent MigrateAsync call.</summary>
+    public IReadOnlyList<string> Notices => _notices.ToArray();
 
     public SqliteMigrator(ISqliteConnectionFactory connectionFactory)
     {
@@ -39,7 +54,7 @@ public sealed class SqliteMigrator
         }
 
         var appliedVersions = await ReadAppliedVersionsAsync(connection, cancellationToken).ConfigureAwait(false);
-        return Migrations.Any(m => !appliedVersions.Contains(m.Version));
+        return Enumerable.Range(1, LatestVersion).Any(version => !appliedVersions.Contains(version));
     }
 
     /// <summary>
@@ -48,6 +63,7 @@ public sealed class SqliteMigrator
     /// </summary>
     public async Task<IReadOnlyList<int>> MigrateAsync(CancellationToken cancellationToken = default)
     {
+        _notices.Clear();
         await using var connection = await _connectionFactory.OpenAsync(cancellationToken).ConfigureAwait(false);
 
         await using (var walCommand = connection.CreateCommand())
@@ -86,7 +102,20 @@ public sealed class SqliteMigrator
                 {
                     command.Transaction = transaction;
                     command.CommandText = sql;
-                    await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                    try
+                    {
+                        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (SqliteException ex) when (
+                        migration.Version == VectorMigrationVersion && SqliteVecExtension.IsMissingVec0(ex))
+                    {
+                        // vec0 DDL is the only optional statement. The relational index preceding it
+                        // remains valid, and version 3 is recorded so the migration stays forward-only.
+                        // DatabaseInitializer retries CREATE embeddings whenever the module is present.
+                        _notices.Add(
+                            "sqlite-vec vec0 is unavailable; migration 3 skipped embeddings creation. " +
+                            "Vector search is disabled and FTS5 remains available.");
+                    }
                 }
 
                 await using (var record = connection.CreateCommand())

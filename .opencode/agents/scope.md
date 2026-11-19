@@ -1,7 +1,7 @@
 ---
 description: Oscilloscope engineer. Builds PicoScope (PicoSDK) and Hantek scope support behind one shared interface, the scope screen modeled on the PicoScope 7 Automotive workflow, guided tests, and waveform storage. Use for anything oscilloscope-related.
 mode: subagent
-model: opencode-go/gemini-4-argon
+model: lmstudio/nvidia/nemotron-3-nano-omni
 color: "#CA5010"
 permissions:
   - action: edit

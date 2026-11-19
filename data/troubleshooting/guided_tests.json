@@ -1,0 +1,203 @@
+[
+  {
+    "id": "gt-crank-sensor",
+    "name": "Crank Sensor (CKP) Signal",
+    "equipment_model_id": null,
+    "system": "engine",
+    "description": "Checks for a repeating CKP pulse train during cranking and records fundamental pulse frequency and signal peak-to-peak voltage; this test alone does not prove correct sensor gap or mechanical timing.",
+    "procedure": "1. Read and follow every displayed safety warning before connecting or cranking. Move the unit to an approved service area, park on level ground, apply the parking brake, chock the wheels, and keep people and leads clear of belts, fans, and other moving parts. Do not crank to investigate a fuel leak. 2. Use the engine wiring diagram to identify the CKP sensor type and its signal, sensor-return/ground, and supply pins. With the engine off and the required electrical isolation applied, inspect the sensor connector, harness, and readily visible trigger-wheel condition; do not use this scope test as permission to disturb timing components. 3. Connect the 1x CH1 probe with insulated back-probe adapters. On a powered three-wire sensor, probe the signal pin and connect scope ground to the documented sensor ground. On a two-wire variable-reluctance sensor, follow the manufacturer's connection method; never assume either wire is chassis ground or clip a common-ground scope lead to a floating sensor return. Use the approved differential/isolated method where required. Do not pierce insulation or short adjacent pins. 4. Secure and strain-relieve all leads, then establish the controlled live-crank condition required by the manufacturer, including any approved no-start procedure. Remove only the isolation needed for the test, keep all start interlocks functional, station an assistant at the controls, and do not exceed the manufacturer's cranking or cool-down limits. 5. Apply the guided setup: CH1, DC, 1x, 5 V range, 5 ms/div, 1 MS/s, rising trigger on CH1 at 2.0 V. Arm the scope before a normal START command. Verify a repeatable triggered pulse train and the expected missing-tooth or reference-gap signature when the engine uses that style of trigger wheel; a reference gap is not automatically a dropped sensor pulse. 6. Save a capture that contains several complete cycles, then review frequency and peak_to_peak for CH1. Frequency is the fundamental repetition rate from rising mid-level crossings, not engine rpm unless the tooth count and pulses per revolution are also applied. If the display clips or reports out-of-range, flat-signal, or no-trigger, correct the connection/setup or obtain the appropriate approved setup before using the value. Pulse frequency, voltage acceptance, sensor air gap, and cranking speed are engine-specific: the supplied reference is TODO, so record observations but do not claim a spec-based pass/fail until the correct manual limits are entered. Re-isolate before disconnecting adapters or making repairs.",
+    "safety_warning_ids": [
+      "sw-lockout-tagout",
+      "sw-high-voltage",
+      "sw-moving-machinery",
+      "sw-wheel-chocks",
+      "sw-aircraft-proximity",
+      "sw-fuel-lpg",
+      "sw-hot-surface"
+    ],
+    "reference_waveform_id": "rw-crank-sensor",
+    "scope_setup_json": {
+      "channels": [
+        {
+          "channel": 1,
+          "voltage_range_volts": 5.0,
+          "coupling": "dc",
+          "probe_multiplier": 1.0,
+          "current_scale_amps_per_volt": 0.0
+        }
+      ],
+      "sample_rate_hz": 1000000,
+      "timebase_seconds_per_division": 0.005,
+      "trigger_mode": "rising",
+      "trigger_channel": 1,
+      "trigger_level_volts": 2.0
+    }
+  },
+  {
+    "id": "gt-injector-current",
+    "name": "Injector Current (peak-and-hold)",
+    "equipment_model_id": null,
+    "system": "engine",
+    "description": "Captures one injector's current event and records peak current plus the first clean 10–90% rise time, allowing the peak-and-hold waveform shape to be checked without piercing the circuit.",
+    "procedure": "1. Read and follow every displayed safety warning before opening access panels or commanding the engine. Move the unit to an approved service area, park and chock it, keep clear of rotating and hot components, and stop immediately for a fuel smell or visible leak; never crank an engine to investigate a fuel leak. 2. Identify the exact injector and a conductor that carries only that injector's current from the applicable wiring diagram. Determine whether the driver switches the feed or return, but do not back-probe powered driver terminals unnecessarily. With the engine stopped and electrical isolation applied, inspect the accessible connector and harness and select a straight, accessible single conductor away from rotating parts and hot surfaces. 3. Select the current clamp's 10 A/V output scale, zero it according to its instructions with the jaw closed and away from other magnetic fields, and connect its output to CH2. Clamp around only the selected injector conductor, never around a whole harness or both supply and return together because their fields cancel. Close the jaw fully and orient the clamp arrow so injector current produces a positive trace. Secure the clamp and leads without pulling on terminals. 4. Apply the guided setup: CH2, DC, 10 A/V clamp, 1 V range, 1 ms/div, 1 MS/s, rising trigger on CH2 at 0.5 V. Re-establish only the controlled live-test condition required by the manufacturer, retain every operator and start interlock, and keep clear of fuel-system components and moving machinery. Arm the scope before cranking or running the engine as the approved diagnostic procedure requires. 5. Verify that each capture contains a complete single injection event with a clean initial rising edge, the initial peak, and the subsequent lower hold portion characteristic of a peak-and-hold driver. Do not mistake multi-event overlapping traces for one slow edge. If the pulse is inverted, reorient the clamp and repeat; if it clips or reports no-trigger/out-of-range, stop and correct the setup rather than reading a truncated peak. 6. Save the capture and review current and rise_time on CH2. Current means peak current (maximum clamp-output voltage multiplied by 10 A/V), not average or hold current; rise time is the first clean 10–90% transition of the captured signal. Record engine speed, cranking/running state, injector identifier, battery condition, and temperature with the result. Peak current, hold current, rise-time limits, and permitted test conditions are driver- and injector-specific: the supplied reference is TODO, so do not issue a spec-based pass/fail until those manual values are entered. Restore isolation before removing the clamp or repairing wiring.",
+    "safety_warning_ids": [
+      "sw-lockout-tagout",
+      "sw-high-voltage",
+      "sw-moving-machinery",
+      "sw-wheel-chocks",
+      "sw-aircraft-proximity",
+      "sw-fuel-lpg",
+      "sw-hot-surface"
+    ],
+    "reference_waveform_id": "rw-injector-current",
+    "scope_setup_json": {
+      "channels": [
+        {
+          "channel": 2,
+          "voltage_range_volts": 1.0,
+          "coupling": "dc",
+          "probe_multiplier": 1.0,
+          "current_scale_amps_per_volt": 10.0
+        }
+      ],
+      "sample_rate_hz": 1000000,
+      "timebase_seconds_per_division": 0.001,
+      "trigger_mode": "rising",
+      "trigger_channel": 2,
+      "trigger_level_volts": 0.5
+    }
+  },
+  {
+    "id": "gt-alternator-ripple",
+    "name": "Alternator Ripple",
+    "equipment_model_id": null,
+    "system": "electrical",
+    "description": "Measures charging-system AC ripple directly at the battery as AC RMS and records its fundamental repetition frequency under documented speed and electrical-load conditions.",
+    "procedure": "1. Read and follow every displayed safety warning before connecting or starting the engine. Move the unit to an approved service area, park and chock it, keep loose clothing and leads clear of belts and fans, and allow hot components to cool enough for safe access. Do not disconnect a battery cable while the engine or charging system is running. 2. With the engine stopped and the required electrical isolation applied, inspect battery posts, main B+ and ground connections, alternator wiring, and accessible drive-belt condition first. Verify that the battery is secured and that the charging complaint is not explained by a loose or damaged connection. Identify the actual battery posts rather than choosing a remote chassis point for convenience. 3. Connect CH1 with a 1x probe and intact rated leads directly across the starting-battery posts: probe tip to battery positive and scope ground to battery negative. Support the leads so they cannot fall into the belt, fan, or terminals. Confirm that the scope and accessories are approved for this grounded battery connection; never attach a common-ground clip to battery positive or alternator B+. 4. Apply the guided setup: CH1, AC, 1x, 1 V range, 10 ms/div, 100 kS/s, rising trigger on CH1 at 0.05 V. AC coupling intentionally removes the DC charging level, so the saved scope numbers from this test are not a charging-voltage measurement. Re-establish the controlled running condition and use only the manufacturer's specified engine speed, warm-up state, battery condition, and switched electrical loads. If those conditions are not available, document the actual conditions and retain the capture as an observation rather than claiming a specification comparison. 5. Verify a stable repeated ripple trace without clipping, disconnected-lead noise, or trigger dropouts. Keep the same connected loads throughout the saved capture and record engine speed and load states. Check the physical connections and stop the test if a terminal, lead, belt, or connection overheats or the charging system behaves abnormally. 6. Save the capture and review ripple and frequency on CH1. Ripple is AC RMS of the mean-subtracted waveform, not peak-to-peak voltage; do not compare a Vpp result to an AC-RMS limit. Frequency is the fundamental ripple repetition rate, not alternator shaft rpm. Ripple acceptance, frequency expectations, and valid speed/load conditions are model-specific: the supplied reference is TODO, so record values but do not claim pass/fail until the correct manual criteria are entered. Shut down and restore isolation before disconnecting leads or making repairs.",
+    "safety_warning_ids": [
+      "sw-lockout-tagout",
+      "sw-high-voltage",
+      "sw-moving-machinery",
+      "sw-wheel-chocks",
+      "sw-aircraft-proximity",
+      "sw-hot-surface"
+    ],
+    "reference_waveform_id": "rw-alternator-ripple",
+    "scope_setup_json": {
+      "channels": [
+        {
+          "channel": 1,
+          "voltage_range_volts": 1.0,
+          "coupling": "ac",
+          "probe_multiplier": 1.0,
+          "current_scale_amps_per_volt": 0.0
+        }
+      ],
+      "sample_rate_hz": 100000,
+      "timebase_seconds_per_division": 0.01,
+      "trigger_mode": "rising",
+      "trigger_channel": 1,
+      "trigger_level_volts": 0.05
+    }
+  },
+  {
+    "id": "gt-starter-current",
+    "name": "Starter Current (inrush)",
+    "equipment_model_id": null,
+    "system": "electrical",
+    "description": "Captures starter main-cable current during a normal START command and reports the highest instantaneous peak current, including inrush, rather than average cranking draw.",
+    "procedure": "1. Read and follow every displayed safety warning before handling the starter cable or commanding START. Move the unit to an approved service area, park on level ground, apply the parking brake, chock the wheels, verify the transmission/service position, and keep everyone clear of travel paths, fans, belts, and hot parts. Remove jewelry and prevent accidental shorts across the battery or starter terminals. Never bypass neutral-start, operator-presence, or other interlocks. 2. Before live testing, inspect the battery hold-down, terminals, starter B+ cable, engine/battery ground straps, and accessible starter connections for looseness, corrosion, heat damage, or broken strands. Confirm battery condition using the manufacturer's approved checks; a high-current capture does not replace battery, voltage-drop, or starter-control diagnosis. With electrical isolation applied, identify a straight accessible portion of the starter main B+ cable where a clamp can close fully without touching adjacent terminals or moving parts. 3. Select the clamp's 100 A/V output scale, zero it with the jaw closed as directed by the clamp manufacturer, and connect it to CH2. Clamp around the starter main B+ cable only, never around both positive and negative cables or the complete main harness. Orient the arrow toward the starter so the current pulse is positive, close and secure the jaw, and route every lead away from rotating and hot parts. 4. Apply the guided setup: CH2, DC, 100 A/V clamp, 1 V range, 100 ms/div, 100 kS/s, rising trigger on CH2 at 0.2 V. The ten-division screen covers one second. Re-establish only the controlled start condition, confirm the unit cannot move, arm the scope, and have an assistant make one normal START command. Do not extend cranking or repeat starts beyond the manufacturer's cranking and cool-down limits, and do not crank to investigate a fuel leak. 5. Verify that the trace begins before starter engagement and captures the complete initial inrush peak followed by the cranking-current portion without a flat clipped top. If the clamp output exceeds the 1 V input range or the scope reports out-of-range, stop: the maximum is not a valid inrush value. Obtain the manufacturer-approved higher-range probe/setup and document any setup deviation instead of judging a saturated capture. 6. Save the capture and review current on CH2. Current is the maximum clamp-output voltage multiplied by 100 A/V; it is peak current, not RMS, hold current, or average crank current. Note battery type/condition, temperature, start duration, and whether the engine actually rotated. Starter inrush and steady-crank limits, clamp range, cranking duration, and ambient/test conditions are model-specific: the supplied reference is TODO, so no spec-based pass/fail is justified until the manual criteria are entered. Shut down and restore isolation before removing the clamp or repairing cables.",
+    "safety_warning_ids": [
+      "sw-lockout-tagout",
+      "sw-high-voltage",
+      "sw-moving-machinery",
+      "sw-wheel-chocks",
+      "sw-aircraft-proximity",
+      "sw-fuel-lpg",
+      "sw-hot-surface"
+    ],
+    "reference_waveform_id": "rw-starter-current",
+    "scope_setup_json": {
+      "channels": [
+        {
+          "channel": 2,
+          "voltage_range_volts": 1.0,
+          "coupling": "dc",
+          "probe_multiplier": 1.0,
+          "current_scale_amps_per_volt": 100.0
+        }
+      ],
+      "sample_rate_hz": 100000,
+      "timebase_seconds_per_division": 0.1,
+      "trigger_mode": "rising",
+      "trigger_channel": 2,
+      "trigger_level_volts": 0.2
+    }
+  },
+  {
+    "id": "gt-can-signal-quality",
+    "name": "CAN Bus Signal Quality",
+    "equipment_model_id": null,
+    "system": "electrical",
+    "description": "Checks CAN_H dominant/recessive switching relative to the documented ground and records peak-to-peak voltage and time-above-midlevel duty cycle during normal bus traffic.",
+    "procedure": "1. Read and follow every displayed safety warning before accessing a network connector or waking the equipment. Move the unit to an approved service area, park and chock it, switch off loads, and keep clear of machinery that could move when controllers wake. Use the manufacturer's sleep/wake and powered-test procedure; do not assume the network is dead merely because the dash is dark. 2. Use the serial-specific schematic and connector views to identify CAN_H, the intended signal ground/reference, and an approved test/back-probe point. Do not infer pinout from wire colors or substitute CAN_L for ground. With the required electrical isolation applied, inspect for backed-out pins, corrosion, harness damage, unauthorized splices, and missing or extra aftermarket connections before probing. 3. Connect CH1 with a 1x probe and insulated adapters: probe tip to CAN_H and scope ground only to the ground/reference identified in the schematic. Never short CAN_H to CAN_L, add a termination resistor, or use a piercing probe to obtain a trace. Keep adapters supported so they cannot move between pins or bring the network down. 4. Apply the guided setup: CH1, DC, 1x, 5 V range, 50 µs/div, 20 MS/s, rising trigger on CH1 at 2.5 V. Re-establish only the controlled powered state required for normal network traffic and let the bus reach its normal operating activity without operating unrelated machine functions. Arm the scope and verify distinct recessive and dominant levels, a repeatable rising transition through the trigger level, and complete pulses without clipping. 5. Save a representative capture during documented traffic and review peak_to_peak and duty_cycle on CH1. Duty cycle here is time above the waveform mid-level divided by the complete period; it changes with message content and bus load and must not be assumed to be 50%. This single-ended test does not prove CAN_H/CAN_L differential symmetry, termination resistance, error rate, or message integrity; use the prescribed differential and network tests if those faults remain suspected. 6. Signal levels, duty-cycle acceptance, traffic state, allowable ringing, and controller wake conditions are network-specific: the supplied reference is TODO, so record the waveform and measurements without claiming a spec-based pass/fail until the applicable manual or network-standard criteria are entered. Restore isolation before removing adapters or repairing the harness.",
+    "safety_warning_ids": [
+      "sw-lockout-tagout",
+      "sw-high-voltage",
+      "sw-moving-machinery",
+      "sw-wheel-chocks",
+      "sw-aircraft-proximity"
+    ],
+    "reference_waveform_id": "rw-can-signal-quality",
+    "scope_setup_json": {
+      "channels": [
+        {
+          "channel": 1,
+          "voltage_range_volts": 5.0,
+          "coupling": "dc",
+          "probe_multiplier": 1.0,
+          "current_scale_amps_per_volt": 0.0
+        }
+      ],
+      "sample_rate_hz": 20000000,
+      "timebase_seconds_per_division": 0.00005,
+      "trigger_mode": "rising",
+      "trigger_channel": 1,
+      "trigger_level_volts": 2.5
+    }
+  },
+  {
+    "id": "gt-solenoid-current",
+    "name": "Solenoid/Valve Current",
+    "equipment_model_id": null,
+    "system": "hydraulic",
+    "description": "Captures a solenoid-operated valve coil during a controlled command and records peak current and first clean 10–90% rise time; a current trace alone does not prove spool movement, pressure, or flow.",
+    "procedure": "1. Read and follow every displayed safety warning before accessing the valve or commanding the function. Move the unit to an approved service area, park and chock it, lower and support the conveyor/loading head or other moved assembly as the manufacturer requires, and keep all people clear of pinch and crush points. Identify stored hydraulic pressure and accumulators and isolate/relieve them only by the manufacturer's procedure before disconnecting components near a pressurized circuit. Never loosen a hydraulic fitting to see whether the circuit is pressurized or use a hand to find a leak. 2. Identify the exact hydraulic solenoid coil, its function, and a branch conductor carrying only that coil's current on the serial-specific schematic. Confirm whether the circuit uses simple on/off or PWM control, but do not infer hydraulic operation from the electrical drawing alone. With the machine off and energy isolated, inspect the coil connector and harness for corrosion, pulled terminals, damaged seals, and evidence of overheating. Install any required mechanical safety props before working near a raised assembly. 3. Select the clamp's 10 A/V output scale, zero it with the jaw closed according to the clamp instructions, and connect it to CH2. Clamp around one conductor in the target coil branch, not both feed and return and not a shared manifold harness carrying other loads. Orient the arrow so coil current produces a positive trace, close the jaw completely, and secure the clamp and leads clear of the valve body, linkages, hot surfaces, and moving assemblies. 4. Apply the guided setup: CH2, DC, 10 A/V clamp, 1 V range, 10 ms/div, 100 kS/s, rising trigger on CH2 at 0.5 V. Establish a controlled live-actuation plan with an observer at the controls and a clear work area. Restore only the energy needed for the commanded test, keep all interlocks and emergency stops functional, and never bypass a safety device. Arm the scope before one normal valve command; do not hold a function at relief or repeat movement beyond the manufacturer's procedure. 5. Verify a complete initial coil-current event with a clean first rising edge and no clipping, inverted peak, or overlapping unrelated command. If the hydraulic function moves unexpectedly, stop immediately and make the machine safe by the approved shutdown/isolation procedure. If the scope reports out-of-range or no-trigger, correct the approved setup/connection rather than judging a missing or clipped value. 6. Save the capture and review current and rise_time on CH2. Current is peak current (maximum clamp-output voltage multiplied by 10 A/V), not average or PWM hold current; rise time is the first clean 10–90% transition. Record coil identity, command, supply state, oil temperature, and actual function response. Coil current/rise-time limits and safe command conditions are valve- and controller-specific: the supplied reference is TODO, so do not issue an electrical pass/fail until manual criteria are entered, and do not call the valve hydraulically good from current alone. Restore full isolation and zero stored energy before removing the clamp or opening any hydraulic connection.",
+    "safety_warning_ids": [
+      "sw-hydraulic-stored-pressure",
+      "sw-lockout-tagout",
+      "sw-high-voltage",
+      "sw-moving-machinery",
+      "sw-wheel-chocks",
+      "sw-aircraft-proximity",
+      "sw-hot-surface"
+    ],
+    "reference_waveform_id": "rw-solenoid-current",
+    "scope_setup_json": {
+      "channels": [
+        {
+          "channel": 2,
+          "voltage_range_volts": 1.0,
+          "coupling": "dc",
+          "probe_multiplier": 1.0,
+          "current_scale_amps_per_volt": 10.0
+        }
+      ],
+      "sample_rate_hz": 100000,
+      "timebase_seconds_per_division": 0.01,
+      "trigger_mode": "rising",
+      "trigger_channel": 2,
+      "trigger_level_volts": 0.5
+    }
+  }
+]

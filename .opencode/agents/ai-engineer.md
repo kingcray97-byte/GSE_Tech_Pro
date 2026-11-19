@@ -1,7 +1,7 @@
 ---
 description: Local AI engineer. Builds the Python AI service (FastAPI) using Ollama + LiteLLM with the lfm3-omni model, the technician chat, guided troubleshooting, AI tools/skills, voice (hands-free) and vision (photo inspection). Use for anything involving the AI model, prompts, or AI tools.
 mode: subagent
-model: opencode-go/claude-haiku-5-5
+model: lmstudio/nvidia/nemotron-3-nano-omni
 color: "#C239B3"
 permissions:
   - action: edit

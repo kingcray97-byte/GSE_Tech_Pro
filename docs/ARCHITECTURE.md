@@ -22,18 +22,59 @@ Four long-lived processes, one per responsibility, so that a 32-bit vendor DLL, 
 
 | Process | Runtime | Purpose | Talks to |
 |---|---|---|---|
-| `GseTechPro.App.exe` | WinUI 3 / Windows App SDK, .NET 8, **x64, unpackaged** | UI, orchestration, navigation, state | device host (named pipes), AI service (HTTP), scope (in-proc or host) |
+| `GseTechPro.App.exe` | WinUI 3 / Windows App SDK, .NET 8, **x64, unpackaged** | UI, orchestration, navigation, state | device host (named pipes), AI service (HTTP), scope (in-proc) |
 | `GseTechPro.Devices.Host32.exe` | .NET 8, **x86** | Loads 32-bit J2534/RP1210 vendor DLLs; decodes J1939/J1708/J1587/OBD/UDS; simulator | App (named pipes) |
 | `GseTechPro.AiService` | Python 3.12 (embedded runtime), FastAPI | RAG, ingestion, LiteLLM→Ollama, tools, voice, vision, recommender | App (HTTP 127.0.0.1), Ollama (HTTP 127.0.0.1:11434) |
 | `ollama.exe serve` | Go (installed by setup) | Local model runtime (`lfm3-omni`, `nomic-embed-text`) | AI service (HTTP 127.0.0.1:11434) |
 
-Scope support is the one deliberate deviation from "one process per concern": **PicoSDK is 64-bit and loads in-process** inside `GseTechPro.Scope`. **Hantek's 6074BE SDK DLLs are often 32-bit**; if so, Hantek capture routes through the same 32-bit device host (or a dedicated scope host) rather than forcing a second 32-bit process design. See ADR on device host below.
+Scope support runs **fully in-process, x64** (ADR-011): **PicoSDK is 64-bit** and loads in-process inside `GseTechPro.Scope`, and the **Hantek 6074BE SDK is dual-architecture** (x64 + x86 DLLs/Libs confirmed in `Reference/HT6074BE_SDK/Dll/`, driver `Hantek6000BAMD64.Sys`) so Hantek capture also loads x64 in-process. **No new 32-bit process and no host32 routing for scope.** Vendor scope DLLs are loaded only behind `IScopeDevice` implementations, so the app never touches them. Note: PicoSDK is compiled against the published API but **not exercised against hardware** in Phase 6 (same clean-room pattern as J2534/RP1210); Hantek SDK license + unsigned driver remain "needs verification" (user-installed).
 
 **IPC choices (concrete):**
 
-1. **App ↔ 32-bit device host: named pipes** (`System.IO.Pipes`, duplex, per-session). Request/response for commands (connect, read DTCs, clear codes) and a streaming channel for live data / CAN capture. Framing: length-prefixed binary (little-endian 4-byte length + payload), JSON for control, raw byte arrays for bus/scope streaming. Named pipes beat gRPC here: no HTTP port management, no TLS/HTTP2 stack on a low-power tablet, works in-process under one Windows user session, and is the Windows-native choice for "one local process to another." gRPC is *not* used anywhere — it adds a dependency and a port for zero benefit on a single machine.
+1. **App ↔ 32-bit device host: named pipes** (`System.IO.Pipes`, duplex, per-session). Request/response for commands (connect, read DTCs, clear codes) and a streaming channel for live data / CAN capture. Framing: a **1-byte frame-kind tag + a little-endian 4-byte length + payload** (see §1.1.1): JSON for control, raw byte arrays for bus/scope streaming. Named pipes beat gRPC here: no HTTP port management, no TLS/HTTP2 stack on a low-power tablet, works in-process under one Windows user session, and is the Windows-native choice for "one local process to another." gRPC is *not* used anywhere — it adds a dependency and a port for zero benefit on a single machine.
 2. **App ↔ AI service: local HTTP on `127.0.0.1` only.** FastAPI is HTTP-native and LiteLLM/Ollama are HTTP-native, so this is the path of least resistance. The service binds a fixed port (default `8765`, configurable) and requires a random per-install token in a header (`X-GSE-Token`) as defense-in-depth against other local processes. Never bind `0.0.0.0`.
 3. **AI service ↔ Ollama: HTTP on `127.0.0.1:11434`** (Ollama default). Ollama is configured with `OLLAMA_HOST=127.0.0.1` and `OLLAMA_NO_CLOUD=1` so it never phones home and never exposes the port.
+
+### 1.1.1 App ↔ 32-bit device host — concrete IPC contract (ADR-007)
+
+This is the normative spec for the Phase 2 IPC client (`device-comms`) and the x86 host. It resolves the Phase-1 "who generates the pipe name / how does the app learn it" gap. Wire DTOs and constants live in `src/GseTechPro.Core/Contracts/HostIpcContracts.cs`; the byte framing lives in `GseTechPro.Devices.Ipc` (device-comms) — Core never references `System.IO.Pipes`.
+
+**Pipe-name handoff + per-launch token.** The **app is the orchestrator** and owns the session identity:
+
+- The app generates a per-session pipe name `GseTechPro.Devices.Host32-{guid:N}` (32 lowercase hex chars) **and** a per-launch token of **32 random bytes → 64 lowercase hex chars** (`RandomNumberGenerator.GetBytes(32)` hex-encoded). Both are unique per launch; the host **stops inventing its own name**.
+- The app locates `GseTechPro.Devices.Host32.exe` (same directory as the app, or the installer-chosen `host32\` subfolder — layout owned by `installer-deploy`) and launches it with exactly two arguments: `--pipe <name> --token <token>`.
+- The host reads `--pipe`/`--token` from `args`, binds `NamedPipeServerStream` to `<name>` with `PipeOptions.Asynchronous | CurrentUserOnly`, and **never logs the token**.
+
+**Token handshake.** The first frame after connect is a `hello` (JSON): `{ "type":"hello", "version":1, "token":"<64 hex>", "client":"GseTechPro.App", "clientVersion":"0.2.0" }`. The host compares the token byte-for-byte (constant-time), and on match replies `{ "type":"hello-ack", "accepted":true, "hostVersion":"…" }`. On mismatch/absent/malformed it replies `hello-ack` with `accepted:false, error:"unauthorized"` and **closes the pipe** — no device command is ever dispatched before this succeeds.
+
+**Command protocol (JSON control channel).** A single envelope covers every request/response:
+
+- Request (app → host): `{ "type":"request", "id":"<guid>", "command":"<name>", "params":{…} }`. `id` is a client correlation id echoed back.
+- Response (host → app): `{ "type":"response", "id":"<same guid>", "ok":true, "result":{…} }` or `{ … "ok":false, "error":{ "code":"…", "message":"…", "detail":"…" } }`.
+
+Command set (Phase 2) — name, params, result:
+
+| Command | Params | Result |
+|---|---|---|
+| `list-devices` | — | `{ devices:[{id,name,kind,protocols[],isSimulated}] }` |
+| `connect` | `{ deviceId, protocol? }` | `{ protocol }` |
+| `disconnect` | — | `{ acknowledged:true }` |
+| `read-dtcs` | — | `{ dtcs:[DtcReadout] }` |
+| `clear-dtcs` | — | `{ cleared:int }` |
+| `read-live-data` | `{ pidNames:[] }` | `{ pids:[PidValue] }` |
+| `subscribe-live-data` | `{ pidNames:[], intervalMs:100 }` | `{ streamId }` |
+| `unsubscribe-live-data` | `{ streamId }` | `{ acknowledged:true }` |
+| `read-freeze-frame` | — | `{ freezeFrame: FreezeFrameData\|null }` |
+| `get-vehicle-info` | — | `{ vehicleInfo: VehicleInfo }` |
+| `ping` | — | `{ pong:"pong", uptimeMs }` |
+
+`ping` is the **heartbeat**: the app pings every 10 s (configurable) and treats no response within 30 s as a dead host → reconnect/re-negotiate. Error codes (string, in `HostErrorCodes`): `unauthorized`, `invalid_request`, `unknown_command`, `device_not_found`, `device_not_connected`, `device_error`, `unsupported`, `timeout`, `internal`.
+
+**Concurrency + streaming.** The single duplex pipe carries interleaved responses and pushes; framing makes each self-delimiting. The host runs a reader loop that dispatches commands **and** a writer that pushes `stream` frames; a single lock serializes writes. The app matches responses by `id` and routes `stream` frames by `streamId`.
+
+**Streaming frame types (control vs binary).** Every frame starts with a 1-byte kind tag, then a 4-byte LE length, then the payload (16 MiB cap): `0x01` JSON, `0x02` binary, `0x03` reserved (unused — scope runs x64 in-process, ADR-011; the tag is kept reserved so the framing doesn't churn). Live data (~10 Hz) streams as JSON `stream` frames: `{ "type":"stream", "streamId":"…", "kind":"live-data", "payload":{ "pids":[PidValue] } }`. High-rate CAN capture uses kind `0x02` binary frames whose layout is **declared by a preceding JSON `stream` frame** (`kind:"can"`, `format:{ protocol, idBits }`); the recommended initial CAN record is `int64 timestampMs | uint32 id | u8 dlc | u8 flags | u8[8] data` (24 bytes) — final layout owned by `device-comms` when the decoders land. Phase 2 recording/playback works purely over the structured `live-data` stream, not raw CAN.
+
+**Provenance across the boundary.** Real vs simulated data is carried end-to-end: `IDiagnosticAdapter.IsSimulated` (default `false`; the simulator overrides to `true`), `DeviceInfo.IsSimulated` from `list-devices`, and `PidValue.IsSimulated` / `DtcReadout.IsSimulated` on every value so a simulated reading stays marked simulated even after it crosses the pipe or is replayed from a recording.
 
 **Packaging: unpackaged + Inno Setup (recommendation, ADR-001).** The app is **unpackaged** (self-contained `.exe` with the Windows App SDK bootstrapped/runtime installed by the setup), not MSIX. Rationale:
 
@@ -510,6 +551,7 @@ CREATE TABLE guided_tests (
   description TEXT, procedure TEXT,
   safety_warning_ids TEXT,
   reference_waveform_id TEXT,
+  scope_setup_json TEXT,                  -- ScopeCaptureRequest: channels, timebase, sample rate, trigger (ADR-011 §7)
   created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 );
 
@@ -518,8 +560,8 @@ CREATE TABLE reference_waveforms (        -- known-good, from real captures/manu
   name TEXT NOT NULL,
   equipment_model_id TEXT REFERENCES equipment_models(id),
   system TEXT, test_name TEXT,
-  expected_json TEXT,                     -- numeric expectations (freq, vpp, duty, rise, ripple, current)
-  data_path TEXT NOT NULL,
+  expected_json TEXT,                     -- ReferenceExpectations: named measurements, nominal±tolerance or min/max, unit, is_todo (ADR-011 §5)
+  data_path TEXT NOT NULL,                -- optional known-good .wfm sample to overlay ('' = none)
   source TEXT NOT NULL,                   -- 'manual'|'real_capture' (never synthesized)
   citation TEXT,
   created_at TEXT NOT NULL, updated_at TEXT NOT NULL
@@ -529,16 +571,67 @@ CREATE TABLE waveforms (                  -- a saved scope capture, tied to a wo
   id TEXT PRIMARY KEY,
   work_order_id TEXT NOT NULL REFERENCES work_orders(id),
   scope_device TEXT NOT NULL,             -- 'picoscope'|'hantek'|'simulator'
-  channel_config_json TEXT NOT NULL,
+  channel_config_json TEXT NOT NULL,      -- ScopeChannelConfig[] (JSON array)
   timebase REAL, sample_rate INTEGER, sample_count INTEGER,
-  data_path TEXT NOT NULL,                -- binary samples on disk
+  data_path TEXT NOT NULL,                -- binary samples on disk: waveforms/{id}.wfm (ADR-011 §6)
   guided_test_id TEXT REFERENCES guided_tests(id),
   reference_waveform_id TEXT REFERENCES reference_waveforms(id),
-  measurements_json TEXT,                 -- computed in code: freq, vpp, duty, rise, ripple, current
+  measurements_json TEXT,                 -- ScopeMeasurement[]: computed freq/peak/Vpp/duty/rise/ripple/current + comparison verdicts
   created_at TEXT NOT NULL, deleted_at TEXT
 );
 CREATE INDEX idx_waveforms_wo ON waveforms(work_order_id);
 ```
+
+Waveform persistence and comparison (ADR-011, normative):
+
+- **Samples → binary `.wfm` file, metadata → the `waveforms` row.** `data_path` is relative to the data dir (`waveforms/{id}.wfm` and `reference_waveforms/{id}.wfm`). The file is little-endian: `byte[8]` magic `GSEWAV1\0`, `int32` version `=1`, `int32` channelCount, `int32` sampleCount, `double` sampleRateHz, `double` timebaseSecondsPerDivision, then per channel `int32` channelIndex (1-based) + `sampleCount × double` (probe-corrected volts). No JSON sidecar, no per-sample timestamps.
+- **`measurements_json` = `ScopeMeasurement[]`** (six measurements — frequency/Hz, peak/V, peak-to-peak/V, duty/%, rise/s, ripple/V (AC RMS), current/A — each with a `status` for no-trigger/too-few-samples/out-of-range/flat-signal/not-configured) **plus** the comparison verdicts (`pass`/`fail`/`na` + the expected nominal/tolerance or min/max and unit) when a reference was compared. One column, so comparison is additive — no schema rewrite.
+- **Comparison is deterministic C#** in the scope math engine; the AI only explains the verdict, never judges the raw image or the numbers. `na` = no expectation / `TODO` reference / un-computable measurement / unit mismatch.
+- **Memory:** block capture = `sampleRate × timebase × 10` samples/channel; the screen caps total depth so 4 channels ≤ 4 M samples (32 MB) worst case, written streaming, off the UI thread.
+
+#### Recordings and playback (live-data capture, Phase 2)
+
+```sql
+CREATE TABLE recordings (                  -- one live-data recording session (screens 17/18)
+  id TEXT PRIMARY KEY,
+  work_order_id TEXT NOT NULL REFERENCES work_orders(id),
+  asset_id TEXT REFERENCES assets(id),
+  technician_id TEXT REFERENCES technicians(id),
+  kind TEXT NOT NULL DEFAULT 'live_data',  -- 'live_data' (Phase 2); 'can'/'scope' later
+  source TEXT NOT NULL DEFAULT 'real',     -- provenance: 'simulated' | 'real'
+  adapter_name TEXT NOT NULL,              -- device name at capture (e.g. "TOPDON RLink X3", "Simulator (J1939)")
+  protocol TEXT NOT NULL,
+  pid_names_json TEXT NOT NULL,            -- JSON array of recorded PID names
+  trigger_json TEXT,                       -- serialized TriggerConfig; NULL = manual
+  started_at TEXT NOT NULL,
+  ended_at TEXT,
+  status TEXT NOT NULL DEFAULT 'recording',-- 'recording'|'completed'|'interrupted' (host died mid-capture)
+  frame_count INTEGER NOT NULL DEFAULT 0,  -- denormalized, updated on close
+  notes TEXT,
+  created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT
+);
+CREATE INDEX idx_recordings_wo ON recordings(work_order_id);
+CREATE INDEX idx_recordings_asset ON recordings(asset_id);
+
+CREATE TABLE recording_frames (            -- one row per sample instant (a batch of all PIDs)
+  id INTEGER PRIMARY KEY,                  -- rowid; high-volume, NOT sync'd (see note below)
+  guid TEXT NOT NULL UNIQUE,
+  recording_id TEXT NOT NULL REFERENCES recordings(id),
+  sequence INTEGER NOT NULL,               -- monotonic 0-based frame index (VCR cursor = seek key)
+  captured_at TEXT NOT NULL,
+  pids_json TEXT NOT NULL,                 -- JSON array of PidValue (each preserves IsSimulated)
+  created_at TEXT NOT NULL,
+  UNIQUE (recording_id, sequence)
+);
+CREATE INDEX idx_recording_frames_recording ON recording_frames(recording_id, sequence);
+```
+
+Design notes:
+
+- **One frame = one timestamp's batch of all PIDs** (not one row per PID). At ~10 Hz that is ~10 rows/s, so the VCR playback bar seeks by `sequence` without scanning per-PID rows. A row-per-PID layout would inflate rows ~9× for no query benefit.
+- `recording_frames` uses an **INTEGER rowid + separate `guid`** (like `manual_chunks`) for insert locality; it is **excluded from shop-server sync** — only the parent `recordings` metadata syncs, raw frames stay local (a fleet server doesn't need every sample).
+- **Provenance (ADR-007):** `recordings.source` records whether the capture came from the simulator or real hardware, and every `PidValue` inside `pids_json` carries its own `IsSimulated` flag, so replay never mislabels data. Phase 4 builds `readings.source` on this: when a scan/scope reading is saved from a recording, the data layer derives simulated-vs-real from `recordings.source` (recommend an additive `readings.is_simulated INTEGER NOT NULL DEFAULT 0` column then, or persist it in `notes` — no rewrite needed).
+- **Interrupted recordings:** when the device host dies mid-capture, the app marks the row `status='interrupted'` and updates `ended_at`/`frame_count`, so the VCR bar can still open a partial recording.
 
 #### Troubleshooting trees
 
@@ -710,6 +803,8 @@ Numbered steps (the exact behavior the `ai-engineer` + `gse-domain-expert` build
 7. At a leaf, the model produces a diagnosis/repair suggestion **citing its source** (manual + page, or past WO number). It never contradicts or skips manufacturer procedures.
 8. The tech records the outcome; that history feeds the recommendation engine (§4.3).
 
+> Tree matching and spec verdicts follow ADR-009: a `draft` tree is served (and labeled "DRAFT — not yet approved") when no `approved` tree matches the same model+symptom, and a single-value spec (`spec_min == spec_max`) yields verdict `na` rather than pass/fail by strict equality.
+
 ### 4.3 Workflow B — Recommendation engine (similar-failure search → ranked repairs)
 
 ```mermaid
@@ -728,17 +823,31 @@ Numbered steps (the `recommender` agent builds):
 
 1. On diagnosis start, build a query vector from the new WO's symptoms, complaint text, readings, and DTCs.
 2. Search history in three widening tiers: **same model → same equipment family → all**.
-3. Score candidates by symptom/DTC/reading/text similarity (hybrid: BM25 + vector, RRF-merged).
+3. Score candidates by symptom/DTC/system/text similarity — a deterministic composite (structured overlap + Jaccard token-overlap), with an **optional** vector cosine path RRF-merged when the embedder is present (ADR-010).
 4. Group hits into candidate repairs; **rank by smoothed success rate** — Wilson/Laplace smoothing so a 1-for-1 record cannot outrank 45-for-50 — weighted by similarity and recency.
 5. Present evidence strings exactly like the spec example, with the source WO numbers (clickable).
 6. Record `outcomes` (fixed/not_fixed/unsure) and auto-detect `comebacks` (same asset + same system/symptom within N days/hours) to mark earlier repairs failed, closing the learning loop.
+
+**Concrete contract (ADR-010 — normative).** `recommender` (Python, read-only on the DB) does the
+search/ranking; the app (C#) is the single writer of `outcomes`/`comebacks`/`recommendations`; the
+endpoint is **`POST /search/repair-history`** (additive — `AiServiceProtocol.Version` stays 1). Tier
+is recorded per candidate as `MatchTier` (`model`/`family`/`all`), where model = same
+`assets.model_id`, family = same `equipment_models.make` + `category`. Similarity v1 is
+deterministic-first (Jaccard text overlap; no new index), vector+RRF only when `nomic-embed-text`
+is present (else `fallback:true`). Smoothing = **Wilson lower bound (95%)** with
+`n` = non-`unsure` outcomes, `s` = `fixed` minus confirmed comebacks (1-for-1 → 0.207 vs 45-for-50 →
+0.786). Comeback defaults = **14 days or 200 hours, whichever is sooner** (configurable), and only
+**confirmed** comebacks demote the earlier repair. Evidence template:
+`Fixed 18 of 20 on TUG MA-50, avg 2.1 hrs, last done 3 weeks ago, WO #4471`. Wire DTOs in
+`Core/Contracts/RepairHistoryContracts.cs`; data needs (additive `work_orders.number` +
+`idx_wo_closed`) documented in ADR-010 §8 for `database`.
 
 ### 4.4 AI skills / tools (complete list)
 
 | Tool | Owner | What it does |
 |---|---|---|
 | `search_manuals` | rag-ingest | Hybrid RAG (BM25 + vector, RRF) over `manual_chunks`; returns chunks with manual + page |
-| `search_repair_history` | recommender | Similar-past-failure search over closed WOs (symptoms/DTCs/readings/text) |
+| `search_repair_history` | recommender | Similar-past-failure search over closed WOs (symptoms/DTCs/readings/text) — same engine as `POST /search/repair-history` (ADR-010) |
 | `get_asset` | ai-engineer | Look up an asset by number/VIN/serial; return config + current status |
 | `get_repair_history` | ai-engineer | Full repair/outcome/comeback history for an asset |
 | `get_part_history` | ai-engineer | Part-replacement history for an asset or part number |
@@ -962,4 +1071,9 @@ Key irreversible decisions are recorded as ADRs in `docs/decisions/`:
 - `004-app-icon.md` — separate GSE Tech Pro icon (Option A, approved)
 - `005-pdf-library.md` — avoid PyMuPDF (AGPL); permissive PDF stack
 - `006-ai-model-routing.md` — local-first `lfm3-omni` + opt-in, online-only cloud fallback
+- `007-host32-ipc-contract.md` — app↔host32 pipe handoff + token, JSON command envelope, binary streaming frames, `IsSimulated` provenance
+- `008-ai-service-api.md` — app↔AI-service HTTP contract: `X-GSE-Token`, error envelope, `/health` `/config` `/chat` `/search/manuals` `/ingest` `/guided`, config schema, offline/BM25-only degradation, SQLite/sqlite-vec sharing
+- `009-gse-troubleshooting.md` — Phase-4 content schema (five JSON files, slug PKs), spec-unit convention (authoring unit → canonical SI), guided `/guided/*` resolution flow, `safety_warnings` table, `readings.is_simulated` provenance
+- `010-recommendation-engine.md` — Phase-5 recommendation engine: ownership boundary, 3-tier search, deterministic similarity + optional vector/RRF, Wilson smoothing, comeback detection, evidence-string format, `/search/repair-history` wire contract
+- `011-scope-interface.md` — Phase-6 oscilloscope: x64 in-process for both brands (no host32), block-capture `IScopeDevice`/`IScopeDeviceFactory`, six measurement algorithms + units/status, `ReferenceExpectations` comparison (deterministic C#, AI only explains), `.wfm` binary persistence, guided-test flow
 - `§6 feature inventory` — keep/drop/later decisions (Mitchell1/NAPA TRACS RO integration, 5-gas, NVH, and Bosch MTS hardware dropped; Mitchell1 repair-info → later) recorded inline in §6 rather than a separate ADR

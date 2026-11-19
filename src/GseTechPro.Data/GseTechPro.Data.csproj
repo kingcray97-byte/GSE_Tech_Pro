@@ -16,6 +16,26 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Migrations\*.sql" />
+    <EmbeddedResource Include="..\..\data\dtc\*.json"
+                      LogicalName="GseTechPro.Data.Content.Dtc.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\data\troubleshooting\*.json"
+                      LogicalName="GseTechPro.Data.Content.Troubleshooting.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- Official sqlite-vec v0.1.9 (MIT / Apache-2.0); provenance and hashes: Native/README.md. -->
+  <ItemGroup>
+    <Content Include="Native\win-x64\vec0.dll"
+             Link="runtimes\win-x64\native\vec0.dll"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Native\LICENSE-MIT.txt"
+             Link="licenses\sqlite-vec\LICENSE-MIT.txt"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Native\LICENSE-APACHE.txt"
+             Link="licenses\sqlite-vec\LICENSE-APACHE.txt"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Native\README.md"
+             Link="licenses\sqlite-vec\README.md"
+             CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

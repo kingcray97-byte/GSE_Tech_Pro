@@ -1,4 +1,5 @@
 using GseTechPro.Data.Repositories;
+using GseTechPro.Data.Services;
 
 namespace GseTechPro.Data;
 
@@ -14,7 +15,11 @@ public sealed class DataServices
         Connections = new SqliteConnectionFactory(Options);
         Migrator = new Migrations.SqliteMigrator(Connections);
         Seeder = new SeedData(Connections);
-        Initializer = new DatabaseInitializer(Connections, Options, Seeder);
+        DtcLibrarySeeder = new DtcLibrarySeeder(Connections);
+        TroubleshootingSeeder = new TroubleshootingSeeder(Connections);
+        ScopeSeeder = new ScopeSeeder(Connections);
+        Initializer = new DatabaseInitializer(
+            Connections, Options, Seeder, DtcLibrarySeeder, TroubleshootingSeeder, ScopeSeeder);
         Backup = new DatabaseBackup(Connections);
 
         Shops = new ShopRepository(Connections);
@@ -31,9 +36,26 @@ public sealed class DataServices
         Parts = new PartRepository(Connections);
         PartsReplaced = new PartReplacedRepository(Connections);
         Outcomes = new OutcomeRepository(Connections);
+        Diagnoses = new DiagnosisRepository(Connections);
+        Comebacks = new ComebackRepository(Connections);
+        Recommendations = new RecommendationRepository(Connections);
+        ComebackDetection = new ComebackDetectionService(Connections);
         Notes = new NoteRepository(Connections);
         Attachments = new AttachmentRepository(Connections);
         Manuals = new ManualRepository(Connections);
+        ManualPages = new ManualPageRepository(Connections);
+        ManualChunks = new ManualChunkRepository(Connections);
+        ChunkTags = new ChunkTagRepository(Connections);
+        Embeddings = new EmbeddingRepository(Connections);
+        Recordings = new RecordingRepository(Connections);
+        RecordingFrames = new RecordingFrameRepository(Connections);
+        SafetyWarnings = new SafetyWarningRepository(Connections);
+        TestPoints = new TestPointRepository(Connections);
+        TroubleshootingTrees = new TroubleshootingTreeRepository(Connections);
+        TroubleshootingSteps = new TroubleshootingStepRepository(Connections);
+        GuidedTests = new GuidedTestRepository(Connections);
+        ReferenceWaveforms = new ReferenceWaveformRepository(Connections);
+        Waveforms = new WaveformRepository(Connections);
     }
 
     public DatabaseOptions Options { get; }
@@ -43,6 +65,12 @@ public sealed class DataServices
     public Migrations.SqliteMigrator Migrator { get; }
 
     public IDbSeeder Seeder { get; }
+
+    public IDtcLibrarySeeder DtcLibrarySeeder { get; }
+
+    public ITroubleshootingSeeder TroubleshootingSeeder { get; }
+
+    public IScopeSeeder ScopeSeeder { get; }
 
     public DatabaseInitializer Initializer { get; }
 
@@ -76,12 +104,51 @@ public sealed class DataServices
 
     public OutcomeRepository Outcomes { get; }
 
+    public DiagnosisRepository Diagnoses { get; }
+
+    public ComebackRepository Comebacks { get; }
+
+    public RecommendationRepository Recommendations { get; }
+
+    /// <summary>Read-only detection plus explicit application writes for comeback confirmation.</summary>
+    public ComebackDetectionService ComebackDetection { get; }
+
     public NoteRepository Notes { get; }
 
     public AttachmentRepository Attachments { get; }
 
     public ManualRepository Manuals { get; }
 
+    public ManualPageRepository ManualPages { get; }
+
+    public ManualChunkRepository ManualChunks { get; }
+
+    public ChunkTagRepository ChunkTags { get; }
+
+    public EmbeddingRepository Embeddings { get; }
+
+    public RecordingRepository Recordings { get; }
+
+    public RecordingFrameRepository RecordingFrames { get; }
+
+    public SafetyWarningRepository SafetyWarnings { get; }
+
+    public TestPointRepository TestPoints { get; }
+
+    public TroubleshootingTreeRepository TroubleshootingTrees { get; }
+
+    public TroubleshootingStepRepository TroubleshootingSteps { get; }
+
+    public GuidedTestRepository GuidedTests { get; }
+
+    public ReferenceWaveformRepository ReferenceWaveforms { get; }
+
+    public WaveformRepository Waveforms { get; }
+
     public Task<DatabaseInitializationResult> InitializeAsync(CancellationToken cancellationToken = default) =>
         Initializer.InitializeAsync(cancellationToken);
+
+    /// <summary>True only when both vec0 and the embeddings table are ready.</summary>
+    public Task<bool> IsVec0AvailableAsync(CancellationToken cancellationToken = default) =>
+        Embeddings.IsVec0AvailableAsync(cancellationToken);
 }
