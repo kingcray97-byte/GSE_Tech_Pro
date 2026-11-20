@@ -41,7 +41,7 @@ def _import_litellm():  # noqa: ANN202 - returns the litellm module
 PROVIDER_ROUTE = "openai"  # LiteLLM route for llama-server's OpenAI-compatible /v1/chat/completions
 LOCAL_NO_KEY = "sk-local-no-key"  # llama-server runs without --api-key; LiteLLM's openai route still wants a value
 CHAT_TIMEOUT_S = 120.0  # CPU-only 2B model: a long first load can be slow
-CHAT_TEMPERATURE = 0.2
+CHAT_TEMPERATURE = 0.0  # default only; the value used comes from models.chat_temperature
 CHAT_MAX_TOKENS = 384  # keeps answers short on a CPU tablet
 
 
@@ -105,8 +105,10 @@ class LiteLLMChatBackend:
         api_key_fn: Optional[Callable[[], Optional[str]]] = None,
         timeout_s: float = CHAT_TIMEOUT_S,
         unreachable_detail: str = "The model route is not reachable.",
+        temperature: float = CHAT_TEMPERATURE,
     ) -> None:
         self._model = model
+        self._temperature = temperature
         self.label = label
         self._api_base = api_base
         self._api_key_fn = api_key_fn
@@ -129,7 +131,7 @@ class LiteLLMChatBackend:
             "messages": messages,
             "stream": True,
             "timeout": self._timeout,
-            "temperature": CHAT_TEMPERATURE,
+            "temperature": self._temperature,
             "max_tokens": CHAT_MAX_TOKENS,
             "max_retries": 0,  # fall back to the next route at once instead of retrying a dead one
         }
@@ -166,6 +168,7 @@ class LlamaCppChatBackend(LiteLLMChatBackend):
             api_key_fn=lambda: LOCAL_NO_KEY,
             timeout_s=timeout_s,
             unreachable_detail="The local model runtime (llama-server) is not reachable.",
+            temperature=config.models.chat_temperature,
         )
         self._runtime = runtime
 
@@ -185,6 +188,7 @@ def remote_backend(config: Config, route: str, key_fn: Callable[[], Optional[str
         api_key_fn=key_fn if rc.key_name.strip() else None,
         timeout_s=CHAT_TIMEOUT_S,
         unreachable_detail=f"The {route} route is not reachable.",
+        temperature=config.models.chat_temperature,
     )
 
 

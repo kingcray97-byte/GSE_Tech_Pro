@@ -179,24 +179,29 @@ def availability(config: Config, chat: RuntimeProbe, embed: RuntimeProbe, db_ok:
 # ------------------------------------------------------------------ process supervisor
 
 
+def _launcher(ls: LlamaServerConfig) -> list[str]:
+    """`llama-server.exe`, or `llama.exe serve` for builds that ship one binary with subcommands."""
+    return [ls.binary] + ([ls.subcommand.strip()] if ls.subcommand.strip() else [])
+
+
 def chat_server_args(config: Config) -> list[str]:
     ls = config.llama_server
-    args = [ls.binary, "-m", ls.model, "--host", "127.0.0.1", "--port", str(ls.port),
-            "-c", str(ls.ctx), "--alias", config.models.chat]
+    args = _launcher(ls) + ["--model", ls.model, "--host", "127.0.0.1", "--port", str(ls.port),
+            "--ctx-size", str(ls.ctx), "--alias", config.models.chat]
     if ls.mmproj.strip():
         args += ["--mmproj", ls.mmproj]
     if ls.threads > 0:
-        args += ["-t", str(ls.threads)]
+        args += ["--threads", str(ls.threads)]
     return args + [str(a) for a in ls.extra_args]
 
 
 def embedding_server_args(config: Config) -> list[str]:
     ls = config.llama_server
     emb: EmbeddingServerConfig = ls.embedding
-    args = [ls.binary, "-m", emb.model, "--host", "127.0.0.1", "--port", str(emb.port),
-            "-c", str(emb.ctx), "--alias", config.models.embedding, "--embedding", "--pooling", emb.pooling]
+    args = _launcher(ls) + ["--model", emb.model, "--host", "127.0.0.1", "--port", str(emb.port),
+            "--ctx-size", str(emb.ctx), "--alias", config.models.embedding, "--embedding", "--pooling", emb.pooling]
     if ls.threads > 0:
-        args += ["-t", str(ls.threads)]
+        args += ["--threads", str(ls.threads)]
     return args + [str(a) for a in emb.extra_args]
 
 

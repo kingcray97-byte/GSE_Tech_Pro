@@ -53,12 +53,37 @@ now as a **GGUF** file served by `llama-server --embedding --pooling mean`. Vect
 model means a re-embed of every chunk (unchanged rule). **Still open (rag-ingest):** confirm the GGUF build runs on
 the pinned llama.cpp release, its license, and CPU speed on the 7220.
 
+## Pinned build and tablet settings (2026-11-19)
+
+- **llama.cpp:** `b12359`, the build of release **v1.0.0** (both published 2026-11-13). Windows asset
+  `llama-b12359-bin-win-cpu-x64.zip`, 25.1 MB, sha256
+  `837c1655e87df3b66989f4be33a792a1399c785bf259038dc75c900096683e69` (GitHub release digest). Liquid's guide says LFM3
+  needs v0.8.0 (b11960) or later and that its examples were checked with b12359. MIT; LICENSE goes into the
+  installer's third-party notices.
+- **Chat model:** LFM3-Omni-2B **Q4_K_M** (1.1 GB), Liquid's "recommended" size/quality balance. Projector
+  `mmproj-LFM3-Omni-2B-Q8_0.gguf` only once image/audio input is used (Phase 7); left out until then to save RAM.
+- **Flags from Liquid (model card + llama.cpp guide):** `--reasoning off` (LFM3-Omni-2B is a non-reasoning model);
+  temperature **0** for text (greedy). Both are in config (`llama_server.extra_args`, `models.chat_temperature`).
+- **Our own choices (not from Liquid):** context `8192` (Liquid's server default is 4096; we need room for chat
+  history plus tool results), threads = llama.cpp default. Liquid lists no thread, batch, mmap or flash-attention
+  setting for LFM3 on CPU.
+- **Binary (checked 2026-11-19, zip hash verified, nothing executed):** b12359 ships `llama-server.exe` (and a
+  `llama.exe`), so `llama_server.subcommand` stays empty; it exists for builds that only ship `llama serve`. A string
+  scan of `llama-common.dll` / `llama-server-impl.dll` finds every flag the service passes: `--model`, `--host`,
+  `--port`, `--ctx-size`, `--threads`, `--alias`, `--mmproj`, `--embedding`, `--pooling`, `--reasoning`. The service
+  uses the long forms. Still to do on the tablet: one real start with `--reasoning off` and the GGUF.
+- **Runtime files:** `llama-server.exe` imports `llama-server-impl.dll`, `llama-common.dll`, `llama.dll`, `mtmd.dll`,
+  `ggml.dll`, `ggml-base.dll`, `libomp.dll`; ggml loads one `ggml-cpu-*.dll` for the CPU at run time. Only these
+  ship (`Reference\llama.cpp\PINNED.txt`). The zip has no llama.cpp LICENSE; it was taken from the same tag
+  (MIT). LLVM OpenMP's license ships too. **ggml needs the Microsoft VC++ 2015–2022 x64 runtime** (`MSVCP140.dll`,
+  `VCRUNTIME140.dll`), which the installer must provide.
+- **License:** `lfm3-omni` is under the LFM Open License v1.0 (model card: `lfm1.0`). **Owner approved bundling on
+  2026-11-19.**
+
 ## Still to check (not measured yet)
 
-- `lfm3-omni` GGUF on the pinned llama.cpp build (text, then image/audio via the projector), RAM and tokens/s on an
-  8 GB 8th-gen i5. Measure, don't quote.
-- `lfm3-omni` license (LFM Open License v1.0, revenue threshold): owner sign-off before bundling.
-- llama.cpp is MIT; its LICENSE goes into the installer's third-party notices.
+- `lfm3-omni` Q4_K_M on b12359 on the 7220: RAM and tokens/s on an 8 GB 8th-gen i5, then image/audio via the projector.
+  Measure, don't quote.
 
 ## Alternatives considered
 

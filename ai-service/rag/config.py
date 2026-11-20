@@ -68,6 +68,7 @@ class LlamaServerConfig:
     """llama.cpp `llama-server` processes the AI service starts and supervises (ADR-012). Paths only."""
 
     binary: str = ""  # llama-server.exe; empty = do not spawn, attach to servers already listening (dev/tests)
+    subcommand: str = ""  # e.g. "serve" when the build ships one `llama.exe` with subcommands instead of llama-server.exe
     model: str = ""  # chat GGUF path
     mmproj: str = ""  # optional projector GGUF (image/audio input)
     port: int = 8081
@@ -114,6 +115,8 @@ class ModelsConfig:
     chat: str = "lfm3-omni"  # label (llama-server --alias); config-only, never hardcoded in code
     embedding: str = "nomic-embed-text"
     embedding_dim: int = VEC0_DIM
+    # LFM3-Omni-2B model card: greedy decoding (temperature 0) for text output. Applies to every route.
+    chat_temperature: float = 0.0
 
 
 @dataclass
@@ -163,6 +166,10 @@ class Config:
                 f"models.embedding_dim must be {VEC0_DIM} (vec0 schema is fixed); "
                 "changing it requires re-embedding every chunk"
             )
+        if not (0.0 <= self.models.chat_temperature <= 2.0):
+            raise ValueError("models.chat_temperature must be in 0..2")
+        if any(c.isspace() for c in ls.subcommand.strip()):
+            raise ValueError("llama_server.subcommand must be one word (e.g. serve)")
         if self.idle_unload_minutes < 0:
             raise ValueError("idle_unload_minutes must be >= 0")
         if self.routes.health_ttl_s < 0 or self.routes.health_timeout_s <= 0:

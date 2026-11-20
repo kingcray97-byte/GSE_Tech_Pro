@@ -48,7 +48,9 @@ Four workstreams. 10A and 10B can run in parallel (different owners and folders)
 6. **Docs** (`gse-lead`): AGENTS.md tech stack + rule 1 (offline first, cloud is an opt-in exception per ADR 013) — ✅ done 2026-11-19. Agent files under `.opencode/agents/` still say Ollama (platform-protected; owner to update).
 7. **Tests** (`tester`): pytest with a fake llama-server (ready/loading/down), route fallback, context stripping for cloud, no key in logs; xUnit for route badge + routing settings. Acceptance: chat works with the network unplugged; with cloud allowed and online, the answer is tagged `cloud`; unplug mid-session and the next answer comes from the tablet.
 
-**Open (owner sign-off):** `lfm3-omni` GGUF license (LFM Open License revenue threshold) and RAM/speed on an 8 GB 8th-gen i5; which cloud provider/model to put in the default config template (leave blank until chosen).
+**Open (owner sign-off):** ~~`lfm3-omni` GGUF license~~ approved by the owner 2026-11-19; RAM/speed on an 8 GB 8th-gen i5 (measure); which cloud provider/model to put in the default config template (leave blank until chosen).
+
+**Pinned 2026-11-19:** llama.cpp b12359 (= v1.0.0), `llama-b12359-bin-win-cpu-x64.zip`; LFM3-Omni-2B Q4_K_M with `--reasoning off` and temperature 0 (Liquid's listed settings); ctx 8192 (our choice). Zip downloaded and hash-verified; it ships `llama-server.exe` and every flag we pass is in it (string check, not run). Runtime files in `Reference\llama.cpp\` (git-ignored). **Open (installer-deploy):** bundle the VC++ 2015–2022 x64 runtime that ggml needs. Details in ADR-012.
 
 **10A status (2026-11-19):**
 - ✅ 10A.1 ADR-012 (llama.cpp runtime) + ADR-013 (routing) written on top of the ADR-008 API; drafts 0001/0002 folded in and removed. ADR-006 superseded, ADR-003 and ADR-008 amended. ARCHITECTURE §1.1, §1.5, §4.1, §4.6, §7.1, §7.2 updated. No `GseTechPro.AiClient` project (the drafts' streaming API was not adopted).

@@ -11,12 +11,13 @@ service:
 # binary empty = do not spawn: attach to a llama-server already listening on the ports below (dev and tests).
 llama_server:
   binary: ""                 # e.g. {app}\llama.cpp\llama-server.exe (installer fills this in)
-  model: ""                  # chat GGUF, e.g. {app}\models\<lfm3-omni>.gguf
-  mmproj: ""                 # optional projector GGUF for image/audio input
+  subcommand: ""             # "serve" if the pinned build ships llama.exe with subcommands instead of llama-server.exe
+  model: ""                  # chat GGUF: LFM3-Omni-2B Q4_K_M (~1.1 GB, Liquid's recommended balance)
+  mmproj: ""                 # image/audio projector (mmproj-LFM3-Omni-2B-Q8_0.gguf); blank until Phase 7 uses it
   port: 8081
-  ctx: 8192
-  threads: 0                 # 0 = llama.cpp default
-  extra_args: []             # release-specific flags (check `llama-server --help` on the pinned build)
+  ctx: 8192                  # our choice (Liquid's serve default is 4096): room for history + tool results
+  threads: 0                 # 0 = llama.cpp default (Liquid lists no thread setting)
+  extra_args: ["--reasoning", "off"]  # LFM3-Omni-2B is non-reasoning: model card says use --reasoning off
   start_timeout_s: 120       # cold load on a CPU tablet can be slow
   embedding:
     model: ""                # embedding GGUF, e.g. {app}\models\<nomic-embed-text>.gguf
@@ -29,6 +30,7 @@ models:
   chat: "lfm3-omni"          # label only (llama-server --alias); config-only, never hardcoded in code
   embedding: "nomic-embed-text"
   embedding_dim: 768         # MUST match the vec0 dimension (fixed at 768); changing it means re-embedding
+  chat_temperature: 0.0      # LFM3-Omni-2B model card: greedy decoding (temperature 0) for text
 
 # Remote routes (ADR-013). Off by default. Keys are NEVER written here: key_name is a Windows Credential Manager
 # entry (service "GSE Tech Pro AI"). The cloud is used only when enabled here AND the app's administrator allows it.

@@ -6,13 +6,14 @@ service:
   port: 8765                 # the app passes --port/--token at launch
 
 llama_server:                # ADR-012: started and stopped by the AI service, 127.0.0.1 only
-  binary: @LLAMA_SERVER@
-  model: @CHAT_MODEL@
-  mmproj: ''
+  binary: @LLAMA_SERVER@     # pinned llama.cpp b12359 (= v1.0.0), Windows CPU x64 build
+  subcommand: ''             # b12359 ships llama-server.exe, so no subcommand (checked 2026-11-19)
+  model: @CHAT_MODEL@        # LFM3-Omni-2B Q4_K_M
+  mmproj: ''                 # image/audio projector, added with Phase 7 (vision/voice)
   port: 8081
   ctx: 8192
   threads: 0
-  extra_args: []             # TODO: confirm flags for the pinned llama.cpp build (e.g. LFM3 "--reasoning off")
+  extra_args: ['--reasoning', 'off']  # LFM3-Omni-2B is non-reasoning (Liquid model card)
   start_timeout_s: 120
   embedding:
     model: @EMBED_MODEL@
@@ -25,6 +26,7 @@ models:
   chat: "lfm3-omni"
   embedding: "nomic-embed-text"
   embedding_dim: 768
+  chat_temperature: 0.0      # greedy decoding for text (Liquid model card)
 
 routes:                      # ADR-013: off by default
   shop_server:

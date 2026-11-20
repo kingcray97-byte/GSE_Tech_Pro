@@ -93,10 +93,17 @@ Source: "..\ai-service\vision\*"; DestDir: "{app}\AiService\vision"; Flags: igno
 ; No Windows service: the AI service starts llama-server on 127.0.0.1 and stops it on idle/exit.
 ; ============================================================================
 
-; llama-server.exe and its DLLs from the pinned llama.cpp Windows CPU release (MIT)
+; llama-server.exe and its DLLs from the pinned llama.cpp Windows CPU release (MIT).
+; PINNED: llama.cpp b12359 (= v1.0.0, 2026-11-13), asset llama-b12359-bin-win-cpu-x64.zip (25.1 MB),
+;   sha256 837c1655e87df3b66989f4be33a792a1399c785bf259038dc75c900096683e69 (GitHub release digest).
+;   Reference\llama.cpp\ holds only llama-server.exe, the DLLs it imports, the ggml-cpu-*.dll
+;   variants (picked at run time) and the licenses; see Reference\llama.cpp\PINNED.txt. LFM3 needs b11960+.
+; TODO (installer-deploy): ggml.dll needs the Microsoft VC++ 2015-2022 x64 runtime (MSVCP140.dll,
+;   VCRUNTIME140.dll). Bundle vc_redist.x64.exe (silent) or app-local copies before shipping.
 Source: "..\Reference\llama.cpp\*"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: llama-cpp
 ; MIT LICENSE goes into the third-party notices (ARCHITECTURE §7.1)
 Source: "..\Reference\llama.cpp\LICENSE"; DestDir: "{app}\third-party"; DestName: "llama.cpp-LICENSE.txt"; Flags: ignoreversion; Components: llama-cpp
+Source: "..\Reference\llama.cpp\LICENSE-LLVM-OpenMP"; DestDir: "{app}\third-party"; DestName: "llvm-openmp-LICENSE.txt"; Flags: ignoreversion; Components: llama-cpp
 
 ; lfm3-omni chat model, GGUF (~2.4 GB on disk) — LFM Open License v1.0 (revenue threshold; owner sign-off pending)
 Source: "..\Reference\models\lfm3-omni.gguf"; DestDir: "{app}\models"; Flags: ignoreversion; Components: model-lfm3-omni

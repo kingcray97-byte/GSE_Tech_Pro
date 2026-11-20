@@ -148,7 +148,7 @@ def test_server_args_always_bind_loopback_and_carry_config(tmp_path):
     assert chat[chat.index("--host") + 1] == "127.0.0.1"
     assert chat[chat.index("--port") + 1] == str(cfg.llama_server.port)
     assert chat[chat.index("--alias") + 1] == "lfm3-omni"
-    assert chat[chat.index("-t") + 1] == "4"
+    assert chat[chat.index("--threads") + 1] == "4"
     assert chat[-2:] == ["--reasoning", "off"]
     embed = embedding_server_args(cfg)
     assert embed[embed.index("--host") + 1] == "127.0.0.1"
@@ -299,3 +299,55 @@ def test_default_spawn_hides_the_console_window(monkeypatch):
     rt._default_spawn(["llama-server.exe"])
     assert seen["stdin"] is subprocess.DEVNULL and seen["stdout"] is subprocess.DEVNULL
     assert seen["creationflags"] == getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+
+# ------------------------------------------------------------------ pinned-build settings (ADR-012, 2026-11-19)
+
+
+def test_shipped_config_uses_liquids_listed_lfm3_settings():
+    cfg = offline_config()  # the real app/config.yaml
+    assert cfg.llama_server.extra_args == ["--reasoning", "off"]  # LFM3-Omni-2B is non-reasoning
+    assert cfg.models.chat_temperature == 0.0  # greedy decoding for text
+
+
+def test_installer_template_uses_the_same_lfm3_settings(tmp_path):
+    from ai_support import REPO
+
+    text = (REPO / "installer" / "ai-service-config.yaml").read_text(encoding="utf-8")
+    for token, value in (("@LLAMA_SERVER@", "'C:/x/llama-server.exe'"), ("@CHAT_MODEL@", "''"),
+                         ("@EMBED_MODEL@", "''"), ("@SHOP_SERVER_URL@", "''"), ("@SHOP_SERVER_ENABLED@", "false")):
+        text = text.replace(token, value)
+    filled = tmp_path / "config.yaml"
+    filled.write_text(text, encoding="utf-8")
+    cfg = load_config(filled, overrides={"token": "t"})
+    assert cfg.llama_server.extra_args == ["--reasoning", "off"]
+    assert cfg.models.chat_temperature == 0.0
+    assert cfg.routes.cloud.enabled is False
+
+
+def test_subcommand_builds_llama_serve_command_line(tmp_path):
+    cfg = _spawn_mode(tmp_path, **{"llama_server.binary": str(tmp_path / "llama.exe"), "llama_server.subcommand": "serve"})
+    chat = chat_server_args(cfg)
+    assert chat[0].endswith("llama.exe") and chat[1] == "serve"
+    assert chat[chat.index("--host") + 1] == "127.0.0.1"
+    assert embedding_server_args(cfg)[1] == "serve"
+    assert chat_server_args(_spawn_mode(tmp_path))[1] == "--model"  # no subcommand: llama-server.exe --model ...
+
+
+def test_subcommand_must_be_one_word():
+    with pytest.raises(ValueError, match="one word"):
+        offline_config(**{"llama_server.subcommand": "serve --host 0.0.0.0"})
+
+
+def test_temperature_from_config_reaches_litellm(monkeypatch):
+    import sys
+    import types
+
+    captured: dict = {}
+    fake = types.ModuleType("litellm")
+    fake.completion = lambda **kw: captured.update(kw) or iter([{"choices": [{"delta": {"content": "ok"}}]}])
+    monkeypatch.setitem(sys.modules, "litellm", fake)
+    LlamaCppChatBackend(offline_config(**{"models.chat_temperature": 0.3})).complete([{"role": "user", "content": "x"}], None)
+    assert captured["temperature"] == 0.3
+    LlamaCppChatBackend(offline_config()).complete([{"role": "user", "content": "x"}], None)
+    assert captured["temperature"] == 0.0
