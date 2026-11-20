@@ -98,8 +98,12 @@ Source: "..\ai-service\vision\*"; DestDir: "{app}\AiService\vision"; Flags: igno
 ;   sha256 837c1655e87df3b66989f4be33a792a1399c785bf259038dc75c900096683e69 (GitHub release digest).
 ;   Reference\llama.cpp\ holds only llama-server.exe, the DLLs it imports, the ggml-cpu-*.dll
 ;   variants (picked at run time) and the licenses; see Reference\llama.cpp\PINNED.txt. LFM3 needs b11960+.
-; TODO (installer-deploy): ggml.dll needs the Microsoft VC++ 2015-2022 x64 runtime (MSVCP140.dll,
-;   VCRUNTIME140.dll). Bundle vc_redist.x64.exe (silent) or app-local copies before shipping.
+; ggml.dll needs the Microsoft VC++ 2015-2022 x64 runtime (MSVCP140.dll, VCRUNTIME140.dll).
+; Microsoft's redistributable installer is bundled and run silently by InstallVcRuntime (see [Code]).
+; Put vc_redist.x64.exe (https://aka.ms/vs/17/release/vc_redist.x64.exe) in Reference\vcredist\.
+; PINNED: 14.44.35211.0, sha256 cc0ff0eb1dc3f5188ae6300faef32bf5beeba4bdd6e8e445a9184072096b713b,
+;   Authenticode-signed by Microsoft Corporation (see Reference\vcredist\PINNED.txt).
+Source: "..\Reference\vcredist\vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall; Components: llama-cpp
 Source: "..\Reference\llama.cpp\*"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: llama-cpp
 ; MIT LICENSE goes into the third-party notices (ARCHITECTURE §7.1)
 Source: "..\Reference\llama.cpp\LICENSE"; DestDir: "{app}\third-party"; DestName: "llama.cpp-LICENSE.txt"; Flags: ignoreversion; Components: llama-cpp
@@ -214,8 +218,8 @@ function YamlPath(const Path: string): string;
 begin
   // Single-quoted YAML scalar: backslashes are literal; a quote is doubled.
   Result := Path;
-  StringChangeEx(Result, , '', True);
-  Result :=  + Result + ;
+  StringChangeEx(Result, '''', '''''', True);
+  Result := '''' + Result + '''';
 end;
 
 procedure WriteAiServiceConfig();
@@ -248,6 +252,62 @@ begin
     StringChangeEx(Text, '@SHOP_SERVER_ENABLED@', 'false', True);
   ForceDirectories(ExpandConstant('{app}\AiService\config'));
   SaveStringToFile(ExpandConstant('{app}\AiService\config\config.yaml'), AnsiString(Text), False);
+end;
+
+// ============================================================================
+// PHASE 10A: MICROSOFT VC++ 2015-2022 x64 RUNTIME (needed by llama.cpp's ggml.dll)
+// vc_redist.x64.exe is Microsoft's redistributable installer. It is safe to run every
+// time: it exits 0 when this or the same version is present and 1638 when a newer one is.
+// ============================================================================
+
+const
+  VCREDIST_OK = 0;
+  VCREDIST_NEWER_PRESENT = 1638;
+  VCREDIST_REBOOT_INITIATED = 1641;
+  VCREDIST_REBOOT_REQUIRED = 3010;
+
+var
+  VcRuntimeNeedsRestart: Boolean;
+
+function VcRuntimePresent(): Boolean;
+var
+  Installed: Cardinal;
+begin
+  // Registry value written by every VC++ 2015-2022 x64 runtime install.
+  Result := RegQueryDWordValue(HKLM64, 'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64',
+    'Installed', Installed) and (Installed = 1);
+end;
+
+procedure InstallVcRuntime();
+var
+  Redist: string;
+  ExitCode: Integer;
+begin
+  Redist := ExpandConstant('{tmp}\vc_redist.x64.exe');
+  if not FileExists(Redist) then
+    Exit;
+  WizardForm.StatusLabel.Caption := 'Installing the Microsoft Visual C++ runtime (needed by the local AI model)...';
+  if not Exec(Redist, '/install /quiet /norestart', '', SW_HIDE, ewWaitUntilTerminated, ExitCode) then
+  begin
+    Log('vc_redist.x64.exe could not be started: ' + SysErrorMessage(ExitCode));
+    ExitCode := -1;
+  end;
+  Log('vc_redist.x64.exe exit code: ' + IntToStr(ExitCode));
+  case ExitCode of
+    VCREDIST_OK, VCREDIST_NEWER_PRESENT: ;
+    VCREDIST_REBOOT_REQUIRED, VCREDIST_REBOOT_INITIATED: VcRuntimeNeedsRestart := True;
+  else
+    if not VcRuntimePresent() then
+      SuppressibleMsgBox('The Microsoft Visual C++ runtime could not be installed (code ' + IntToStr(ExitCode) + ').' + #13#10 +
+        'The local AI model will not start until it is installed. Manual search and diagnostics still work.' + #13#10 +
+        'Run vc_redist.x64.exe from Microsoft, or reinstall GSE Tech Pro.',
+        mbError, MB_OK, IDOK);
+  end;
+end;
+
+function NeedRestart(): Boolean;
+begin
+  Result := VcRuntimeNeedsRestart;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -290,6 +350,10 @@ begin
     // the AI service starts llama-server itself, on 127.0.0.1 only.
     Exec('sc', 'stop GSE-Ollama', '', SW_HIDE, ewWaitUntilTerminated, RESULT);
     Exec('sc', 'delete GSE-Ollama', '', SW_HIDE, ewWaitUntilTerminated, RESULT);
+
+    // llama-server.exe needs the VC++ 2015-2022 x64 runtime; install it whenever llama.cpp is installed.
+    if IsComponentSelected('llama-cpp') then
+      InstallVcRuntime();
 
     // Write the AI service config with the bundled llama-server and GGUF paths (never a key: ADR-013).
     if IsComponentSelected('ai-service') then

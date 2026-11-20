@@ -23,6 +23,7 @@ The installer bundles or installs these runtimes:
 - **.NET 8 Desktop Runtime (x64)** — for the main app
 - **.NET 8 Desktop Runtime (x86)** — required for the 32-bit device host (J2534/RP1210 DLLs are 32-bit)
 - **Windows App SDK** — for WinUI 3 controls and Mica/notifications
+- **Microsoft Visual C++ 2015–2022 runtime (x64)** — needed by `llama-server.exe` (llama.cpp's `ggml.dll` loads `MSVCP140.dll` / `VCRUNTIME140.dll`). Setup runs Microsoft's `vc_redist.x64.exe /install /quiet /norestart` whenever the llama.cpp component is installed. A newer runtime already on the tablet is left alone; if the redistributable asks for a restart, setup asks for one at the end.
 
 > **Note:** Vendor diagnostic drivers (TOPDON RLink X3, Nexiq USB-Link, Noregon DLA+, PicoScope, Hantek) must be installed separately by the shop. They are not bundled due to proprietary licensing.
 
@@ -138,6 +139,7 @@ Alternatively, include the manual library in your silent install config by setti
 
 - The AI service starts `llama-server.exe` itself (two processes: chat and embeddings). After 10 idle minutes it stops them to free RAM; the next question starts them again, so the first answer after a break is slower.
 - Check that the GGUF files exist in `C:\Program Files\GSE Tech Pro\models\` and that `AiService\config\config.yaml` points at them (`llama_server.binary`, `llama_server.model`, `llama_server.embedding.model`).
+- If `llama-server.exe` exits at once with a missing `MSVCP140.dll` / `VCRUNTIME140.dll`, the VC++ runtime is not installed: run `vc_redist.x64.exe` from Microsoft (https://aka.ms/vs/17/release/vc_redist.x64.exe) as administrator. Setup's log (`%TEMP%\Setup Log *.txt`) shows the redistributable's exit code.
 - All AI ports are on 127.0.0.1 only (8765 AI service, 8081 chat model, 8082 embeddings); no firewall rule is needed or wanted.
 - Upgrading from 0.3.x: setup stops and deletes the old `GSE-Ollama` service. If it is still listed in Services, run `sc delete GSE-Ollama` as administrator.
 

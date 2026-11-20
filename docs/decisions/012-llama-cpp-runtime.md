@@ -76,7 +76,9 @@ the pinned llama.cpp release, its license, and CPU speed on the 7220.
   `ggml.dll`, `ggml-base.dll`, `libomp.dll`; ggml loads one `ggml-cpu-*.dll` for the CPU at run time. Only these
   ship (`Reference\llama.cpp\PINNED.txt`). The zip has no llama.cpp LICENSE; it was taken from the same tag
   (MIT). LLVM OpenMP's license ships too. **ggml needs the Microsoft VC++ 2015–2022 x64 runtime** (`MSVCP140.dll`,
-  `VCRUNTIME140.dll`), which the installer must provide.
+  `VCRUNTIME140.dll`). Setup bundles Microsoft's `vc_redist.x64.exe` and runs it silently with the llama.cpp
+  component (exit 0 / 1638 = fine, 3010 = restart at the end, anything else = a clear message; chat stays off until
+  it is installed, manual search still works).
 - **License:** `lfm3-omni` is under the LFM Open License v1.0 (model card: `lfm1.0`). **Owner approved bundling on
   2026-11-19.**
 

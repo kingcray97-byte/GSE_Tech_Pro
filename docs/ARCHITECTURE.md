@@ -1002,6 +1002,8 @@ Anything not listed here is either already in the spec or not present in the ref
 | Component | License | Bundle in installer? | Notes |
 |---|---|---|---|
 | **llama.cpp (`llama-server`)** | MIT | ✅ bundle | MIT permits redistribution; copy its LICENSE into third-party notices (ADR-012). Replaces Ollama. |
+| **LLVM OpenMP (`libomp.dll`, ships with llama.cpp)** | Apache-2.0 WITH LLVM-exception | ✅ bundle | License copied into third-party notices. |
+| **Microsoft VC++ 2015–2022 x64 runtime (`vc_redist.x64.exe`)** | Microsoft Visual Studio redistributable terms | ✅ bundle the official installer, unmodified | Needed by llama.cpp's `ggml.dll`. Run silently by setup; never repackage its DLLs. |
 | **`lfm3-omni`** (Liquid AI LFM3-Omni-2B) | **LFM Open License v1.0** (Apache-2.0 base + **$10M/yr revenue threshold**) | ✅ bundle (see note) | Free commercial use **only if the legal entity's annual revenue < $10M**; above that, contact Liquid AI. Include license + notices. Downstream customer revenue is their own concern. **Verify the customer's revenue before shipping.** |
 | **`nomic-embed-text`** (Nomic AI) | Apache-2.0 | ✅ bundle | 137M, 768-d, ~274 MB |
 | **PicoSDK** (Pico Technology) | Proprietary-permissive ("copy & distribute SDK without restriction, keep copyright; use only with Pico products") | ✅ bundle (with copyright intact) | Not OSI open source; redistributable per terms. Requires Pico hardware. |
