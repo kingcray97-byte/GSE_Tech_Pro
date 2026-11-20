@@ -28,7 +28,7 @@
 | 7 | Vision & voice, ECOM/CANCapture | ⬜ |
 | 8 | Full installer (signing, silent multi-tablet, upgrades, updates) | ✅ Done |
 | 9 | Optional shop-server sync | ⬜ |
-| 10 | Owner change request 2026-11-19: llama.cpp + cloud route, Shop Foreman Pro look, GSE components, PicoScope-style scope | 🔄 10A service side done (UI part pending); 10B–10D next |
+| 10 | Owner change request 2026-11-19: llama.cpp + cloud route, Shop Foreman Pro look, GSE components, PicoScope-style scope | 🔄 10A service side done (UI part pending); 10B.1–10B.2 done, 10B.3 next; 10C–10D after |
 
 ## Phase 10 — Owner change request (2026-11-19) ⬜ Next
 
@@ -75,6 +75,12 @@ GSE mapping: Vehicle → **Equipment** (asset #, make, model, serial, hour meter
 1. **Shell** (`ui-winui`): finish the uncommitted sidebar/shell rework in the working tree, then match the layout above. Use Segoe Fluent Icons in colour-coded rounded tiles (no Bosch art, rule 12), 44 px+ touch targets, Mica title bar, and the existing light/dark/sunlight themes. Navy `#1F3A5F`-family section tiles become a theme resource (tokens in ARCHITECTURE §5.3, `architect` to confirm).
 2. **Work order document** (`ui-winui`): RO Viewer section-tile form + Integrated Diagnostics grid/preview/note, bound to the existing work order, equipment and records data.
 3. **Diagnostic module frame** (`ui-winui`): a shared left-nav + breadcrumb + status-strip frame reused by Scan/Engine/OBD II/J1939, Scope, CAN capture and Guided tests.
+**10B status (2026-11-20):**
+- ✅ 10B.1 Shell: menu bar, icon-tile toolbar (document / Current User / modules / context groups), document tab strip, navy module menu with one entry per section, breadcrumb, status bar. Old nav rail and Work Orders command bar removed. `SidebarNavigationTests`.
+- ✅ 10B.2 Work order document: RO Viewer (navy section tiles: Repair Order, Equipment, Symptoms, Diagnosis & Repair, Station, Outcome, Technician, Shop Info; empty values show "—") and Integrated Diagnostics (readings, scope waveforms, repairs, outcome; preview + Record Note). `WorkOrderDocumentTests`. Checked in the running app at 1920×1080.
+- ⬜ 10B.3 Shared diagnostic module frame for Scope, CAN capture and Guided tests (Scan/Equipment Health already uses the navy left nav + breadcrumb).
+- Open: RO Notes / Tech Notes sections need a notes field on the work order (not in Core yet).
+
 4. **Check** (`tester` + owner): side-by-side screenshots against the `live-2026-11-19` and `01–29` references at 1920×1080 and on the 7220 (1920×1080, 11.6"); a human/vision sign-off (still open from Phase 2).
 
 ### 10C — GSE components from `Reference/GSE diagnostic apps/`

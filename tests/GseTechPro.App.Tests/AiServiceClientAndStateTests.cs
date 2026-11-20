@@ -1046,8 +1046,8 @@ public sealed class AiServiceClientAndStateTests
         await using var vm = new MainShellViewModel(dataServices, adapterFactory);
         await vm.ReloadDatabaseRecordsAsync();
 
-        // 1. Nav rail contains Readings item and SelectNavRailItem("Readings") activates the screen
-        Assert.Contains(vm.NavRailItems, item => item.Key == "Readings" && item.Glyph == "\uE8E5");
+        // 1. Sidebar has a Readings page and SelectNavRailItem("Readings") activates the screen
+        Assert.Contains(vm.SidebarSections.SelectMany(s => s.Children), item => item.Key == "Readings" && item.Glyph == "\uE8E5");
         await vm.SelectNavRailItem("Readings");
         Assert.True(vm.IsReadingsViewVisible);
         Assert.Equal(Visibility.Visible, vm.ReadingsViewVisibility);

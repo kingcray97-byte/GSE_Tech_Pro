@@ -16,20 +16,21 @@
 
     <Grid x:Name="RootGrid" Background="{ThemeResource AppBackgroundBrush}">
         <Grid.RowDefinitions>
-            <!-- Row 0: Menu Bar -->
+            <!-- Row 0: Menu bar -->
             <RowDefinition Height="Auto" />
-            <!-- Row 1: Main Toolbar (Icon + Label buttons, Current Technician, Tool Buttons) -->
+            <!-- Row 1: Icon toolbar (document tools, Current User, modules) -->
             <RowDefinition Height="Auto" />
-            <!-- Row 2: Document Tabs (One per open work order / visit) -->
+            <!-- Row 2: Document tabs (one per open work order) -->
             <RowDefinition Height="Auto" />
-            <!-- Row 3: Left Navigation Rail + Right Main Content -->
+            <!-- Row 3: Navy module menu + page -->
             <RowDefinition Height="*" />
-            <!-- Row 4: Status Bar -->
+            <!-- Row 4: Status bar -->
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- =================================================================== -->
-        <!-- ROW 0: MENU BAR (Matches Screenshot 01 top menu)                     -->
+        <!-- ROW 0: MENU BAR (Shop Foreman Pro: File Edit View Tools Data Setup  -->
+        <!-- Help). Items reuse the toolbar/page routing (Tag = page key).        -->
         <!-- =================================================================== -->
         <Grid Grid.Row="0" Background="{ThemeResource AppSurfaceBrush}" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
             <Grid.ColumnDefinitions>
@@ -37,61 +38,69 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <MenuBar Grid.Column="0" Height="44">
+            <MenuBar Grid.Column="0" MinHeight="40">
                 <MenuBarItem Title="File">
-                    <MenuFlyoutItem Text="New Work Order" Click="OnNewWorkOrderMenuClick" />
-                    <MenuFlyoutItem Text="Open Work Order Browser" Click="OnOpenWorkOrdersMenuClick" />
-                    <MenuFlyoutItem Text="Equipment &amp; Asset Registry" Click="OnOpenAssetsMenuClick" />
+                    <MenuFlyoutItem Text="New Work Order" Tag="New" Click="OnToolbarButtonClick" />
+                    <MenuFlyoutItem Text="Open Work Order…" Tag="Open" Click="OnToolbarButtonClick" />
+                    <MenuFlyoutItem Text="Equipment Registry" Tag="Home" Click="OnToolbarButtonClick" />
                     <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="Refresh Local SQLite Database" Click="OnReloadDbMenuClick" />
+                    <MenuFlyoutItem Text="Save" Tag="Save" Click="OnToolbarButtonClick" />
+                    <MenuFlyoutItem Text="Print…" Tag="Print" Click="OnToolbarButtonClick" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="Reload Database" Click="OnReloadDbMenuClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="Edit">
-                    <MenuFlyoutItem Text="Edit Custom Snaplist (Screen 14)" Click="OnEditSnaplistMenuClick" />
-                    <MenuFlyoutItem Text="Build Custom Display (Screen 15)" Click="OnCustomDisplayMenuClick" />
+                    <MenuFlyoutItem Text="Edit Snaplist" Tag="EditSnaplist" Click="OnNavRailButtonClick" />
+                    <MenuFlyoutItem Text="Custom Display" Tag="CustomDisplay" Click="OnNavRailButtonClick" />
                     <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="Add Work Order Note" Click="OnNotesMenuClick" />
+                    <MenuFlyoutItem Text="Notes" Tag="Notes" Click="OnToolbarButtonClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="View">
-                    <MenuFlyoutItem Text="Follow Windows Theme (Light / Dark)" Click="OnFollowSystemThemeClick" />
-                    <MenuFlyoutItem Text="Force Light Theme" Click="OnLightThemeClick" />
-                    <MenuFlyoutItem Text="Force Dark Theme" Click="OnDarkThemeClick" />
+                    <MenuFlyoutItem Text="Equipment Health" Tag="Diagnostics" Click="OnToolbarButtonClick" />
+                    <MenuFlyoutItem Text="Live Data" Tag="LiveData" Click="OnNavRailButtonClick" />
+                    <MenuFlyoutItem Text="Graph" Tag="GraphView" Click="OnNavRailButtonClick" />
                     <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="Toggle Sunlight High-Contrast Mode (Ramp)" Click="OnToggleSunlightMenuClick" />
-                    <MenuFlyoutItem Text="Toggle Imperial / Metric Display Units" Click="OnToggleUnitsMenuClick" />
-                </MenuBarItem>
-                <MenuBarItem Title="Data">
-                    <MenuFlyoutItem Text="Equipment / Vehicle Health (Screen 04)" Click="OnVehicleHealthMenuClick" />
-                    <MenuFlyoutItem Text="Live Data List / Snaplist (Screen 13)" Click="OnLiveSnaplistMenuClick" />
-                    <MenuFlyoutItem Text="Line Graph &amp; Cursors (Screen 16)" Click="OnLineGraphMenuClick" />
-                    <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="Trigger Setup… (Screen 18)" Click="OnOpenTriggerSetupClick" />
-                </MenuBarItem>
-                <MenuBarItem Title="Setup">
-                    <MenuFlyoutItem Text="Scan Tool &amp; J2534/RP1210 Device Setup… (Screen 26/28)" Click="OnOpenDeviceSetupDialogClick" />
-                    <MenuFlyoutItem Text="Discover 32-Bit Host Devices" Click="OnDiscoverDevicesClick" />
+                    <MenuFlyoutItem Text="Switch Imperial / Metric Units" Command="{x:Bind ViewModel.ToggleUnitSystemCommand}" />
+                    <MenuFlyoutItem Text="Theme and Sunlight Mode…" Tag="Settings" Click="OnToolbarButtonClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="Tools">
-                    <MenuFlyoutItem Text="Connect Selected Adapter" Click="OnConnectSimulatorClick" />
-                    <MenuFlyoutItem Text="Disconnect Adapter" Click="OnDisconnectSimulatorClick" />
+                    <MenuFlyoutItem Text="Connect Adapter" Command="{x:Bind ViewModel.ConnectSimulatorCommand}" />
+                    <MenuFlyoutItem Text="Disconnect Adapter" Command="{x:Bind ViewModel.DisconnectSimulatorCommand}" />
                     <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="Read DTCs &amp; Freeze Frame" Click="OnRefreshDiagnosticsClick" />
-                    <MenuFlyoutItem Text="Clear Active/Pending DTCs (Screen 27)" Click="OnClearDtcsClick" />
+                    <MenuFlyoutItem Text="Read DTCs" Command="{x:Bind ViewModel.RefreshDiagnosticsCommand}" />
+                    <MenuFlyoutItem Text="Clear DTCs…" Command="{x:Bind ViewModel.ClearDtcsCommand}" />
                     <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="AI Tech Chat &amp; Citations" Click="OnOpenAiTechChatMenuClick" />
-                    <MenuFlyoutItem Text="Repair Recommendations (Phase 5)" Click="OnOpenRecommendationsMenuClick" />
-                    <MenuFlyoutItem Text="Guided Troubleshooting" Click="OnOpenGuidedTreeMenuClick" />
-                    <MenuFlyoutItem Text="Manual Readings &amp; Test Points (No-ECU)" Click="OnOpenReadingsMenuClick" />
-                    <MenuFlyoutItem Text="Oscilloscope &amp; Guided Scope Tests (Phase 6)" Click="OnOpenScopeMenuClick" />
-                    <MenuFlyoutItem Text="Repair Manuals &amp; Hybrid RAG Search" Click="OnOpenManualSearchMenuClick" />
+                    <MenuFlyoutItem Text="Oscilloscope" Tag="Scope" Click="OnToolbarButtonClick" />
+                    <MenuFlyoutItem Text="CAN Capture" Tag="CanCapture" Click="OnToolbarButtonClick" />
+                    <MenuFlyoutItem Text="Camera" Tag="Camera" Click="OnToolbarButtonClick" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="AI Tech Chat" Tag="AiChat" Click="OnNavRailButtonClick" />
+                    <MenuFlyoutItem Text="Repair Recommendations" Tag="Recommendations" Click="OnNavRailButtonClick" />
+                    <MenuFlyoutItem Text="Guided Troubleshooting" Tag="GuidedTree" Click="OnNavRailButtonClick" />
+                    <MenuFlyoutItem Text="Manual Readings" Tag="Readings" Click="OnNavRailButtonClick" />
+                    <MenuFlyoutItem Text="Manual Search" Tag="ManualSearch" Click="OnNavRailButtonClick" />
+                </MenuBarItem>
+                <MenuBarItem Title="Data">
+                    <MenuFlyoutItem Text="Trouble Codes" Tag="DTCs" Click="OnNavRailButtonClick" />
+                    <MenuFlyoutItem Text="Freeze Frames" Tag="FreezeFrames" Click="OnNavRailButtonClick" />
+                    <MenuFlyoutItem Text="Readiness" Tag="Readiness" Click="OnNavRailButtonClick" />
+                    <MenuFlyoutItem Text="Monitors" Tag="Monitors" Click="OnNavRailButtonClick" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="Trigger Setup…" Click="OnOpenTriggerSetupClick" />
+                </MenuBarItem>
+                <MenuBarItem Title="Setup">
+                    <MenuFlyoutItem Text="Scan Tool / VCI Setup…" Click="OnOpenDeviceSetupDialogClick" />
+                    <MenuFlyoutItem Text="Find 32-bit Devices" Click="OnDiscoverDevicesClick" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="Settings…" Tag="Settings" Click="OnToolbarButtonClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="Help">
-                    <MenuFlyoutItem Text="About GSE Tech Pro (Offline First)" Click="OnAboutMenuClick" />
+                    <MenuFlyoutItem Text="About GSE Tech Pro" Click="OnAboutMenuClick" />
                 </MenuBarItem>
             </MenuBar>
 
-            <!-- Quick Ramp Toggles: Provenance Badge + Units + Sunlight High-Contrast Mode -->
+            <!-- Data source badge (always shown when values are simulated or real) and units -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Padding="8,0" VerticalAlignment="Center">
-                <!-- Prominent SIMULATED badge whenever adapter or values are simulated -->
                 <Border Background="{ThemeResource SimBadgeBackgroundBrush}"
                         BorderBrush="{ThemeResource SimBadgeBorderBrush}"
                         BorderThickness="1.5"
@@ -121,434 +130,535 @@
                 <Button Style="{StaticResource ActionTouchButtonStyle}"
                         Command="{x:Bind ViewModel.ToggleUnitSystemCommand}"
                         Content="{x:Bind ViewModel.UnitSystemLabel, Mode=OneWay}"
-                        ToolTipService.ToolTip="Switch shop default display units between Imperial and Metric (canonical SI &amp; per-reading overrides preserved)" />
-
-                <ToggleButton x:Name="SunlightToggleButton"
-                              MinHeight="44"
-                              MinWidth="128"
-                              Padding="12,8"
-                              CornerRadius="{StaticResource AppCornerRadius}"
-                              Click="OnSunlightToggleButtonClick"
-                              ToolTipService.ToolTip="High-contrast pure-white ramp mode for direct outdoor sunlight">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE706;" FontSize="16" />
-                        <TextBlock Text="Sunlight Mode" VerticalAlignment="Center" FontWeight="SemiBold" />
-                    </StackPanel>
-                </ToggleButton>
+                        ToolTipService.ToolTip="Switch display units between Imperial and Metric (stored values stay in SI)" />
             </StackPanel>
         </Grid>
 
         <!-- =================================================================== -->
-        <!-- ROW 1: MAIN TOOLBAR (Exact Screenshot 01 / 04 button sequence)       -->
-        <!-- Order: RO List / Work Orders, New, Open, Search, Save, Print,        -->
-        <!-- Home, Notes, Current Technician drop-down, then tool buttons:        -->
-        <!-- J2534 Â· Heavy Duty Â· OBD II Â· Scope Â· CAN Capture Â· Camera Â· AI Chat -->
+        <!-- ROW 1: ICON TOOLBAR (Shop Foreman Pro order: New Open Search Save    -->
+        <!-- Print Home | Current User | modules | context). Segoe Fluent icons   -->
+        <!-- in colour-coded tiles, no vendor art (AGENTS.md rule 12).            -->
         <!-- =================================================================== -->
         <Border Grid.Row="1"
                 Background="{ThemeResource AppToolbarBrush}"
                 BorderBrush="{ThemeResource AppSubtleBorderBrush}"
                 BorderThickness="0,0,0,1"
                 Padding="6,4">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" HorizontalScrollMode="Enabled">
-                <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-
-                    <!-- 1. RO List / Work Orders -->
-                    <Button Style="{StaticResource ToolbarButtonStyle}" Tag="WorkOrders" Click="OnToolbarButtonClick"
-                            ToolTipService.ToolTip="RO List / Work Orders Browser">
-                        <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8FD;" FontSize="18" />
-                            <TextBlock Text="Work Orders" FontSize="11" />
-                        </StackPanel>
-                    </Button>
-
-                    <!-- 2. New -->
-                    <Button Style="{StaticResource ToolbarButtonStyle}" Tag="New" Click="OnToolbarButtonClick"
-                            ToolTipService.ToolTip="New Work Order Tab">
-                        <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE710;" FontSize="18" />
-                            <TextBlock Text="New" FontSize="11" />
-                        </StackPanel>
-                    </Button>
-
-                    <!-- 3. Open -->
-                    <Button Style="{StaticResource ToolbarButtonStyle}" Tag="Open" Click="OnToolbarButtonClick"
-                            ToolTipService.ToolTip="Open Work Order">
-                        <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8E5;" FontSize="18" />
-                            <TextBlock Text="Open" FontSize="11" />
-                        </StackPanel>
-                    </Button>
-
-                    <!-- 4. Search -->
-                    <Button Style="{StaticResource ToolbarButtonStyle}" Tag="Search" Click="OnToolbarButtonClick"
-                            ToolTipService.ToolTip="Search Work Orders &amp; Files">
-                        <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE721;" FontSize="18" />
-                            <TextBlock Text="Search" FontSize="11" />
-                        </StackPanel>
-                    </Button>
-
-                    <!-- 5. Save -->
-                    <Button Style="{StaticResource ToolbarButtonStyle}" Tag="Save" Click="OnToolbarButtonClick"
-                            ToolTipService.ToolTip="Save Current Work Order Snapshot">
-                        <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE74E;" FontSize="18" />
-                            <TextBlock Text="Save" FontSize="11" />
-                        </StackPanel>
-                    </Button>
-
-                    <!-- 6. Print -->
-                    <Button Style="{StaticResource ToolbarButtonStyle}" Tag="Print" Click="OnToolbarButtonClick"
-                            ToolTipService.ToolTip="Print Diagnostic Report">
-                        <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE749;" FontSize="18" />
-                            <TextBlock Text="Print" FontSize="11" />
-                        </StackPanel>
-                    </Button>
-
-                    <!-- 7. Home -->
-                    <Button Style="{StaticResource ToolbarButtonStyle}" Tag="Home" Click="OnToolbarButtonClick"
-                            ToolTipService.ToolTip="Home / Equipment Registry">
-                        <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE80F;" FontSize="18" />
-                            <TextBlock Text="Home" FontSize="11" />
-                        </StackPanel>
-                    </Button>
-
-                    <!-- 8. Notes -->
-                    <Button Style="{StaticResource ToolbarButtonStyle}" Tag="Notes" Click="OnToolbarButtonClick"
-                            ToolTipService.ToolTip="Technician &amp; Work Order Notes">
-                        <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE70B;" FontSize="18" />
-                            <TextBlock Text="Notes" FontSize="11" />
-                        </StackPanel>
-                    </Button>
-
-                    <AppBarSeparator Margin="4,0" />
-
-                    <!-- 9. Current Technician Drop-Down -->
-                    <StackPanel VerticalAlignment="Center" Margin="6,0" Spacing="2">
-                        <TextBlock Text="Current Technician" FontSize="11" Foreground="{ThemeResource AppTextSecondaryBrush}" HorizontalAlignment="Center" />
-                        <ComboBox MinWidth="185"
-                                  MinHeight="44"
-                                  ItemsSource="{x:Bind ViewModel.AvailableTechnicians, Mode=OneWay}"
-                                  SelectedItem="{x:Bind ViewModel.SelectedTechnician, Mode=TwoWay}" />
-                    </StackPanel>
-
-                    <AppBarSeparator Margin="4,0" />
-
-                    <!-- 10. Tool Buttons: J2534 Â· Heavy Duty Â· OBD II Â· Scope Â· CAN Capture Â· Camera Â· AI Tech Chat -->
-                    <Button Style="{StaticResource ToolToggleButtonStyle}" Tag="J2534" Click="OnToolbarButtonClick"
-                            ToolTipService.ToolTip="J2534 Pass-Thru Diagnostics">
-                        <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE950;" FontSize="18" />
-                            <TextBlock Text="J2534" FontSize="11" />
-                        </StackPanel>
-                    </Button>
-
-                    <Button Style="{StaticResource ToolToggleButtonStyle}" Tag="HeavyDuty" Click="OnToolbarButtonClick"
-                            ToolTipService.ToolTip="Heavy Duty J1939 / J1708 / RP1210 Diagnostics">
-                        <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE7EC;" FontSize="18" />
-                            <TextBlock Text="Heavy Duty" FontSize="11" />
-                        </StackPanel>
-                    </Button>
-
-                    <Button Style="{StaticResource ToolToggleButtonStyle}" Tag="OBDII" Click="OnToolbarButtonClick"
-                            ToolTipService.ToolTip="Global OBD II Diagnostics">
-                        <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE9D9;" FontSize="18" />
-                            <TextBlock Text="OBD II" FontSize="11" />
-                        </StackPanel>
-                    </Button>
-
-                    <Button Style="{StaticResource ToolToggleButtonStyle}" Tag="Scope" Click="OnToolbarButtonClick"
-                            ToolTipService.ToolTip="Oscilloscope (PicoScope / Hantek)">
-                        <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE9D2;" FontSize="18" />
-                            <TextBlock Text="Scope" FontSize="11" />
-                        </StackPanel>
-                    </Button>
-
-                    <Button Style="{StaticResource ToolToggleButtonStyle}" Tag="CanCapture" Click="OnToolbarButtonClick"
-                            ToolTipService.ToolTip="CAN / J1939 / J1708 Bus Capture &amp; Recording">
-                        <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8EE;" FontSize="18" />
-                            <TextBlock Text="CAN Capture" FontSize="11" />
-                        </StackPanel>
-                    </Button>
-
-                    <Button Style="{StaticResource ToolToggleButtonStyle}" Tag="Camera" Click="OnToolbarButtonClick"
-                            ToolTipService.ToolTip="Camera, Pen Annotation &amp; Dataplate OCR">
-                        <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE722;" FontSize="18" />
-                            <TextBlock Text="Camera" FontSize="11" />
-                        </StackPanel>
-                    </Button>
-
-                    <Button Style="{StaticResource ToolToggleButtonStyle}" Tag="AiTechChat" Click="OnToolbarButtonClick"
-                            ToolTipService.ToolTip="{x:Bind ViewModel.AiTechChatToolTip, Mode=OneWay}">
-                        <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8BD;" FontSize="18" />
-                            <TextBlock Text="AI Tech Chat" FontSize="11" />
-                        </StackPanel>
-                    </Button>
-
-                </StackPanel>
-            </ScrollViewer>
-        </Border>
-
-        <!-- =================================================================== -->
-        <!-- ROW 2: DOCUMENT TABS AREA (One tab per open work order / visit)      -->
-        <!-- =================================================================== -->
-        <Border Grid.Row="2"
-                Background="{ThemeResource AppSurfaceBrush}"
-                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
-                BorderThickness="0,0,0,1"
-                Padding="8,4">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-
-                <ListView Grid.Column="0"
-                          ItemsSource="{x:Bind ViewModel.OpenTabs, Mode=OneWay}"
-                          SelectedItem="{x:Bind ViewModel.SelectedTab, Mode=TwoWay}"
-                          SelectionMode="Single"
-                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                          ScrollViewer.HorizontalScrollMode="Enabled"
-                          ScrollViewer.VerticalScrollMode="Disabled">
-                    <ListView.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <ItemsStackPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ListView.ItemsPanel>
-                    <ListView.ItemTemplate>
-                        <DataTemplate x:DataType="vm:OpenWorkOrderTab">
-                            <Border MinHeight="40"
-                                    Padding="12,6"
-                                    Margin="0,0,6,0"
-                                    CornerRadius="6,6,0,0"
-                                    BorderBrush="{ThemeResource AppFocusBorderBrush}"
-                                    BorderThickness="1,1,1,2"
-                                    Background="{ThemeResource AppToolbarBrush}">
-                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8A5;" FontSize="14" />
-                                    <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                    <TextBlock Text="{x:Bind AssetNumber}" Foreground="{ThemeResource AppTextSecondaryBrush}" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-
-                <Button Grid.Column="1"
-                        Style="{StaticResource ActionTouchButtonStyle}"
-                        Tag="New"
-                        Click="OnToolbarButtonClick"
-                        ToolTipService.ToolTip="Open a new Work Order document tab">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE710;" FontSize="14" />
-                        <TextBlock Text="New WO Tab" />
+                <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Enabled"
+                              VerticalScrollBarVisibility="Disabled" VerticalScrollMode="Disabled">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource ToolbarTileButtonStyle}" Tag="New" Click="OnToolbarButtonClick"
+                                AutomationProperties.Name="New" ToolTipService.ToolTip="New work order">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileDocBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE710;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="New" HorizontalAlignment="Center" FontSize="12" />
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource ToolbarTileButtonStyle}" Tag="Open" Click="OnToolbarButtonClick"
+                                AutomationProperties.Name="Open" ToolTipService.ToolTip="Open a work order (work order list)">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileDocBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8E5;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="Open" HorizontalAlignment="Center" FontSize="12" />
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource ToolbarTileButtonStyle}" Tag="Search" Click="OnToolbarButtonClick"
+                                AutomationProperties.Name="Search" ToolTipService.ToolTip="Search work orders and equipment">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileDocBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE721;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="Search" HorizontalAlignment="Center" FontSize="12" />
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource ToolbarTileButtonStyle}" Tag="Save" Click="OnToolbarButtonClick"
+                                AutomationProperties.Name="Save" ToolTipService.ToolTip="Save">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileDocBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE74E;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="Save" HorizontalAlignment="Center" FontSize="12" />
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource ToolbarTileButtonStyle}" Tag="Print" Click="OnToolbarButtonClick"
+                                AutomationProperties.Name="Print" ToolTipService.ToolTip="Print report">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileDocBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE749;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="Print" HorizontalAlignment="Center" FontSize="12" />
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource ToolbarTileButtonStyle}" Tag="Home" Click="OnToolbarButtonClick"
+                                AutomationProperties.Name="Home" ToolTipService.ToolTip="Home: equipment registry">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileDocBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE80F;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="Home" HorizontalAlignment="Center" FontSize="12" />
+                                <Rectangle Grid.Row="2" Height="3" Width="28" RadiusX="1.5" RadiusY="1.5" Fill="{ThemeResource AppAccentBrush}" Visibility="{x:Bind vm:MainShellViewModel.ToolbarIndicator(ViewModel.ActiveTool, 'Equipment Registry'), Mode=OneWay}" />
+                            </Grid>
+                        </Button>
+                        <AppBarSeparator Margin="4,6" />
+                        <StackPanel Spacing="2" VerticalAlignment="Center" Margin="6,0">
+                            <TextBlock Text="Current User" FontSize="12" HorizontalAlignment="Center" />
+                            <ComboBox MinWidth="190"
+                                      MinHeight="44"
+                                      PlaceholderText="Technician"
+                                      AutomationProperties.Name="Current user"
+                                      ToolTipService.ToolTip="Current technician"
+                                      ItemsSource="{x:Bind ViewModel.AvailableTechnicians, Mode=OneWay}"
+                                      SelectedItem="{x:Bind ViewModel.SelectedTechnician, Mode=TwoWay}" />
+                        </StackPanel>
+                        <AppBarSeparator Margin="4,6" />
+                        <Button Style="{StaticResource ToolbarTileButtonStyle}" Click="OnOpenDeviceSetupDialogClick"
+                                AutomationProperties.Name="VCI" ToolTipService.ToolTip="Vehicle communication interface: J2534 / RP1210 / simulator setup">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileModuleBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE950;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="VCI" HorizontalAlignment="Center" FontSize="12" />
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource ToolbarTileButtonStyle}" Tag="Diagnostics" Click="OnToolbarButtonClick"
+                                AutomationProperties.Name="Scan" ToolTipService.ToolTip="Scan: equipment health, codes and live data">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileModuleBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE9D9;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="Scan" HorizontalAlignment="Center" FontSize="12" />
+                                <Rectangle Grid.Row="2" Height="3" Width="28" RadiusX="1.5" RadiusY="1.5" Fill="{ThemeResource AppAccentBrush}" Visibility="{x:Bind vm:MainShellViewModel.ToolbarIndicator(ViewModel.ActiveTool, 'Diagnostics'), Mode=OneWay}" />
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource ToolbarTileButtonStyle}" Tag="HeavyDuty" Click="OnToolbarButtonClick"
+                                AutomationProperties.Name="J1939" ToolTipService.ToolTip="Heavy duty J1939 / J1708 diagnostics">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileModuleBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE7EC;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="J1939" HorizontalAlignment="Center" FontSize="12" />
+                                <Rectangle Grid.Row="2" Height="3" Width="28" RadiusX="1.5" RadiusY="1.5" Fill="{ThemeResource AppAccentBrush}" Visibility="{x:Bind vm:MainShellViewModel.ToolbarIndicator(ViewModel.ActiveTool, 'Heavy Duty'), Mode=OneWay}" />
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource ToolbarTileButtonStyle}" Tag="OBDII" Click="OnToolbarButtonClick"
+                                AutomationProperties.Name="OBD II" ToolTipService.ToolTip="Global OBD II diagnostics">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileModuleBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE804;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="OBD II" HorizontalAlignment="Center" FontSize="12" />
+                                <Rectangle Grid.Row="2" Height="3" Width="28" RadiusX="1.5" RadiusY="1.5" Fill="{ThemeResource AppAccentBrush}" Visibility="{x:Bind vm:MainShellViewModel.ToolbarIndicator(ViewModel.ActiveTool, 'OBD II'), Mode=OneWay}" />
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource ToolbarTileButtonStyle}" Tag="Scope" Click="OnToolbarButtonClick"
+                                AutomationProperties.Name="Scope" ToolTipService.ToolTip="Oscilloscope and guided tests">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileScopeBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE9D2;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="Scope" HorizontalAlignment="Center" FontSize="12" />
+                                <Rectangle Grid.Row="2" Height="3" Width="28" RadiusX="1.5" RadiusY="1.5" Fill="{ThemeResource AppAccentBrush}" Visibility="{x:Bind vm:MainShellViewModel.ToolbarIndicator(ViewModel.ActiveTool, 'Scope'), Mode=OneWay}" />
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource ToolbarTileButtonStyle}" Tag="CanCapture" Click="OnToolbarButtonClick"
+                                AutomationProperties.Name="CAN" ToolTipService.ToolTip="CAN bus capture">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileScopeBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE968;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="CAN" HorizontalAlignment="Center" FontSize="12" />
+                                <Rectangle Grid.Row="2" Height="3" Width="28" RadiusX="1.5" RadiusY="1.5" Fill="{ThemeResource AppAccentBrush}" Visibility="{x:Bind vm:MainShellViewModel.ToolbarIndicator(ViewModel.ActiveTool, 'CAN Capture'), Mode=OneWay}" />
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource ToolbarTileButtonStyle}" Tag="Camera" Click="OnToolbarButtonClick"
+                                AutomationProperties.Name="Camera" ToolTipService.ToolTip="Camera and markup">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileScopeBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE722;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="Camera" HorizontalAlignment="Center" FontSize="12" />
+                                <Rectangle Grid.Row="2" Height="3" Width="28" RadiusX="1.5" RadiusY="1.5" Fill="{ThemeResource AppAccentBrush}" Visibility="{x:Bind vm:MainShellViewModel.ToolbarIndicator(ViewModel.ActiveTool, 'Camera'), Mode=OneWay}" />
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource ToolbarTileButtonStyle}" Tag="AiTechChat" Click="OnToolbarButtonClick"
+                                AutomationProperties.Name="AI Chat" ToolTipService.ToolTip="AI tech chat, troubleshooting and manuals">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileAiBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8BD;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="AI Chat" HorizontalAlignment="Center" FontSize="12" />
+                                <Rectangle Grid.Row="2" Height="3" Width="28" RadiusX="1.5" RadiusY="1.5" Fill="{ThemeResource AppAccentBrush}" Visibility="{x:Bind vm:MainShellViewModel.ToolbarIndicator(ViewModel.ActiveTool, 'AI Tech Chat'), Mode=OneWay}" />
+                            </Grid>
+                        </Button>
+                        <AppBarSeparator Margin="4,6" />
+                        <Button Style="{StaticResource ToolbarTileButtonStyle}" Tag="WorkOrders" Click="OnToolbarButtonClick"
+                                AutomationProperties.Name="List" ToolTipService.ToolTip="Work order list">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileDocBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8FD;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="List" HorizontalAlignment="Center" FontSize="12" />
+                                <Rectangle Grid.Row="2" Height="3" Width="28" RadiusX="1.5" RadiusY="1.5" Fill="{ThemeResource AppAccentBrush}" Visibility="{x:Bind vm:MainShellViewModel.ToolbarIndicator(ViewModel.ActiveTool, 'Work Orders'), Mode=OneWay}" />
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource ToolbarTileButtonStyle}" Tag="Notes" Click="OnToolbarButtonClick"
+                                AutomationProperties.Name="Notes" ToolTipService.ToolTip="Work order and technician notes">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileDocBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE70B;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="Notes" HorizontalAlignment="Center" FontSize="12" />
+                            </Grid>
+                        </Button>
                     </StackPanel>
-                </Button>
+                </ScrollViewer>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource ToolbarTileButtonStyle}" Tag="Settings" Click="OnToolbarButtonClick"
+                                AutomationProperties.Name="Settings" ToolTipService.ToolTip="Settings: display, units and devices">
+                            <Grid RowSpacing="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="6" HorizontalAlignment="Center"
+                                        Background="{ThemeResource ToolTileDocBrush}">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE713;" FontSize="16"
+                                              Foreground="{ThemeResource ToolTileGlyphBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Text="Settings" HorizontalAlignment="Center" FontSize="12" />
+                                <Rectangle Grid.Row="2" Height="3" Width="28" RadiusX="1.5" RadiusY="1.5" Fill="{ThemeResource AppAccentBrush}" Visibility="{x:Bind vm:MainShellViewModel.ToolbarIndicator(ViewModel.ActiveTool, 'Settings'), Mode=OneWay}" />
+                            </Grid>
+                        </Button>
+                </StackPanel>
             </Grid>
         </Border>
 
-        <!-- =================================================================== -->
-        <!-- ROW 3: MAIN BODY — Left Navigation Rail + Right Content Pane         -->
-        <!-- =================================================================== -->
+        <!-- WORK ORDER TABS: one per open work order (Shop Foreman Pro document tabs) -->
+        <Border Grid.Row="2"
+                Background="{ThemeResource AppSurfaceBrush}"
+                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="8,2"
+                Visibility="{x:Bind ViewModel.TabStripVisibility, Mode=OneWay}">
+            <ListView ItemsSource="{x:Bind ViewModel.OpenTabs, Mode=OneWay}"
+                      SelectedItem="{x:Bind ViewModel.SelectedTab, Mode=TwoWay}"
+                      SelectionMode="Single"
+                      AutomationProperties.Name="Open work orders"
+                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                      ScrollViewer.HorizontalScrollMode="Enabled"
+                      ScrollViewer.VerticalScrollMode="Disabled">
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsStackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ListView.ItemsPanel>
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:OpenWorkOrderTab">
+                        <StackPanel Orientation="Horizontal" Spacing="8" MinHeight="40" Padding="4,0" VerticalAlignment="Center">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8A5;" FontSize="14" />
+                            <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock Text="{x:Bind AssetNumber}" Foreground="{ThemeResource AppTextSecondaryBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Border>
+
+        <!-- ROW 3: navy module menu (inside modules only) + page -->
         <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
-                <!-- Left Navigation Rail (Shop Foreman Pro Vertical Toolbar) -->
-                <ColumnDefinition Width="180" />
-                <!-- Main Content Area -->
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- LEFT NAVIGATION RAIL (Screenshot 04 & 13 vertical toolbar order) -->
+            <!-- MODULE MENU: the active module's pages (Shop Foreman Pro's navy left menu) -->
             <Border Grid.Column="0"
-                    Background="{ThemeResource AppRailBrush}"
-                    BorderBrush="{ThemeResource AppSubtleBorderBrush}"
-                    BorderThickness="0,0,1,0"
-                    Padding="4,8">
+                    Width="232"
+                    Background="{ThemeResource ModuleNavBrush}"
+                    RequestedTheme="Dark"
+                    Visibility="{x:Bind ViewModel.ModuleNavVisibility, Mode=OneWay}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0"
-                               Text="{x:Bind ViewModel.ActiveTool, Mode=OneWay}"
-                               Foreground="{ThemeResource AppRailTextBrush}"
-                               FontWeight="Bold"
-                               FontSize="13"
-                               Margin="12,4,12,8" />
-
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{x:Bind ViewModel.NavRailItems, Mode=OneWay}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:NavRailItem">
-                                    <Button Style="{StaticResource NavRailButtonStyle}"
-                                            Tag="{x:Bind Key}"
-                                            Click="OnNavRailButtonClick">
-                                        <StackPanel Orientation="Horizontal" Spacing="10">
-                                            <FontIcon FontFamily="{StaticResource IconFontFamily}"
-                                                      Glyph="{x:Bind Glyph}"
-                                                      FontSize="18" />
-                                            <TextBlock Text="{x:Bind Label}"
-                                                       VerticalAlignment="Center"
-                                                       FontWeight="SemiBold" />
-                                        </StackPanel>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-
-                    <Border Grid.Row="2"
-                            Margin="6,8,6,4"
-                            Padding="8"
-                            CornerRadius="{StaticResource AppCornerRadius}"
-                            BorderBrush="{ThemeResource AppRailTextBrush}"
-                            BorderThickness="1">
-                        <StackPanel Spacing="2">
-                            <TextBlock Text="Shop:" FontSize="11" Foreground="{ThemeResource AppRailTextBrush}" Opacity="0.8" />
-                            <TextBlock Text="{x:Bind ViewModel.ShopNameText, Mode=OneWay}"
-                                       FontSize="12"
-                                       FontWeight="SemiBold"
-                                       Foreground="{ThemeResource AppRailTextBrush}"
-                                       TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
+                    <StackPanel Orientation="Horizontal" Spacing="10" Padding="16,14,12,10">
+                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="{x:Bind ViewModel.ModuleNavGlyph, Mode=OneWay}"
+                                  FontSize="18" Foreground="{ThemeResource SectionTileTextBrush}" />
+                        <TextBlock Text="{x:Bind ViewModel.ModuleNavTitle, Mode=OneWay}" FontSize="16" FontWeight="Bold"
+                                   Foreground="{ThemeResource SectionTileTextBrush}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ListView Grid.Row="1"
+                              ItemsSource="{x:Bind ViewModel.CurrentModuleNavItems, Mode=OneWay}"
+                              SelectedItem="{x:Bind ViewModel.SelectedModuleNavItem, Mode=TwoWay}"
+                              SelectionMode="Single"
+                              AutomationProperties.Name="Module pages"
+                              Padding="4,0">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SidebarItem">
+                                <StackPanel Orientation="Horizontal" Spacing="12" MinHeight="48">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="{x:Bind Glyph}" FontSize="18"
+                                              VerticalAlignment="Center" Foreground="{ThemeResource SectionTileTextBrush}" />
+                                    <TextBlock Text="{x:Bind Label}" FontWeight="SemiBold" VerticalAlignment="Center"
+                                               TextWrapping="Wrap" Foreground="{ThemeResource SectionTileTextBrush}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                    <TextBlock Grid.Row="2"
+                               Text="{x:Bind ViewModel.ShopNameText, Mode=OneWay}"
+                               Margin="16,8,16,12"
+                               FontSize="12"
+                               Opacity="0.8"
+                               Foreground="{ThemeResource SectionTileTextBrush}"
+                               TextTrimming="CharacterEllipsis" />
                 </Grid>
             </Border>
 
-            <!-- RIGHT CONTENT AREA (Breadcrumb + Device Bar + Active View + VCR Bar) -->
+            <!-- PAGE AREA (Header + page command bar + Active View + VCR Bar) -->
             <Grid Grid.Column="1">
                 <Grid.RowDefinitions>
-                    <!-- Row 0: Breadcrumb Bar (Equipment Selection >> Main Menu >> Equipment Health) -->
+                    <!-- Row 0: Header and the current section's command bar -->
                     <RowDefinition Height="Auto" />
-                    <!-- Row 1: Device Selection (Host32 + Simulator) & Diagnostic Action Bar -->
+                    <!-- Row 1: Work order tabs -->
                     <RowDefinition Height="Auto" />
                     <!-- Row 2: Active Screen Content -->
                     <RowDefinition Height="*" />
-                    <!-- Row 3: VCR Recording & Playback Transport Bar (Screenshots 13, 17, 18) -->
+                    <!-- Row 3: VCR Recording & Playback Transport Bar -->
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <!-- 1. BREADCRUMB BAR (Matches Screenshot 04 / 13 header bar) -->
-                <Border Grid.Row="0"
-                        Background="{ThemeResource AppToolbarBrush}"
-                        BorderBrush="{ThemeResource AppSubtleBorderBrush}"
-                        BorderThickness="0,0,0,1"
-                        Padding="14,6">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+                <StackPanel Grid.Row="0">
+                    <!-- HEADER: where you are · status · data source badge · technician -->
+                    <Border Background="{ThemeResource AppToolbarBrush}"
+                            BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                            BorderThickness="0,0,0,1"
+                            Padding="16,6">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
 
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <HyperlinkButton Content="{x:Bind ViewModel.BreadcrumbRoot, Mode=OneWay}"
-                                             MinHeight="44"
-                                             Padding="6,4"
-                                             Click="OnBreadcrumbRootClick" />
-                            <TextBlock Text="&gt;&gt;" VerticalAlignment="Center" FontWeight="Bold" Foreground="{ThemeResource AppTextSecondaryBrush}" />
-                            <HyperlinkButton Content="{x:Bind ViewModel.BreadcrumbCategory, Mode=OneWay}"
-                                             MinHeight="44"
-                                             Padding="6,4"
-                                             Click="OnVehicleHealthMenuClick" />
-                            <TextBlock Text="&gt;&gt;" VerticalAlignment="Center" FontWeight="Bold" Foreground="{ThemeResource AppTextSecondaryBrush}" />
-                            <TextBlock Text="{x:Bind ViewModel.BreadcrumbLeaf, Mode=OneWay}"
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <TextBlock Text="{x:Bind ViewModel.BreadcrumbCategory, Mode=OneWay}"
+                                           FontSize="15"
+                                           VerticalAlignment="Center"
+                                           Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE76C;" FontSize="10"
+                                          Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                <TextBlock Text="{x:Bind ViewModel.BreadcrumbLeaf, Mode=OneWay}"
+                                           FontSize="15"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"
+                                           Foreground="{ThemeResource AppTextPrimaryBrush}" />
+                            </StackPanel>
+
+                            <TextBlock Grid.Column="1"
+                                       Text="{x:Bind ViewModel.StatusBannerMessage, Mode=OneWay}"
                                        VerticalAlignment="Center"
-                                       FontWeight="Bold"
-                                       FontSize="15"
-                                       Foreground="{ThemeResource AppTextPrimaryBrush}" />
-                        </StackPanel>
+                                       HorizontalAlignment="Right"
+                                       FontSize="12"
+                                       TextTrimming="CharacterEllipsis"
+                                       Foreground="{ThemeResource AppTextSecondaryBrush}" />
 
-                        <TextBlock Grid.Column="1"
-                                   Text="{x:Bind ViewModel.StatusBannerMessage, Mode=OneWay}"
-                                   VerticalAlignment="Center"
-                                   FontSize="12"
-                                   MaxWidth="560"
-                                   TextTrimming="CharacterEllipsis"
-                                   Foreground="{ThemeResource AppTextSecondaryBrush}" />
-                    </Grid>
-                </Border>
+                        </Grid>
+                    </Border>
 
-                <!-- 2. DEVICE SELECTION (HOST32 + IN-PROC SIMULATOR) & DIAGNOSTIC ACTION BAR (Screens 26/28) -->
-                <Border Grid.Row="1"
-                        Background="{ThemeResource AppSurfaceBrush}"
-                        BorderBrush="{ThemeResource AppSubtleBorderBrush}"
-                        BorderThickness="0,0,0,1"
-                        Padding="14,8">
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <!-- DIAGNOSTICS / CAN COMMAND BAR: adapter, protocol, connect, DTC actions -->
+                    <Border Background="{ThemeResource AppSurfaceBrush}"
+                            BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                            BorderThickness="0,0,0,1"
+                            Padding="16,6"
+                            Visibility="{x:Bind ViewModel.DeviceCommandBarVisibility, Mode=OneWay}">
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <ComboBox MinWidth="260"
+                                          MinHeight="44"
+                                          PlaceholderText="Adapter"
+                                          ItemsSource="{x:Bind ViewModel.AvailableDevices, Mode=OneWay}"
+                                          SelectedItem="{x:Bind ViewModel.SelectedDevice, Mode=TwoWay}"
+                                          ToolTipService.ToolTip="Adapter: in-process simulator or 32-bit host J2534/RP1210 device" />
 
-                            <TextBlock Text="Adapter:" VerticalAlignment="Center" FontWeight="SemiBold" />
-                            <ComboBox MinWidth="290"
-                                      MinHeight="44"
-                                      ItemsSource="{x:Bind ViewModel.AvailableDevices, Mode=OneWay}"
-                                      SelectedItem="{x:Bind ViewModel.SelectedDevice, Mode=TwoWay}"
-                                      ToolTipService.ToolTip="Select In-Process Simulator or 32-bit Host J2534/RP1210 device" />
+                                <ComboBox MinWidth="120"
+                                          MinHeight="44"
+                                          PlaceholderText="Protocol"
+                                          ItemsSource="{x:Bind ViewModel.SimulatorProtocols}"
+                                          SelectedItem="{x:Bind ViewModel.SelectedProtocol, Mode=TwoWay}"
+                                          ToolTipService.ToolTip="Protocol (OBD II, J1939, J1708)" />
 
-                            <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                    Click="OnOpenDeviceSetupDialogClick"
-                                    ToolTipService.ToolTip="Open Scan Tool &amp; J2534/RP1210 Device Setup Dialog (Screens 26 &amp; 28)">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE713;" FontSize="15" />
-                                    <TextBlock Text="Device Setup…" />
-                                </StackPanel>
-                            </Button>
+                                <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                        Click="OnOpenDeviceSetupDialogClick"
+                                        ToolTipService.ToolTip="Scan tool and J2534/RP1210 device setup">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE713;" FontSize="16" />
+                                </Button>
 
-                            <TextBlock Text="Protocol:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="4,0,0,0" />
-                            <ComboBox MinWidth="120"
-                                      MinHeight="44"
-                                      ItemsSource="{x:Bind ViewModel.SimulatorProtocols}"
-                                      SelectedItem="{x:Bind ViewModel.SelectedProtocol, Mode=TwoWay}" />
+                                <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                        Command="{x:Bind ViewModel.ConnectSimulatorCommand}"
+                                        Visibility="{x:Bind ViewModel.ConnectButtonVisibility, Mode=OneWay}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE703;" FontSize="16" />
+                                        <TextBlock Text="Connect" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                </Button>
 
-                            <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                    Command="{x:Bind ViewModel.ConnectSimulatorCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE703;" FontSize="16" />
-                                    <TextBlock Text="Connect" FontWeight="SemiBold" />
-                                </StackPanel>
-                            </Button>
+                                <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                        Command="{x:Bind ViewModel.DisconnectSimulatorCommand}"
+                                        Visibility="{x:Bind ViewModel.DisconnectButtonVisibility, Mode=OneWay}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE711;" FontSize="16" />
+                                        <TextBlock Text="Disconnect" />
+                                    </StackPanel>
+                                </Button>
 
-                            <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                    Command="{x:Bind ViewModel.DisconnectSimulatorCommand}"
-                                    IsEnabled="{x:Bind ViewModel.IsConnected, Mode=OneWay}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE711;" FontSize="16" />
-                                    <TextBlock Text="Disconnect" />
-                                </StackPanel>
-                            </Button>
+                                <AppBarSeparator Margin="4,0" />
 
-                            <AppBarSeparator Margin="4,0" />
+                                <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                        Command="{x:Bind ViewModel.RefreshDiagnosticsCommand}"
+                                        IsEnabled="{x:Bind ViewModel.IsConnected, Mode=OneWay}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE72C;" FontSize="16" />
+                                        <TextBlock Text="Read DTCs" />
+                                    </StackPanel>
+                                </Button>
 
-                            <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                    Command="{x:Bind ViewModel.RefreshDiagnosticsCommand}"
-                                    IsEnabled="{x:Bind ViewModel.IsConnected, Mode=OneWay}">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE72C;" FontSize="16" />
-                                    <TextBlock Text="Read DTCs &amp; Snapshot" />
-                                </StackPanel>
-                            </Button>
+                                <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                        Command="{x:Bind ViewModel.ClearDtcsCommand}"
+                                        IsEnabled="{x:Bind ViewModel.IsConnected, Mode=OneWay}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE74D;" FontSize="16" />
+                                        <TextBlock Text="Clear DTCs" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
 
-                            <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                    Command="{x:Bind ViewModel.ClearDtcsCommand}"
-                                    IsEnabled="{x:Bind ViewModel.IsConnected, Mode=OneWay}">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE74D;" FontSize="16" />
-                                    <TextBlock Text="Clear DTCs" />
-                                </StackPanel>
-                            </Button>
-                        </StackPanel>
-                    </ScrollViewer>
-                </Border>
+                </StackPanel>
+
 
                 <!-- =============================================================== -->
                 <!-- 3A. DIAGNOSTICS / EQUIPMENT HEALTH & MULTI-VIEW LIVE DATA        -->
@@ -686,15 +796,6 @@
                                                       ItemsSource="{x:Bind ViewModel.LiveDataDisplayModes}"
                                                       SelectedItem="{x:Bind ViewModel.SelectedLiveDataMode, Mode=TwoWay}"
                                                       ToolTipService.ToolTip="Switch between List, Snaplist Editor, Bar, Digital Meter, Analog Gauge, Line Graph, and Custom Display" />
-                                            <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                                    Click="OnEditSnaplistMenuClick"
-                                                    Content="Edit Snaplist (14)" />
-                                            <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                                    Click="OnCustomDisplayMenuClick"
-                                                    Content="Custom Display (15)" />
-                                            <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                                    Click="OnLineGraphMenuClick"
-                                                    Content="Graph Cursors (16)" />
                                         </StackPanel>
                                     </ScrollViewer>
                                 </Grid>
@@ -1319,7 +1420,7 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" Spacing="2">
-                                    <TextBlock Text="Work Order / Repair Order (RO) Browser (Screenshot 03)" FontSize="{StaticResource FontSizeSubtitle}" FontWeight="Bold" />
+                                    <TextBlock Text="Work Orders" FontSize="{StaticResource FontSizeSubtitle}" FontWeight="Bold" />
                                     <TextBlock Text="{x:Bind ViewModel.ActiveWorkOrderSummaryText, Mode=OneWay}" FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold" Foreground="{ThemeResource AppAccentBrush}" TextWrapping="Wrap" />
                                     <TextBlock Text="{x:Bind ViewModel.WorkOrderCloseStatusMessage, Mode=OneWay}" FontSize="{StaticResource FontSizeSmall}" Foreground="{ThemeResource AppTextSecondaryBrush}" TextWrapping="Wrap" />
                                 </StackPanel>
@@ -1408,108 +1509,166 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Preview Pane with Labeled Rows (Matches Screenshot 03 bottom preview pane) -->
+                        <!-- WORK ORDER DOCUMENT (Shop Foreman Pro: RO Viewer + Integrated Diagnostics tabs) -->
                         <Border Background="{ThemeResource AppSurfaceBrush}"
                                 BorderBrush="{ThemeResource AppSubtleBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="{StaticResource CardCornerRadius}">
                             <StackPanel>
-                                <Grid MinHeight="44" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="180" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Background="{ThemeResource AppRailBrush}" Padding="12,8">
-                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8A5;" FontSize="15" Foreground="{ThemeResource AppRailTextBrush}" />
-                                            <TextBlock Text="Repair Order" FontWeight="Bold" Foreground="{ThemeResource AppRailTextBrush}" />
-                                        </StackPanel>
-                                    </Border>
-                                    <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.PreviewRepairOrderLine, Mode=OneWay}" Padding="12,8" FontWeight="Bold" VerticalAlignment="Center" TextWrapping="Wrap" />
-                                </Grid>
+                                <SelectorBar x:Name="WorkOrderDocumentTabs"
+                                             Padding="8,2"
+                                             SelectionChanged="OnWorkOrderDocumentTabChanged"
+                                             AutomationProperties.Name="Work order views">
+                                    <SelectorBarItem Text="RO Viewer" Tag="0" IsSelected="True" MinHeight="44">
+                                        <SelectorBarItem.Icon>
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8A5;" />
+                                        </SelectorBarItem.Icon>
+                                    </SelectorBarItem>
+                                    <SelectorBarItem Text="Integrated Diagnostics" Tag="1" MinHeight="44">
+                                        <SelectorBarItem.Icon>
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE9D9;" />
+                                        </SelectorBarItem.Icon>
+                                    </SelectorBarItem>
+                                </SelectorBar>
 
-                                <Grid MinHeight="44" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="180" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Background="{ThemeResource AppRailBrush}" Padding="12,8">
-                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE7EC;" FontSize="15" Foreground="{ThemeResource AppRailTextBrush}" />
-                                            <TextBlock Text="Vehicle / Asset" FontWeight="Bold" Foreground="{ThemeResource AppRailTextBrush}" />
-                                        </StackPanel>
-                                    </Border>
-                                    <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.PreviewVehicleAssetLine, Mode=OneWay}" Padding="12,8" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
-                                </Grid>
+                                <!-- RO VIEWER: navy section tile on the left, label/value rows on the right -->
+                                <ItemsControl ItemsSource="{x:Bind ViewModel.RoSections, Mode=OneWay}"
+                                              Visibility="{x:Bind ViewModel.RoViewerVisibility, Mode=OneWay}"
+                                              BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                              BorderThickness="0,1,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:RoSection">
+                                            <Grid BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="168" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" Background="{ThemeResource SectionTileBrush}" Padding="10,12" MinHeight="48">
+                                                    <StackPanel Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="{x:Bind Glyph}" FontSize="24"
+                                                                  Foreground="{ThemeResource SectionTileTextBrush}" />
+                                                        <TextBlock Text="{x:Bind Title}" FontWeight="Bold" TextAlignment="Center" TextWrapping="Wrap"
+                                                                   Foreground="{ThemeResource SectionTileTextBrush}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <ItemsControl Grid.Column="1" ItemsSource="{x:Bind Rows}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:RoFieldRow">
+                                                            <Grid MinHeight="34" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="200" />
+                                                                    <ColumnDefinition Width="*" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Grid.Column="0" Text="{x:Bind Label}" FontWeight="Bold" Padding="10,7"
+                                                                           VerticalAlignment="Center" />
+                                                                <TextBlock Grid.Column="1" Text="{x:Bind Value}" Padding="10,7" TextWrapping="Wrap"
+                                                                           VerticalAlignment="Center" IsTextSelectionEnabled="True" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
 
-                                <Grid MinHeight="44" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="180" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Background="{ThemeResource AppRailBrush}" Padding="12,8">
-                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE7BA;" FontSize="15" Foreground="{ThemeResource AppRailTextBrush}" />
-                                            <TextBlock Text="Symptoms" FontWeight="Bold" Foreground="{ThemeResource AppRailTextBrush}" />
-                                        </StackPanel>
-                                    </Border>
-                                    <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.PreviewSymptomsLine, Mode=OneWay}" Padding="12,8" VerticalAlignment="Center" TextWrapping="Wrap" />
-                                </Grid>
+                                <!-- INTEGRATED DIAGNOSTICS: record grid, preview, record note -->
+                                <Grid Visibility="{x:Bind ViewModel.IntegratedDiagnosticsVisibility, Mode=OneWay}"
+                                      BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                      BorderThickness="0,1,0,0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
 
-                                <Grid MinHeight="44" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="180" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Background="{ThemeResource AppRailBrush}" Padding="12,8">
-                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE70B;" FontSize="15" Foreground="{ThemeResource AppRailTextBrush}" />
-                                            <TextBlock Text="Service Notes" FontWeight="Bold" Foreground="{ThemeResource AppRailTextBrush}" />
-                                        </StackPanel>
-                                    </Border>
-                                    <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.PreviewServiceNotesLine, Mode=OneWay}" Padding="12,8" VerticalAlignment="Center" TextWrapping="Wrap" />
-                                </Grid>
+                                    <Grid Grid.Row="0" Background="{ThemeResource AppToolbarBrush}" Padding="12,8"
+                                          BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="40" />
+                                            <ColumnDefinition Width="170" />
+                                            <ColumnDefinition Width="220" />
+                                            <ColumnDefinition Width="160" />
+                                            <ColumnDefinition Width="160" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE73E;" FontSize="14"
+                                                  Foreground="{ThemeResource AppSuccessBrush}" HorizontalAlignment="Left" />
+                                        <TextBlock Grid.Column="1" Text="Record Type" FontWeight="Bold" />
+                                        <TextBlock Grid.Column="2" Text="Origin" FontWeight="Bold" />
+                                        <TextBlock Grid.Column="3" Text="Date / Time" FontWeight="Bold" />
+                                        <TextBlock Grid.Column="4" Text="Technician" FontWeight="Bold" />
+                                        <TextBlock Grid.Column="5" Text="Record Note" FontWeight="Bold" />
+                                    </Grid>
 
-                                <Grid MinHeight="44" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="180" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Background="{ThemeResource AppRailBrush}" Padding="12,8">
-                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE73E;" FontSize="15" Foreground="{ThemeResource AppRailTextBrush}" />
-                                            <TextBlock Text="Outcome" FontWeight="Bold" Foreground="{ThemeResource AppRailTextBrush}" />
-                                        </StackPanel>
+                                    <Border Grid.Row="1" Background="{ThemeResource AppRowAltBrush}" Padding="16"
+                                            Visibility="{x:Bind ViewModel.NoDiagnosticRecordsVisibility, Mode=OneWay}">
+                                        <TextBlock Text="No diagnostic records on this work order yet. Readings, scope waveforms, repairs and the close-out outcome appear here as they are saved."
+                                                   Foreground="{ThemeResource AppTextSecondaryBrush}" TextWrapping="Wrap" />
                                     </Border>
-                                    <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.PreviewOutcomeLine, Mode=OneWay}" Padding="12,8" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
-                                </Grid>
 
-                                <Grid MinHeight="44" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="180" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Background="{ThemeResource AppRailBrush}" Padding="12,8">
-                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE77B;" FontSize="15" Foreground="{ThemeResource AppRailTextBrush}" />
-                                            <TextBlock Text="Technician" FontWeight="Bold" Foreground="{ThemeResource AppRailTextBrush}" />
-                                        </StackPanel>
-                                    </Border>
-                                    <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.PreviewTechnicianLine, Mode=OneWay}" Padding="12,8" VerticalAlignment="Center" />
-                                </Grid>
+                                    <ListView Grid.Row="2"
+                                              ItemsSource="{x:Bind ViewModel.DiagnosticRecords, Mode=OneWay}"
+                                              SelectedItem="{x:Bind ViewModel.SelectedDiagnosticRecord, Mode=TwoWay}"
+                                              SelectionMode="Single"
+                                              AutomationProperties.Name="Diagnostic records"
+                                              MaxHeight="300">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:DiagnosticRecordRow">
+                                                <Grid MinHeight="44" Padding="0,4">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="40" />
+                                                        <ColumnDefinition Width="170" />
+                                                        <ColumnDefinition Width="220" />
+                                                        <ColumnDefinition Width="160" />
+                                                        <ColumnDefinition Width="160" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <FontIcon Grid.Column="0" FontFamily="{StaticResource IconFontFamily}" Glyph="{x:Bind Glyph}" FontSize="16"
+                                                              HorizontalAlignment="Left" VerticalAlignment="Center" />
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                        <TextBlock Text="{x:Bind RecordType}" FontWeight="SemiBold" />
+                                                        <Border Background="{ThemeResource SimBadgeBackgroundBrush}" BorderBrush="{ThemeResource SimBadgeBorderBrush}"
+                                                                BorderThickness="1" CornerRadius="{StaticResource BadgeCornerRadius}" Padding="4,0"
+                                                                Visibility="{x:Bind SimulatedBadgeVisibility}">
+                                                            <TextBlock Text="SIM" FontSize="10" FontWeight="Bold" Foreground="{ThemeResource SimBadgeTextBrush}" />
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="2" Text="{x:Bind Origin}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Grid.Column="3" Text="{x:Bind DateTime}" VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="4" Text="{x:Bind Technician}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Grid.Column="5" Text="{x:Bind Note}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
 
-                                <Grid MinHeight="44">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="180" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Background="{ThemeResource AppRailBrush}" Padding="12,8">
-                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE80F;" FontSize="15" Foreground="{ThemeResource AppRailTextBrush}" />
-                                            <TextBlock Text="Shop Info" FontWeight="Bold" Foreground="{ThemeResource AppRailTextBrush}" />
+                                    <!-- Preview + Record Note (bottom of SFP's Integrated Diagnostics) -->
+                                    <Grid Grid.Row="3" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,1,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="168" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Background="{ThemeResource SectionTileBrush}" Padding="10,12" MinHeight="96">
+                                            <StackPanel Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE70B;" FontSize="24"
+                                                          Foreground="{ThemeResource SectionTileTextBrush}" />
+                                                <TextBlock Text="Record Note" FontWeight="Bold" TextAlignment="Center"
+                                                           Foreground="{ThemeResource SectionTileTextBrush}" />
+                                            </StackPanel>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Padding="12,10" Spacing="4">
+                                            <TextBlock Text="Preview" FontWeight="Bold" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                            <TextBlock Text="{x:Bind ViewModel.DiagnosticRecordPreviewText, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                                         </StackPanel>
-                                    </Border>
-                                    <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.PreviewShopInfoLine, Mode=OneWay}" Padding="12,8" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="2" Padding="12,10" Spacing="4"
+                                                    BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="1,0,0,0">
+                                            <TextBlock Text="Note" FontWeight="Bold" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                            <TextBlock Text="{x:Bind ViewModel.DiagnosticRecordNoteText, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                        </StackPanel>
+                                    </Grid>
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -1658,18 +1817,6 @@
                                         <TextBlock Text="Check AI Status" />
                                     </StackPanel>
                                 </Button>
-                                <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                        Tag="Recommendations"
-                                        Click="OnNavRailButtonClick"
-                                        Content="Recommendations" />
-                                <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                        Tag="GuidedTree"
-                                        Click="OnNavRailButtonClick"
-                                        Content="Guided Tree" />
-                                <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                        Tag="ManualSearch"
-                                        Click="OnNavRailButtonClick"
-                                        Content="Manual RAG" />
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -1929,22 +2076,6 @@
                                     <Button Style="{StaticResource ActionTouchButtonStyle}"
                                             Command="{x:Bind ViewModel.CreateActiveWorkOrderCommand}"
                                             Content="Open / Create WO" />
-                                    <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                            Tag="Recommendations"
-                                            Click="OnNavRailButtonClick"
-                                            Content="Recommendations" />
-                                    <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                            Tag="Readings"
-                                            Click="OnNavRailButtonClick"
-                                            Content="Manual Readings" />
-                                    <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                            Tag="AiChat"
-                                            Click="OnNavRailButtonClick"
-                                            Content="Back to Tech Chat" />
-                                    <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                            Tag="ManualSearch"
-                                            Click="OnNavRailButtonClick"
-                                            Content="Manual RAG" />
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -2276,10 +2407,6 @@
                                     <Button Style="{StaticResource ActionTouchButtonStyle}"
                                             Command="{x:Bind ViewModel.EnableFreeEntryReadingModeCommand}"
                                             Content="Free-Entry Mode" />
-                                    <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                            Tag="GuidedTree"
-                                            Click="OnNavRailButtonClick"
-                                            Content="Guided Tree" />
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -2688,11 +2815,6 @@
                                     </StackPanel>
                                 </Button>
 
-                                <Button Grid.Column="2"
-                                        Style="{StaticResource ActionTouchButtonStyle}"
-                                        Tag="AiChat"
-                                        Click="OnNavRailButtonClick"
-                                        Content="Back to Tech Chat" />
                             </Grid>
 
                             <StackPanel Orientation="Horizontal" Spacing="10">
@@ -2881,10 +3003,6 @@
                                                 Tag="WorkOrders"
                                                 Click="OnNavRailButtonClick"
                                                 Content="Work Orders &amp; Close" />
-                                        <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                                Tag="AiChat"
-                                                Click="OnNavRailButtonClick"
-                                                Content="Tech Chat" />
                                     </StackPanel>
                                 </Grid>
 
@@ -4076,13 +4194,83 @@
                                        FontSize="14"
                                        Foreground="{ThemeResource AppTextSecondaryBrush}"
                                        TextWrapping="Wrap" />
-                            <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                    Tag="HeavyDuty"
-                                    Click="OnToolbarButtonClick"
-                                    Content="Return to Diagnostics &amp; Simulator" />
                         </StackPanel>
                     </Border>
                 </Grid>
+
+                <!-- =============================================================== -->
+                <!-- 3H. SETTINGS (theme, sunlight mode, units, devices, data, about) -->
+                <!-- =============================================================== -->
+                <ScrollViewer Grid.Row="2"
+                              Padding="24,16"
+                              Visibility="{x:Bind ViewModel.SettingsViewVisibility, Mode=OneWay}">
+                    <StackPanel Spacing="16" MaxWidth="720" HorizontalAlignment="Left">
+                        <Border Background="{ThemeResource AppSurfaceBrush}"
+                                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource CardCornerRadius}"
+                                Padding="20">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Display" FontSize="18" FontWeight="SemiBold" />
+                                <RadioButtons x:Name="ThemeRadioButtons"
+                                              Header="Theme"
+                                              SelectedIndex="0"
+                                              SelectionChanged="OnThemeRadioSelectionChanged">
+                                    <RadioButton Content="Follow Windows" MinHeight="44" />
+                                    <RadioButton Content="Light" MinHeight="44" />
+                                    <RadioButton Content="Dark" MinHeight="44" />
+                                </RadioButtons>
+                                <ToggleSwitch x:Name="SunlightToggleSwitch"
+                                              Header="Sunlight mode (high contrast for outdoor ramp work)"
+                                              MinHeight="44"
+                                              Toggled="OnSunlightToggleSwitchToggled" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{ThemeResource AppSurfaceBrush}"
+                                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource CardCornerRadius}"
+                                Padding="20">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Units" FontSize="18" FontWeight="SemiBold" />
+                                <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                        Command="{x:Bind ViewModel.ToggleUnitSystemCommand}"
+                                        Content="{x:Bind ViewModel.UnitSystemLabel, Mode=OneWay}"
+                                        ToolTipService.ToolTip="Switch shop default display units (per-reading overrides are kept)" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{ThemeResource AppSurfaceBrush}"
+                                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource CardCornerRadius}"
+                                Padding="20">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Devices &amp; recording" FontSize="18" FontWeight="SemiBold" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Style="{StaticResource ActionTouchButtonStyle}" Click="OnOpenDeviceSetupDialogClick" Content="Device setup…" />
+                                    <Button Style="{StaticResource ActionTouchButtonStyle}" Click="OnDiscoverDevicesClick" Content="Find 32-bit host devices" />
+                                    <Button Style="{StaticResource ActionTouchButtonStyle}" Click="OnOpenTriggerSetupClick" Content="Recording trigger…" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{ThemeResource AppSurfaceBrush}"
+                                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource CardCornerRadius}"
+                                Padding="20">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Data &amp; about" FontSize="18" FontWeight="SemiBold" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Style="{StaticResource ActionTouchButtonStyle}" Click="OnReloadDbMenuClick" Content="Reload local database" />
+                                    <Button Style="{StaticResource ActionTouchButtonStyle}" Click="OnAboutMenuClick" Content="About GSE Tech Pro" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
 
                 <!-- =============================================================== -->
                 <!-- ROW 3: VCR RECORDING & PLAYBACK TRANSPORT BAR (Screens 13, 17, 18) -->
@@ -4225,7 +4413,7 @@
         </Grid>
 
         <!-- =================================================================== -->
-        <!-- ROW 4: STATUS BAR (Matches Screenshot 01 / 04 bottom status bar)     -->
+        <!-- ROW 4: STATUS BAR                                                    -->
         <!-- Shows: Adapter/Device, Provenance Badge, MIL, VIN, Protocol, Status  -->
         <!-- =================================================================== -->
         <Border Grid.Row="4"
@@ -4269,18 +4457,6 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Provenance Status Badge -->
-                <Border Grid.Column="2"
-                        Margin="8,0"
-                        Padding="8,2"
-                        CornerRadius="4"
-                        Background="{ThemeResource SimBadgeBackgroundBrush}"
-                        BorderBrush="{ThemeResource SimBadgeBorderBrush}"
-                        BorderThickness="1"
-                        VerticalAlignment="Center"
-                        Visibility="{x:Bind ViewModel.SimulatedBannerVisibility, Mode=OneWay}">
-                    <TextBlock Text="SIMULATED" FontWeight="Bold" FontSize="11" Foreground="{ThemeResource SimBadgeTextBrush}" />
-                </Border>
 
                 <!-- MIL Status Badge -->
                 <Border Grid.Column="3"

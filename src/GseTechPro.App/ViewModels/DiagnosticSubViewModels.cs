@@ -11,7 +11,14 @@ using Windows.UI;
 
 namespace GseTechPro.App.ViewModels;
 
-public sealed record NavRailItem(string Key, string Label, string Glyph);
+/// <summary>
+/// One entry in the main window sidebar. Top-level sections have no <see cref="ParentKey"/>;
+/// sub-pages carry their section's key so the shell can switch tools before opening them.
+/// </summary>
+public sealed record SidebarItem(string Key, string Label, string Glyph, string? ParentKey = null)
+{
+    public IReadOnlyList<SidebarItem> Children { get; init; } = Array.Empty<SidebarItem>();
+}
 
 public sealed record OpenWorkOrderTab(string Id, string Title, string AssetNumber, string StatusText);
 

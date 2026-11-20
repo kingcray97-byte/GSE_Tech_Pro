@@ -16,6 +16,17 @@
                     <SolidColorBrush x:Key="AppToolbarBrush" Color="#EBEBEB" />
                     <SolidColorBrush x:Key="AppRailBrush" Color="#23276E" />
                     <SolidColorBrush x:Key="AppRailTextBrush" Color="#FFFFFF" />
+                    <!-- Phase 10B: Shop Foreman Pro look (navy section tiles, module menu, colour-coded toolbar tiles) -->
+                    <SolidColorBrush x:Key="SectionTileBrush" Color="#1F3A5F" />
+                    <SolidColorBrush x:Key="ModuleNavBrush" Color="#1F3A5F" />
+                    <SolidColorBrush x:Key="ModuleContentBrush" Color="#DCE5F0" />
+                    <SolidColorBrush x:Key="ToolTileDocBrush" Color="#2E6DB4" />
+                    <SolidColorBrush x:Key="ToolTileModuleBrush" Color="#2E8B57" />
+                    <SolidColorBrush x:Key="ToolTileScopeBrush" Color="#00838F" />
+                    <SolidColorBrush x:Key="ToolTileAiBrush" Color="#6A4BC4" />
+                    <SolidColorBrush x:Key="DocTabSelectedBrush" Color="#1F3A5F" />
+                    <SolidColorBrush x:Key="SectionTileTextBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ToolTileGlyphBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#1A1A1A" />
                     <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#5C5C5C" />
                     <SolidColorBrush x:Key="AppAccentBrush" Color="#2E3391" />
@@ -62,6 +73,17 @@
                     <SolidColorBrush x:Key="AppToolbarBrush" Color="#242424" />
                     <SolidColorBrush x:Key="AppRailBrush" Color="#181B42" />
                     <SolidColorBrush x:Key="AppRailTextBrush" Color="#FFFFFF" />
+                    <!-- Phase 10B: Shop Foreman Pro look (navy section tiles, module menu, colour-coded toolbar tiles) -->
+                    <SolidColorBrush x:Key="SectionTileBrush" Color="#1C3354" />
+                    <SolidColorBrush x:Key="ModuleNavBrush" Color="#182C48" />
+                    <SolidColorBrush x:Key="ModuleContentBrush" Color="#1B2330" />
+                    <SolidColorBrush x:Key="ToolTileDocBrush" Color="#3A7BC8" />
+                    <SolidColorBrush x:Key="ToolTileModuleBrush" Color="#2F9E63" />
+                    <SolidColorBrush x:Key="ToolTileScopeBrush" Color="#1497A3" />
+                    <SolidColorBrush x:Key="ToolTileAiBrush" Color="#7B5FD6" />
+                    <SolidColorBrush x:Key="DocTabSelectedBrush" Color="#2A4A75" />
+                    <SolidColorBrush x:Key="SectionTileTextBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ToolTileGlyphBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#A0A0A0" />
                     <SolidColorBrush x:Key="AppAccentBrush" Color="#8C93F0" />
@@ -108,6 +130,17 @@
                     <SolidColorBrush x:Key="AppToolbarBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="AppRailBrush" Color="#1E2FB8" />
                     <SolidColorBrush x:Key="AppRailTextBrush" Color="#FFFFFF" />
+                    <!-- Phase 10B: Shop Foreman Pro look (navy section tiles, module menu, colour-coded toolbar tiles) -->
+                    <SolidColorBrush x:Key="SectionTileBrush" Color="#0B1F3A" />
+                    <SolidColorBrush x:Key="ModuleNavBrush" Color="#0B1F3A" />
+                    <SolidColorBrush x:Key="ModuleContentBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ToolTileDocBrush" Color="#003C8F" />
+                    <SolidColorBrush x:Key="ToolTileModuleBrush" Color="#006B2E" />
+                    <SolidColorBrush x:Key="ToolTileScopeBrush" Color="#005F66" />
+                    <SolidColorBrush x:Key="ToolTileAiBrush" Color="#4B2A9E" />
+                    <SolidColorBrush x:Key="DocTabSelectedBrush" Color="#0B1F3A" />
+                    <SolidColorBrush x:Key="SectionTileTextBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ToolTileGlyphBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#000000" />
                     <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#1A1A1A" />
                     <SolidColorBrush x:Key="AppAccentBrush" Color="#1E2FB8" />
@@ -166,45 +199,22 @@
             <x:Double x:Key="FontSizeHeader">20</x:Double>
             <x:Double x:Key="FontSizeMeterValue">28</x:Double>
 
-            <Style x:Key="ToolbarButtonStyle" TargetType="Button">
-                <Setter Property="MinWidth" Value="54" />
-                <Setter Property="MinHeight" Value="52" />
-                <Setter Property="Padding" Value="8,6" />
-                <Setter Property="Margin" Value="{StaticResource ToolbarButtonMargin}" />
-                <Setter Property="CornerRadius" Value="{StaticResource AppCornerRadius}" />
-                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
-                <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
-                <Setter Property="HorizontalContentAlignment" Value="Center" />
-                <Setter Property="VerticalContentAlignment" Value="Center" />
-            </Style>
 
-            <Style x:Key="ToolToggleButtonStyle" TargetType="Button">
+
+
+            <!-- Phase 10B: Shop Foreman Pro toolbar tile (icon over label, 64x60, touch and glove friendly) -->
+            <Style x:Key="ToolbarTileButtonStyle" TargetType="Button">
                 <Setter Property="MinWidth" Value="64" />
-                <Setter Property="MinHeight" Value="52" />
-                <Setter Property="Padding" Value="8,6" />
-                <Setter Property="Margin" Value="{StaticResource ToolbarButtonMargin}" />
+                <Setter Property="MinHeight" Value="60" />
+                <Setter Property="Padding" Value="6,4" />
+                <Setter Property="Margin" Value="1,0" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="CornerRadius" Value="{StaticResource AppCornerRadius}" />
                 <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
                 <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
-                <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="HorizontalContentAlignment" Value="Center" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
-            </Style>
-
-            <Style x:Key="NavRailButtonStyle" TargetType="Button">
-                <Setter Property="MinHeight" Value="48" />
-                <Setter Property="MinWidth" Value="148" />
-                <Setter Property="HorizontalAlignment" Value="Stretch" />
-                <Setter Property="HorizontalContentAlignment" Value="Left" />
-                <Setter Property="Padding" Value="12,8" />
-                <Setter Property="Margin" Value="4,2" />
-                <Setter Property="CornerRadius" Value="{StaticResource AppCornerRadius}" />
-                <Setter Property="Background" Value="Transparent" />
-                <Setter Property="Foreground" Value="{ThemeResource AppRailTextBrush}" />
-                <Setter Property="BorderBrush" Value="Transparent" />
-                <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
-                <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
             </Style>
 
             <Style x:Key="ActionTouchButtonStyle" TargetType="Button">

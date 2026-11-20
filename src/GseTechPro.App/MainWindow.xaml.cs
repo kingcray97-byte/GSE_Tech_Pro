@@ -16,6 +16,7 @@ public sealed partial class MainWindow : Window
 {
     private ResourceDictionary? _sunlightDictionary;
     private bool _suppressSliderSeek;
+    private bool _suppressSunlightToggle;
 
     public MainWindow(
         DataServices dataServices,
@@ -38,7 +39,10 @@ public sealed partial class MainWindow : Window
 
         // Hand the view model the live XamlRoot once loaded so it can host confirmation
         // and error dialogs (e.g. Clear DTCs confirmation, Trigger Setup, Device Setup).
-        RootGrid.Loaded += (_, _) => ViewModel.DialogXamlRoot = RootGrid.XamlRoot;
+        RootGrid.Loaded += (_, _) =>
+        {
+            ViewModel.DialogXamlRoot = RootGrid.XamlRoot;
+        };
 
         RootGrid.ActualThemeChanged += (_, _) => SyncThemeStateToViewModel();
         SyncThemeStateToViewModel();
@@ -70,6 +74,7 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>Menu items and in-page links (Tag = page key) open a module page through the same router as the module menu.</summary>
     private async void OnNavRailButtonClick(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string navKey })
@@ -77,7 +82,11 @@ public sealed partial class MainWindow : Window
 
         try
         {
-            await ViewModel.SelectNavRailItem(navKey);
+            var item = ViewModel.FindSidebarItem(navKey);
+            if (item is not null)
+                await ViewModel.SelectSidebarItemAsync(item);
+            else
+                await ViewModel.SelectNavRailItem(navKey);
         }
         catch (Exception ex)
         {
@@ -85,32 +94,12 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void OnBreadcrumbRootClick(object sender, RoutedEventArgs e) =>
-        ViewModel.SelectToolbarAction("Assets");
-
-    private void OnNewWorkOrderMenuClick(object sender, RoutedEventArgs e) =>
-        ViewModel.SelectToolbarAction("New");
-
-    private void OnOpenWorkOrdersMenuClick(object sender, RoutedEventArgs e) =>
-        ViewModel.SelectToolbarAction("WorkOrders");
-
-    private void OnOpenAssetsMenuClick(object sender, RoutedEventArgs e) =>
-        ViewModel.SelectToolbarAction("Assets");
-
-    private async void OnVehicleHealthMenuClick(object sender, RoutedEventArgs e) =>
-        await ViewModel.SelectNavRailItem("Back");
-
-    private async void OnLiveSnaplistMenuClick(object sender, RoutedEventArgs e) =>
-        await ViewModel.SelectNavRailItem("LiveData");
-
-    private async void OnEditSnaplistMenuClick(object sender, RoutedEventArgs e) =>
-        await ViewModel.SelectNavRailItem("EditSnaplist");
-
-    private async void OnCustomDisplayMenuClick(object sender, RoutedEventArgs e) =>
-        await ViewModel.SelectNavRailItem("CustomDisplay");
-
-    private async void OnLineGraphMenuClick(object sender, RoutedEventArgs e) =>
-        await ViewModel.SelectNavRailItem("GraphView");
+    /// <summary>RO Viewer / Integrated Diagnostics tabs on the work order document.</summary>
+    private void OnWorkOrderDocumentTabChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
+    {
+        if (sender.SelectedItem is { Tag: string tag } && int.TryParse(tag, out var index))
+            ViewModel.WorkOrderDocumentTabIndex = index;
+    }
 
     private async void OnReloadDbMenuClick(object sender, RoutedEventArgs e)
     {
@@ -124,9 +113,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void OnNotesMenuClick(object sender, RoutedEventArgs e) =>
-        ViewModel.SelectToolbarAction("Notes");
-
     private async void OnDiscoverDevicesClick(object sender, RoutedEventArgs e)
     {
         try
@@ -136,54 +122,6 @@ public sealed partial class MainWindow : Window
         catch (Exception ex)
         {
             ViewModel.ReportError("Discover devices failed", ex);
-        }
-    }
-
-    private async void OnConnectSimulatorClick(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            await ViewModel.ConnectSimulatorAsync();
-        }
-        catch (Exception ex)
-        {
-            ViewModel.ReportError("Connect adapter failed", ex);
-        }
-    }
-
-    private async void OnDisconnectSimulatorClick(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            await ViewModel.DisconnectSimulatorAsync();
-        }
-        catch (Exception ex)
-        {
-            ViewModel.ReportError("Disconnect adapter failed", ex);
-        }
-    }
-
-    private async void OnRefreshDiagnosticsClick(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            await ViewModel.RefreshDiagnosticsAsync();
-        }
-        catch (Exception ex)
-        {
-            ViewModel.ReportError("Read DTCs failed", ex);
-        }
-    }
-
-    private async void OnClearDtcsClick(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            await ViewModel.ClearDtcsAsync();
-        }
-        catch (Exception ex)
-        {
-            ViewModel.ReportError("Clear DTCs failed", ex);
         }
     }
 
@@ -443,45 +381,42 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void OnToggleUnitsMenuClick(object sender, RoutedEventArgs e) =>
-        ViewModel.ToggleUnitSystem();
-
-    private void OnFollowSystemThemeClick(object sender, RoutedEventArgs e)
+    private ElementTheme SelectedTheme => ThemeRadioButtons?.SelectedIndex switch
     {
-        SetSunlightMode(false);
-        RootGrid.RequestedTheme = ElementTheme.Default;
+        1 => ElementTheme.Light,
+        2 => ElementTheme.Dark,
+        _ => ElementTheme.Default,
+    };
+
+    /// <summary>Settings → Theme. Picking a theme turns Sunlight mode off.</summary>
+    private void OnThemeRadioSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (RootGrid is null || SunlightToggleSwitch is null)
+            return;
+
+        if (SunlightToggleSwitch.IsOn)
+        {
+            SetSunlightMode(false);
+            return;
+        }
+
+        RootGrid.RequestedTheme = SelectedTheme;
         SyncThemeStateToViewModel();
     }
 
-    private void OnLightThemeClick(object sender, RoutedEventArgs e)
+    private void OnSunlightToggleSwitchToggled(object sender, RoutedEventArgs e)
     {
-        SetSunlightMode(false);
-        RootGrid.RequestedTheme = ElementTheme.Light;
-        SyncThemeStateToViewModel();
-    }
+        if (_suppressSunlightToggle)
+            return;
 
-    private void OnDarkThemeClick(object sender, RoutedEventArgs e)
-    {
-        SetSunlightMode(false);
-        RootGrid.RequestedTheme = ElementTheme.Dark;
-        SyncThemeStateToViewModel();
-    }
-
-    private void OnToggleSunlightMenuClick(object sender, RoutedEventArgs e)
-    {
-        var nextState = !(SunlightToggleButton.IsChecked ?? false);
-        SetSunlightMode(nextState);
-    }
-
-    private void OnSunlightToggleButtonClick(object sender, RoutedEventArgs e)
-    {
-        var isChecked = SunlightToggleButton.IsChecked ?? false;
-        SetSunlightMode(isChecked);
+        SetSunlightMode(SunlightToggleSwitch.IsOn);
     }
 
     private void SetSunlightMode(bool enabled)
     {
-        SunlightToggleButton.IsChecked = enabled;
+        _suppressSunlightToggle = true;
+        SunlightToggleSwitch.IsOn = enabled;
+        _suppressSunlightToggle = false;
 
         if (enabled)
         {
@@ -507,8 +442,10 @@ public sealed partial class MainWindow : Window
                 RootGrid.Resources.MergedDictionaries.Remove(_sunlightDictionary);
             }
 
-            RootGrid.RequestedTheme = ElementTheme.Dark;
-            RootGrid.RequestedTheme = ElementTheme.Default;
+            // Flip through the opposite theme so {ThemeResource} bindings re-evaluate, then land on the chosen theme
+            var target = SelectedTheme;
+            RootGrid.RequestedTheme = target == ElementTheme.Dark ? ElementTheme.Light : ElementTheme.Dark;
+            RootGrid.RequestedTheme = target;
         }
 
         SyncThemeStateToViewModel();
@@ -516,7 +453,7 @@ public sealed partial class MainWindow : Window
 
     private void SyncThemeStateToViewModel()
     {
-        var isSunlight = SunlightToggleButton?.IsChecked ?? false;
+        var isSunlight = SunlightToggleSwitch?.IsOn ?? false;
         var isDark = !isSunlight && RootGrid.ActualTheme == ElementTheme.Dark;
         ViewModel.UpdateThemeState(isDark, isSunlight);
     }
@@ -538,47 +475,6 @@ public sealed partial class MainWindow : Window
     // =========================================================================
     // Phase 3: AI Tech Chat, Citations, Guided Troubleshooting & Manual RAG
     // =========================================================================
-
-    private void OnOpenAiTechChatMenuClick(object sender, RoutedEventArgs e) =>
-        ViewModel.SelectToolbarAction("AiTechChat");
-
-    private async void OnOpenGuidedTreeMenuClick(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            ViewModel.SelectToolbarAction("AiTechChat");
-            await ViewModel.SelectNavRailItem("GuidedTree");
-        }
-        catch (Exception ex)
-        {
-            ViewModel.ReportError("Open guided troubleshooting failed", ex);
-        }
-    }
-
-    private async void OnOpenReadingsMenuClick(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            await ViewModel.SelectNavRailItem("Readings");
-        }
-        catch (Exception ex)
-        {
-            ViewModel.ReportError("Open manual readings failed", ex);
-        }
-    }
-
-    private async void OnOpenManualSearchMenuClick(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            ViewModel.SelectToolbarAction("AiTechChat");
-            await ViewModel.SelectNavRailItem("ManualSearch");
-        }
-        catch (Exception ex)
-        {
-            ViewModel.ReportError("Open manual search failed", ex);
-        }
-    }
 
     private async void OnQuickPromptButtonClick(object sender, RoutedEventArgs e)
     {
@@ -673,19 +569,6 @@ public sealed partial class MainWindow : Window
     // Phase 5: Repair Recommendations, Outcomes & Comeback Confirmation (ADR-010)
     // =========================================================================
 
-    private async void OnOpenRecommendationsMenuClick(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            ViewModel.SelectToolbarAction("AiTechChat");
-            await ViewModel.SelectNavRailItem("Recommendations");
-        }
-        catch (Exception ex)
-        {
-            ViewModel.ReportError("Open repair recommendations failed", ex);
-        }
-    }
-
     private async void OnRecommendationQueryKeyDown(object sender, KeyRoutedEventArgs e)
     {
         if (e.Key != VirtualKey.Enter)
@@ -722,9 +605,6 @@ public sealed partial class MainWindow : Window
     // =========================================================================
     // Phase 6: Oscilloscope (PicoScope / Hantek / Simulator Workflow — ADR-011)
     // =========================================================================
-
-    private void OnOpenScopeMenuClick(object sender, RoutedEventArgs e) =>
-        ViewModel.SelectToolbarAction("Scope");
 
     private async void OnLoadSavedWaveformButtonClick(object sender, RoutedEventArgs e)
     {

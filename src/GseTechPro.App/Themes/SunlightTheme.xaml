@@ -35,6 +35,17 @@
             <SolidColorBrush x:Key="AppToolbarBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="AppRailBrush" Color="#1E2FB8" />
             <SolidColorBrush x:Key="AppRailTextBrush" Color="#FFFFFF" />
+            <!-- Phase 10B: Shop Foreman Pro look (navy section tiles, module menu, colour-coded toolbar tiles) -->
+            <SolidColorBrush x:Key="SectionTileBrush" Color="#0B1F3A" />
+            <SolidColorBrush x:Key="ModuleNavBrush" Color="#0B1F3A" />
+            <SolidColorBrush x:Key="ModuleContentBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="ToolTileDocBrush" Color="#003C8F" />
+            <SolidColorBrush x:Key="ToolTileModuleBrush" Color="#006B2E" />
+            <SolidColorBrush x:Key="ToolTileScopeBrush" Color="#005F66" />
+            <SolidColorBrush x:Key="ToolTileAiBrush" Color="#4B2A9E" />
+            <SolidColorBrush x:Key="DocTabSelectedBrush" Color="#0B1F3A" />
+            <SolidColorBrush x:Key="SectionTileTextBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="ToolTileGlyphBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#000000" />
             <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#1A1A1A" />
             <SolidColorBrush x:Key="AppAccentBrush" Color="#1E2FB8" />

@@ -101,6 +101,9 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
             _playbackTimer.Tick += OnPlaybackTimerTick;
         }
 
+        OpenTabs.CollectionChanged += (_, _) => OnPropertyChanged(nameof(TabStripVisibility));
+        SyncModuleNavSelection(null);
+        RebuildWorkOrderDocument();
         OpenTabs.Add(new OpenWorkOrderTab(
             "SIM-SESSION-01",
             "Active Diagnostic Session (Unassigned)",
@@ -150,7 +153,6 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
             CustomDisplaySlots.Add(slot);
         }
 
-        RebuildNavRailForTool("Heavy Duty");
     }
 
     public AiServiceStateService AiState { get; }
@@ -188,10 +190,10 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     [ObservableProperty]
     private SelectableDeviceItem? _selectedDevice;
 
-    public ObservableCollection<NavRailItem> NavRailItems { get; } = new();
+    public IReadOnlyList<SidebarItem> SidebarSections { get; } = BuildSidebarSections();
 
     [ObservableProperty]
-    private string _activeTool = "Heavy Duty";
+    private string _activeTool = "Diagnostics";
 
     [ObservableProperty]
     private string _activeSectionKey = "Diagnostics";
@@ -200,7 +202,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     private string _breadcrumbRoot = "Equipment Selection";
 
     [ObservableProperty]
-    private string _breadcrumbCategory = "Main Menu";
+    private string _breadcrumbCategory = "Diagnostics";
 
     [ObservableProperty]
     private string _breadcrumbLeaf = "Equipment Health";
@@ -474,6 +476,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         !IsManualSearchViewVisible &&
         !IsReadingsViewVisible &&
         !IsRecommendationsViewVisible &&
+        !IsSettingsViewVisible &&
         !IsScopeViewVisible;
 
     // Section-filtering inside Diagnostics / Equipment Health (Screenshot 04 shows all; sub-nav focuses or shows all)
@@ -1901,11 +1904,214 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     // Toolbar & Left Navigation Rail Routing
     // =========================================================================
 
+    private static IReadOnlyList<SidebarItem> BuildSidebarSections()
+    {
+        static SidebarItem Child(string parent, string key, string label, string glyph) =>
+            new(key, label, glyph, parent);
+
+        return new[]
+        {
+            new SidebarItem("Diagnostics", "Diagnostics", "")
+            {
+                Children = new[]
+                {
+                    Child("Diagnostics", "Overview", "Equipment Health", ""),
+                    Child("Diagnostics", "LiveData", "Live Data", ""),
+                    Child("Diagnostics", "DTCs", "Trouble Codes", ""),
+                    Child("Diagnostics", "FreezeFrames", "Freeze Frames", ""),
+                    Child("Diagnostics", "Readiness", "Readiness", ""),
+                    Child("Diagnostics", "Monitors", "Monitors", ""),
+                },
+            },
+            new SidebarItem("Scope", "Scope", "")
+            {
+                Children = new[]
+                {
+                    Child("Scope", "Overview", "Scope Capture", ""),
+                    Child("Scope", "ScopeChannels", "Channels", ""),
+                    Child("Scope", "GuidedTests", "Guided Tests", ""),
+                    Child("Scope", "RefWaveforms", "Reference Waveforms", ""),
+                },
+            },
+            new SidebarItem("CanCapture", "CAN Capture", ""),
+            new SidebarItem("WorkOrders", "Work Orders", ""),
+            new SidebarItem("Assets", "Equipment", ""),
+            new SidebarItem("AiTechChat", "AI Tech Chat", "")
+            {
+                Children = new[]
+                {
+                    Child("AiTechChat", "AiChat", "Tech Chat", ""),
+                    Child("AiTechChat", "Recommendations", "Recommendations", ""),
+                    Child("AiTechChat", "GuidedTree", "Troubleshooting", ""),
+                    Child("AiTechChat", "Readings", "Manual Readings", ""),
+                    Child("AiTechChat", "ManualSearch", "Manual Search", ""),
+                },
+            },
+            new SidebarItem("Camera", "Camera", ""),
+        };
+    }
+
+    /// <summary>Sidebar section key for the active tool (used to keep the sidebar selection and page command bars in sync).</summary>
+    public string CurrentSidebarSectionKey => ActiveTool switch
+    {
+        "Work Orders" => "WorkOrders",
+        "Equipment Registry" => "Assets",
+        "Scope" => "Scope",
+        "CAN Capture" => "CanCapture",
+        "Camera" => "Camera",
+        "AI Tech Chat" => "AiTechChat",
+        "Settings" => "Settings",
+        _ => "Diagnostics",
+    };
+
+    public Visibility DeviceCommandBarVisibility =>
+        CurrentSidebarSectionKey is "Diagnostics" or "CanCapture" ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility WorkOrdersCommandBarVisibility =>
+        CurrentSidebarSectionKey == "WorkOrders" ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility TabStripVisibility => OpenTabs.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility ConnectButtonVisibility => IsConnected ? Visibility.Collapsed : Visibility.Visible;
+
+    public Visibility DisconnectButtonVisibility => IsConnected ? Visibility.Visible : Visibility.Collapsed;
+
+    partial void OnIsConnectedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ConnectButtonVisibility));
+        OnPropertyChanged(nameof(DisconnectButtonVisibility));
+    }
+
+    public bool IsSettingsViewVisible => ActiveSectionKey == "Settings";
+
+    public Visibility SettingsViewVisibility => IsSettingsViewVisible ? Visibility.Visible : Visibility.Collapsed;
+
+    partial void OnActiveToolChanged(string value)
+    {
+        OnPropertyChanged(nameof(CurrentSidebarSectionKey));
+        OnPropertyChanged(nameof(DeviceCommandBarVisibility));
+        OnPropertyChanged(nameof(WorkOrdersCommandBarVisibility));
+        OnPropertyChanged(nameof(CurrentModuleNavItems));
+        OnPropertyChanged(nameof(ModuleNavTitle));
+        OnPropertyChanged(nameof(ModuleNavGlyph));
+        OnPropertyChanged(nameof(ModuleNavVisibility));
+        SyncModuleNavSelection(null);
+    }
+
+    // ------------------------------------------------------------------
+    // Phase 10B: Shop Foreman Pro shell. The menu bar and icon toolbar pick a module; inside a
+    // module, a navy left menu lists that module's pages (SFP's "New Scan / Recent Vehicles" rail).
+    // The menu reuses SidebarSections, so the toolbar, menus and in-page links share one router.
+    // ------------------------------------------------------------------
+
+    private bool _syncingModuleNav;
+
+    private SidebarItem? CurrentSection =>
+        SidebarSections.FirstOrDefault(s => s.Key == CurrentSidebarSectionKey);
+
+    /// <summary>Pages of the active module, shown in the navy left menu. Empty for screens without sub-pages.</summary>
+    public IReadOnlyList<SidebarItem> CurrentModuleNavItems => CurrentSection?.Children ?? Array.Empty<SidebarItem>();
+
+    public string ModuleNavTitle => CurrentSection?.Label ?? string.Empty;
+
+    public string ModuleNavGlyph => CurrentSection?.Glyph ?? string.Empty;
+
+    public Visibility ModuleNavVisibility => CurrentModuleNavItems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    /// <summary>The highlighted page in the module menu. Setting it from the UI opens that page.</summary>
+    [ObservableProperty]
+    private SidebarItem? _selectedModuleNavItem;
+
+    partial void OnSelectedModuleNavItemChanged(SidebarItem? value)
+    {
+        if (_syncingModuleNav || value is null)
+            return;
+        _ = OpenModuleNavItemAsync(value);
+    }
+
+    private async Task OpenModuleNavItemAsync(SidebarItem item)
+    {
+        try
+        {
+            await SelectSidebarItemAsync(item);
+        }
+        catch (Exception ex)
+        {
+            ReportError("Navigation failed", ex);
+        }
+    }
+
+    /// <summary>Highlights a module page without navigating (code-driven page changes).</summary>
+    private void SyncModuleNavSelection(string? childKey)
+    {
+        var items = CurrentModuleNavItems;
+        var target = (childKey is null ? null : items.FirstOrDefault(c => c.Key == childKey)) ?? items.FirstOrDefault();
+        if (ReferenceEquals(SelectedModuleNavItem, target))
+            return;
+        _syncingModuleNav = true;
+        try
+        {
+            SelectedModuleNavItem = target;
+        }
+        finally
+        {
+            _syncingModuleNav = false;
+        }
+    }
+
+    /// <summary>Underline under the toolbar tile of the active module (x:Bind function binding).</summary>
+    public static Visibility ToolbarIndicator(string activeTool, string tool) =>
+        string.Equals(activeTool, tool, StringComparison.Ordinal) ? Visibility.Visible : Visibility.Collapsed;
+
+    /// <summary>
+    /// Finds the sidebar entry for a page key: the active section's own sub-page first,
+    /// then a top-level section, then a sub-page of any other section.
+    /// </summary>
+    public SidebarItem? FindSidebarItem(string key)
+    {
+        var current = SidebarSections.FirstOrDefault(s => s.Key == CurrentSidebarSectionKey);
+        return current?.Children.FirstOrDefault(c => c.Key == key)
+               ?? SidebarSections.FirstOrDefault(s => s.Key == key)
+               ?? SidebarSections.SelectMany(s => s.Children).FirstOrDefault(c => c.Key == key);
+    }
+
+    /// <summary>
+    /// Opens a sidebar entry. A sub-page first switches to its parent section when that
+    /// section is not already active, then opens the sub-page.
+    /// </summary>
+    public async Task SelectSidebarItemAsync(SidebarItem item)
+    {
+        if (item.ParentKey is null)
+        {
+            SelectToolbarAction(item.Key);
+            return;
+        }
+
+        if (CurrentSidebarSectionKey != item.ParentKey)
+        {
+            SelectToolbarAction(item.ParentKey);
+        }
+
+        await SelectNavRailItem(item.Key);
+        SyncModuleNavSelection(item.Key);
+    }
+
     [RelayCommand]
     public void SelectToolbarAction(string actionKey)
     {
         switch (actionKey)
         {
+            case "Diagnostics":
+                ActivateDiagnosticTool("Diagnostics", "Diagnostics", "Equipment Health");
+                break;
+
+            case "Settings":
+                ActiveTool = "Settings";
+                ActiveSectionKey = "Settings";
+                BreadcrumbCategory = "Settings";
+                BreadcrumbLeaf = "Display, Units & Devices";
+                break;
+
             case "WorkOrders":
             case "Open":
                 ActiveTool = "Work Orders";
@@ -1913,7 +2119,6 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                 BreadcrumbRoot = "Shop Foreman";
                 BreadcrumbCategory = "Repair Orders";
                 BreadcrumbLeaf = "Work Order Browser";
-                RebuildNavRailForTool("WorkOrders");
                 break;
 
             case "New":
@@ -1935,7 +2140,6 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                 BreadcrumbRoot = "Equipment Selection";
                 BreadcrumbCategory = "Fleet & GSE Registry";
                 BreadcrumbLeaf = "Assets & Equipment Database";
-                RebuildNavRailForTool("Assets");
                 break;
 
             case "Search":
@@ -1979,7 +2183,6 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                 BreadcrumbRoot = "Equipment Selection";
                 BreadcrumbCategory = "Oscilloscope (4-Channel)";
                 BreadcrumbLeaf = "Scope Capture, Guided Tests & Measurements";
-                RebuildNavRailForTool("Scope");
                 _ = EnsureScopeCatalogAndDevicesLoadedAsync();
                 break;
 
@@ -1989,12 +2192,10 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                 BreadcrumbRoot = "Equipment Selection";
                 BreadcrumbCategory = "CAN / Bus Capture";
                 BreadcrumbLeaf = "Live Data Recording & VCR Playback";
-                RebuildNavRailForTool("Heavy Duty");
                 break;
 
             case "Camera":
                 ActiveTool = "Camera";
-                RebuildNavRailForTool("Camera");
                 ShowPlaceholder("Camera & Pen Annotation", "Rugged tablet photo capture, pen markup, and dataplate OCR (Phase 7).");
                 break;
 
@@ -2004,7 +2205,6 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                 BreadcrumbRoot = "Equipment Selection";
                 BreadcrumbCategory = "AI Tech Chat";
                 BreadcrumbLeaf = "Technician Assistant & Citations";
-                RebuildNavRailForTool("AiTechChat");
                 EnsureWelcomeChatMessage();
                 break;
         }
@@ -2017,6 +2217,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     {
         switch (navKey)
         {
+            case "Overview":
             case "Back":
                 if (ActiveTool == "Scope")
                 {
@@ -2213,7 +2414,6 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         BreadcrumbRoot = "Equipment Selection";
         BreadcrumbCategory = category;
         BreadcrumbLeaf = leaf;
-        RebuildNavRailForTool(toolName);
     }
 
     private void ShowPlaceholder(string title, string subtitle)
@@ -2247,6 +2447,8 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         OnPropertyChanged(nameof(RecommendationsViewVisibility));
         OnPropertyChanged(nameof(ScopeViewVisibility));
         OnPropertyChanged(nameof(ToolPlaceholderVisibility));
+        OnPropertyChanged(nameof(IsSettingsViewVisible));
+        OnPropertyChanged(nameof(SettingsViewVisibility));
         OnPropertyChanged(nameof(DtcSectionVisibility));
         OnPropertyChanged(nameof(LiveDataSectionVisibility));
         OnPropertyChanged(nameof(FreezeFrameSectionVisibility));
@@ -2263,70 +2465,6 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         OnPropertyChanged(nameof(AnalogGaugeModeVisibility));
         OnPropertyChanged(nameof(LineGraphModeVisibility));
         OnPropertyChanged(nameof(CustomDisplayModeVisibility));
-    }
-
-    private void RebuildNavRailForTool(string toolKey)
-    {
-        NavRailItems.Clear();
-
-        if (toolKey is "WorkOrders")
-        {
-            NavRailItems.Add(new NavRailItem("Back", "Back", "\uE72B"));
-            NavRailItems.Add(new NavRailItem("WorkOrders", "Open ROs", "\uE8A5"));
-            NavRailItems.Add(new NavRailItem("Recommendations", "Recommendations", "\uE9CE"));
-            NavRailItems.Add(new NavRailItem("Readings", "Readings", "\uE8E5"));
-            NavRailItems.Add(new NavRailItem("Assets", "Equipment List", "\uE7EC"));
-            NavRailItems.Add(new NavRailItem("Refresh", "Refresh DB", "\uE72C"));
-            return;
-        }
-
-        if (toolKey is "Assets")
-        {
-            NavRailItems.Add(new NavRailItem("Assets", "Equipment List", "\uE7EC"));
-            NavRailItems.Add(new NavRailItem("WorkOrders", "Work Orders", "\uE8A5"));
-            NavRailItems.Add(new NavRailItem("Recommendations", "Recommendations", "\uE9CE"));
-            NavRailItems.Add(new NavRailItem("Readings", "Readings", "\uE8E5"));
-            NavRailItems.Add(new NavRailItem("Diagnostics", "Scan / Health", "\uE9D9"));
-            NavRailItems.Add(new NavRailItem("Refresh", "Refresh DB", "\uE72C"));
-            return;
-        }
-
-        if (toolKey is "Scope")
-        {
-            NavRailItems.Add(new NavRailItem("Back", "Back", "\uE72B"));
-            NavRailItems.Add(new NavRailItem("ScopeChannels", "Channels A–D", "\uE9D9"));
-            NavRailItems.Add(new NavRailItem("GuidedTests", "Guided Tests", "\uE890"));
-            NavRailItems.Add(new NavRailItem("RefWaveforms", "Ref Waveforms", "\uE8B7"));
-            NavRailItems.Add(new NavRailItem("DataFormat", "Data Format", "\uE8AB"));
-            return;
-        }
-
-        if (toolKey is "AiTechChat")
-        {
-            NavRailItems.Add(new NavRailItem("Back", "Back", "\uE72B"));
-            NavRailItems.Add(new NavRailItem("AiChat", "Tech Chat", "\uE8BD"));
-            NavRailItems.Add(new NavRailItem("Recommendations", "Recommendations", "\uE9CE"));
-            NavRailItems.Add(new NavRailItem("GuidedTree", "Guided Tree", "\uE890"));
-            NavRailItems.Add(new NavRailItem("Readings", "Readings", "\uE8E5"));
-            NavRailItems.Add(new NavRailItem("ManualSearch", "Manual RAG", "\uE82D"));
-            return;
-        }
-
-        // Shop Foreman Pro vertical toolbar order (ARCHITECTURE.md §5.1, Screenshots 04 & 13) + Phase 4 Manual Readings + Phase 5 Recommendations:
-        NavRailItems.Add(new NavRailItem("Back", "Vehicle Health", "\uE72B"));
-        NavRailItems.Add(new NavRailItem("LiveData", "Live Snaplist", "\uE9D9"));
-        NavRailItems.Add(new NavRailItem("EditSnaplist", "Edit Snaplist", "\uE70F"));
-        NavRailItems.Add(new NavRailItem("Refresh", "Refresh", "\uE72C"));
-        NavRailItems.Add(new NavRailItem("DTCs", "DTCs", "\uE7BA"));
-        NavRailItems.Add(new NavRailItem("FreezeFrames", "Freeze Frames", "\uE8B8"));
-        NavRailItems.Add(new NavRailItem("CurrentData", "Current Data", "\uE8A5"));
-        NavRailItems.Add(new NavRailItem("Readings", "Readings", "\uE8E5"));
-        NavRailItems.Add(new NavRailItem("Recommendations", "Recommendations", "\uE9CE"));
-        NavRailItems.Add(new NavRailItem("Readiness", "IM Readiness", "\uE73E"));
-        NavRailItems.Add(new NavRailItem("Monitors", "OBD Monitors", "\uE7F4"));
-        NavRailItems.Add(new NavRailItem("CustomDisplay", "Custom Display", "\uE74C"));
-        NavRailItems.Add(new NavRailItem("GraphView", "Graph Cursors", "\uE9D2"));
-        NavRailItems.Add(new NavRailItem("DataFormat", "Data Format ▸", "\uE8AB"));
     }
 
     // =========================================================================
@@ -4494,6 +4632,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         OnPropertyChanged(nameof(PreviewOutcomeLine));
         OnPropertyChanged(nameof(PreviewTechnicianLine));
         OnPropertyChanged(nameof(PreviewShopInfoLine));
+        RebuildWorkOrderDocument();
     }
 
     private void ReplaceWorkOrderInMemory(WorkOrder updated)
