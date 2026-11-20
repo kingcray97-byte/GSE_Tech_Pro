@@ -1,6 +1,6 @@
 """HTTP test fixtures for the AI service. Uses FastAPI TestClient with the real lifespan (schema check, probes).
 
-No Ollama is needed: the default probe points at a closed port. Tests that need Ollama-present behaviour inject
+No model is needed: the default probe reports llama-server down. Tests that need a running model inject
 a fake probe through `make_client(probe_fn=...)`.
 """
 
@@ -29,17 +29,19 @@ def make_client():
         port: int = 8765,
         overrides: Optional[dict] = None,
         wait_warm: bool = True,
+        **app_kwargs,
     ) -> TestClient:
         values = {"token": token, "port": port}
         values.update(overrides or {})
         cfg = offline_config(**values)
-        # Default: a fake probe that reports Ollama unreachable. No network, so tests stay fast and independent of
+        # Default: a fake probe that reports llama-server unreachable. No network, so tests stay fast and independent of
         # whatever runs on the machine. The real probe is covered by one explicit test.
         app = create_app(
             cfg,
             db_path=db_path,
             probe_fn=probe_fn if probe_fn is not None else fake_probe(reachable=False),
             backend=backend,
+            **app_kwargs,  # route_health, remote_backends, spawn (ADR-012/013 tests)
         )
         client = TestClient(app, headers={"X-GSE-Token": token} if token else {})
         client.__enter__()  # run the lifespan (schema check, background warm-up)

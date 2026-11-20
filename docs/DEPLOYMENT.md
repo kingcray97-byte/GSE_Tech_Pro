@@ -11,8 +11,9 @@ This guide covers installing, upgrading, and managing GSE Tech Pro across multip
 | **GSE Tech Pro App** (x64) | `C:\Program Files\GSE Tech Pro\` | Main WinUI 3 application |
 | **Device Host** (x86) | `C:\Program Files\GSE Tech Pro\DeviceHost32\` | 32-bit process for J2534/RP1210 vendor DLLs |
 | **Python AI Service** | `C:\Program Files\GSE Tech Pro\AiService\` | Local FastAPI service (RAG, tools, voice, vision) |
-| **Ollama Runtime** | `C:\Program Files\GSE Tech Pro\Ollama\` | Local model inference engine |
-| **AI Models** | `C:\Program Files\GSE Tech Pro\Ollama\models\` | lfm3-omni (~2.4 GB) + nomic-embed-text (~274 MB) |
+| **llama.cpp runtime** | `C:\Program Files\GSE Tech Pro\llama.cpp\` | `llama-server.exe` (pinned CPU/AVX2 build, MIT). Started and stopped by the AI service on 127.0.0.1; no Windows service (ADR-012) |
+| **AI Models (GGUF)** | `C:\Program Files\GSE Tech Pro\models\` | lfm3-omni (~2.4 GB) + nomic-embed-text (~274 MB) |
+| **AI service config** | `C:\Program Files\GSE Tech Pro\AiService\config\config.yaml` | Written by setup from `installer/ai-service-config.yaml` (bundled paths; cloud off; no keys) |
 | **Database & User Data** | `%APPDATA%\GSE Tech Pro\Data\` | SQLite DB, manuals, logs (per-user) |
 
 ### Runtime Dependencies
@@ -41,7 +42,7 @@ The installer bundles or installs these runtimes:
 
 1. Copy `GSE-Tech-Pro-Setup.exe` to the tablet (USB or network share).
 2. Double-click and follow the wizard.
-3. Choose **Full installation** for app + AI service + Ollama + model, or **Core only** if using remote AI.
+3. Choose **Full installation** for app + AI service + llama.cpp + models, or **Core only** if using a shop AI server.
 4. After install, the first-run setup wizard launches automatically.
 
 ### Silent Install (Multi-Tablet Deployment)
@@ -135,9 +136,10 @@ Alternatively, include the manual library in your silent install config by setti
 
 ### AI Service Not Responding
 
-- Confirm Ollama is running: open Task Manager and look for `ollama.exe`.
-- Check that the model files exist in `C:\Program Files\GSE Tech Pro\Ollama\models\`.
-- Verify port 8765 (AI service) and 11434 (Ollama) are not blocked by firewall.
+- The AI service starts `llama-server.exe` itself (two processes: chat and embeddings). After 10 idle minutes it stops them to free RAM; the next question starts them again, so the first answer after a break is slower.
+- Check that the GGUF files exist in `C:\Program Files\GSE Tech Pro\models\` and that `AiService\config\config.yaml` points at them (`llama_server.binary`, `llama_server.model`, `llama_server.embedding.model`).
+- All AI ports are on 127.0.0.1 only (8765 AI service, 8081 chat model, 8082 embeddings); no firewall rule is needed or wanted.
+- Upgrading from 0.3.x: setup stops and deletes the old `GSE-Ollama` service. If it is still listed in Services, run `sc delete GSE-Ollama` as administrator.
 
 ### Device Host Issues (J2534/RP1210)
 
@@ -151,7 +153,6 @@ Alternatively, include the manual library in your silent install config by setti
 |-----------|--------------|
 | App logs | `%APPDATA%\GSE Tech Pro\Data\logs\app.log` |
 | AI service logs | `%APPDATA%\GSE Tech Pro\Data\logs\ai-service.log` |
-| Ollama logs | `C:\Program Files\GSE Tech Pro\Ollama\ollama.log` |
 | Device host logs | `%APPDATA%\GSE Tech Pro\Data\logs\device-host.log` |
 
 ## Phase 8 Features (Implemented)
@@ -164,8 +165,15 @@ Authenticode code signing is supported via environment variables. Set `SIGNTOOL_
 ### Runtime Bundling
 The installer bundles self-contained .NET 8 Desktop Runtime (both x64 and x86) and Windows App SDK, so no separate runtime installation is required on target tablets. This enables true offline deployment with zero prerequisites.
 
-### Ollama Service Installation
-When the "full" install type is selected, Ollama is automatically installed as a Windows service (`GSE-Ollama`) that starts on boot. The service runs under LocalSystem and manages the local model runtime lifecycle. On uninstall, the service is cleanly removed.
+### Local Model Runtime (llama.cpp, Phase 10A)
+The full install bundles the pinned llama.cpp `llama-server.exe` and the GGUF models. There is **no Windows service**: the AI service starts `llama-server` on 127.0.0.1 when it starts, stops it after the idle timeout and on exit (ADR-012). The old `GSE-Ollama` service from 0.3.x is removed during upgrade and on uninstall.
+
+### AI Routing: Shop Server and Cloud (ADR-013)
+- **Default: this tablet only.** Nothing leaves the tablet.
+- **Shop server (optional):** set `shop_server_url` under `[ai]` in the silent-install config, or edit `routes.shop_server` in `AiService\config\config.yaml`. If the proxy needs a key, store it in Windows Credential Manager (generic credential, internet/network address `GSE Tech Pro AI`, user name = the `key_name` in config).
+- **Cloud (off by default):** needs `routes.cloud.enabled: true` plus a provider/model in `config.yaml`, the key in Windows Credential Manager (same rule), **and** an administrator turning it on in Setup > AI service. Job details go to the cloud only if the administrator also allows that.
+- **Never put a key in `config.yaml` or the `.ini`.** The AI service refuses to start if its config contains one.
+- To store a key, run as the tablet user (it prompts; the key is not echoed or logged): `"C:\Program Files\GSE Tech Pro\Python\python.exe" -m keyring set "GSE Tech Pro AI" <key_name>`.
 
 ### Model Download Progress Indication
 During installation of large AI models (lfm3-omni ~2.4 GB, nomic-embed-text ~274 MB), the installer displays progress messages indicating which model is being installed and its approximate size.

@@ -5,14 +5,15 @@ Run (standalone / dev):   python -m app.main --port 8765 --token <token>
 The App launches the same entrypoint with --port and --token; CLI values override config.yaml.
 
 The service binds 127.0.0.1 only (enforced by config validation), requires X-GSE-Token on every endpoint,
-refuses to start with an empty token, and boots without Ollama (degraded, never crashing).
+refuses to start with an empty token, and boots without a model (degraded, never crashing). It starts and stops its
+own llama-server children (ADR-012); with no llama_server.binary configured it attaches to servers already running.
 """
 
 from __future__ import annotations
 
 import argparse
+import atexit
 import logging
-import os
 import sys
 import threading
 from contextlib import asynccontextmanager
@@ -25,8 +26,9 @@ from app import SERVICE_VERSION
 from app.api import router
 from app.bootstrap import ensure_schema
 from app.errors import install_error_handlers
-from app.llm import IdleUnloader, OllamaChatBackend
-from app.ollama import OllamaMonitor, probe_now
+from app.llm import IdleUnloader, LlamaCppChatBackend
+from app.routing import RouteHealth
+from app.runtime import LlamaRuntime, RuntimeMonitor, probe_now
 from app.prompts import load_prompt
 from app.security import TokenAuthMiddleware
 from app.state import ServiceState
@@ -52,23 +54,30 @@ def create_app(
     probe_fn: Any = None,
     registry: Optional[ToolRegistry] = None,
     system_prompt: Optional[str] = None,
+    route_health: Optional[RouteHealth] = None,
+    remote_backends: Optional[dict[str, Any]] = None,
+    spawn: Any = None,
 ) -> FastAPI:
     """Build the FastAPI app. Injection points exist for tests; the defaults are the production wiring."""
     if not config.service.token or not config.service.token.strip():
         raise RefuseToServe("no service token: pass --token or set service.token (refusing to serve unauthenticated)")
     config.validate()
-    if config.ollama.no_cloud:
-        os.environ["OLLAMA_NO_CLOUD"] = "1"
 
     resolved_db = Path(db_path) if db_path is not None else default_db_path()
+    monitor = RuntimeMonitor(config, probe_fn=probe_fn or probe_now)
+    runtime = LlamaRuntime(config, monitor, spawn=spawn) if spawn is not None else LlamaRuntime(config, monitor)
     state = ServiceState(
         config=config,
         db_path=resolved_db,
-        monitor=OllamaMonitor(config.ollama.base_url, probe_fn=probe_fn or probe_now),
-        backend=backend if backend is not None else OllamaChatBackend(config),
+        monitor=monitor,
+        runtime=runtime,
+        backend=backend if backend is not None else LlamaCppChatBackend(config, runtime),
         registry=registry if registry is not None else default_registry(),
         system_prompt=system_prompt if system_prompt is not None else load_prompt("system.md"),
+        route_health=route_health if route_health is not None else RouteHealth(config),
+        remote_backends=dict(remote_backends or {}),
     )
+    atexit.register(runtime.stop_all)  # never leave a llama-server running after the service exits
     state.unloader = IdleUnloader(config.idle_unload_minutes, state.backend.unload)
     migrations = Path(migrations_dir) if migrations_dir is not None else None
 
@@ -81,7 +90,7 @@ def create_app(
         except Exception as exc:  # degraded, not dead: search reports db_unavailable
             state.schema_error = type(exc).__name__
             log.warning("schema bootstrap failed (%s); search will report db_unavailable", state.schema_error)
-        threading.Thread(target=state.warm_up, name="ollama-warmup", daemon=True).start()
+        threading.Thread(target=state.warm_up, name="runtime-warmup", daemon=True).start()
         threading.Thread(target=state.unload_loop, name="idle-unload", daemon=True).start()
         log.info("AI service %s ready on %s:%s (chat=%s, embed=%s)", SERVICE_VERSION, config.service.host,
                  config.service.port, config.models.chat, config.models.embedding)
@@ -89,6 +98,7 @@ def create_app(
             yield
         finally:
             state.stop.set()
+            runtime.stop_all()
 
     app = FastAPI(
         title="GSE Tech Pro AI service",

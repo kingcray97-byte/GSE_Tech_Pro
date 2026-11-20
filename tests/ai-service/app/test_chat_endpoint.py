@@ -48,7 +48,7 @@ def _ask(text: str = "How often do I lubricate the flexramp axle?", **extra):
     return body
 
 
-def test_no_ollama_is_503_ai_unavailable_and_backend_never_called(make_client, seeded_db):
+def test_no_runtime_is_503_ai_unavailable_and_backend_never_called(make_client, seeded_db):
     backend = ScriptedBackend([])
     client = make_client(db_path=seeded_db, backend=backend)
     resp = client.post("/chat", json=_ask())
@@ -56,13 +56,19 @@ def test_no_ollama_is_503_ai_unavailable_and_backend_never_called(make_client, s
     err = resp.json()["error"]
     assert err["code"] == "ai_unavailable"
     assert err["message"].startswith("AI assistant is unavailable")
-    assert err["detail"] == "ollama_unreachable"
+    assert err["detail"] == "model_runtime_unreachable"
     assert backend.calls == []  # never fabricates an answer
 
 
-def test_chat_model_missing_is_503_ai_unavailable(make_client, seeded_db):
+def test_chat_model_missing_is_503_ai_unavailable(make_client, seeded_db, tmp_path):
     backend = ScriptedBackend([])
-    client = make_client(db_path=seeded_db, backend=backend, probe_fn=fake_probe(("nomic-embed-text",)))
+    client = make_client(
+        db_path=seeded_db,
+        backend=backend,
+        probe_fn=fake_probe(("nomic-embed-text",)),
+        overrides={"llama_server.binary": str(tmp_path / "llama-server.exe"),
+                   "llama_server.model": str(tmp_path / "missing.gguf")},
+    )
     resp = client.post("/chat", json=_ask())
     assert resp.status_code == 503
     assert resp.json()["error"]["code"] == "ai_unavailable"

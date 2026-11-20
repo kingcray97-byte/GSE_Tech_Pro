@@ -1,6 +1,6 @@
 """HTTP routes (ADR-008). Every route is behind the X-GSE-Token middleware (app/security.py).
 
-Blocking work (SQLite, Ollama, LiteLLM) runs in FastAPI's thread pool: these handlers are plain `def`.
+Blocking work (SQLite, llama-server, LiteLLM) runs in FastAPI's thread pool: these handlers are plain `def`.
 """
 
 from __future__ import annotations
@@ -20,8 +20,10 @@ from app.chat import run_chat
 from app.errors import ApiError
 from app.guided import NO_TREE_MESSAGE
 from app.llm import ChatUnavailable
-from app.ollama import model_names_available
+from app.routing import CLOUD, CLOUD_SAFE_TOOLS, TABLET, plan_routes
 from app.models import (
+    RouteStatusOut,
+    RoutingIn,
     AiServiceConfigResponse,
     AiServiceHealth,
     ChatRequest,
@@ -62,9 +64,10 @@ def health(request: Request) -> AiServiceHealth:
     cfg = svc.config
     db_ok = svc.db_ok()
     if not svc.warm.is_set():
-        # Booting: report 'starting' without probing Ollama, so a slow or hung Ollama cannot stall liveness.
+        # Booting: report 'starting' without probing, so a slow or hung runtime cannot stall liveness.
         return AiServiceHealth(
             status="starting",
+            model_runtime_reachable=False,
             ollama_reachable=False,
             chat_available=False,
             search_available=db_ok,
@@ -73,16 +76,18 @@ def health(request: Request) -> AiServiceHealth:
             degradation_reason=None,
             version=SERVICE_VERSION,
         )
-    avail = svc.availability(svc.monitor.probe(), db_ok)
+    avail = svc.availability(db_ok)
     return AiServiceHealth(
         status=avail.status,
-        ollama_reachable=avail.ollama_reachable,
+        model_runtime_reachable=avail.model_runtime_reachable,
+        ollama_reachable=avail.model_runtime_reachable,  # deprecated alias, one release (ADR-012)
         chat_available=avail.chat_available,
         search_available=avail.search_available,
         chat_model=cfg.models.chat,
         embedding_model=cfg.models.embedding,
         degradation_reason=avail.degradation_reason,  # None only when every capability is ready
         version=SERVICE_VERSION,
+        routes=[RouteStatusOut(**vars(s)) for s in svc.route_statuses(avail)],
     )
 
 
@@ -106,33 +111,65 @@ def chat(body: ChatRequest, request: Request) -> ChatResponse:
     offline_message = svc.config.degradation.offline_chat_message
     if not svc.warm.is_set():
         raise ApiError(503, "ai_starting", "AI is starting.", detail="warm-up probe in progress")
-    probe = svc.monitor.probe()  # cached (5 s): an Ollama that is down must not add a probe timeout to every turn
-    if not probe.reachable:
-        raise ApiError(503, "ai_unavailable", offline_message, detail="ollama_unreachable")
-    chat_present, _ = model_names_available(svc.config, probe)
-    if not chat_present:
-        raise ApiError(
-            503,
-            "ai_unavailable",
-            offline_message,
-            detail=f"chat_model_missing: '{svc.config.models.chat}' is not installed in Ollama",
-        )
+    routing = body.routing or RoutingIn()
+    routes_cfg = svc.config.routes
+    plan = plan_routes(routing.mode, routing.cloud_allowed, routes_cfg.shop_server.configured, routes_cfg.cloud.configured)
+    tool_ctx = svc.tool_context()
+    if svc.unloader is not None:
+        svc.unloader.touch()  # before a possible cold start, so the idle timer cannot stop the server mid-answer
     with svc.chat_lock:  # one generation at a time on a CPU-only tablet
-        try:
-            run = run_chat(
-                body,
-                backend=svc.backend,
-                registry=svc.registry,
-                tool_ctx=svc.tool_context(),
-                system_prompt=svc.system_prompt,
-            )
-        except ChatUnavailable as exc:
-            raise ApiError(503, exc.code, offline_message if exc.code == "ai_unavailable" else "AI is starting.",
-                           detail=exc.detail) from exc
+        answered: Optional[tuple[str, object, str]] = None
+        for route in plan:
+            if route == TABLET:
+                break
+            ok, _ = svc.route_health.check(route)  # cached; a route that failed its last check is skipped, no wait
+            if not ok:
+                continue
+            backend = svc.backend_for(route)
+            strip = route == CLOUD and not routing.share_job_details_with_cloud
+            try:
+                run = run_chat(
+                    body,
+                    backend=backend,
+                    registry=svc.registry,
+                    tool_ctx=tool_ctx,
+                    system_prompt=svc.system_prompt,
+                    include_job_context=not strip,
+                    allowed_tools=CLOUD_SAFE_TOOLS if strip else None,
+                )
+            except ChatUnavailable as exc:
+                svc.route_health.mark_down(route)
+                log.warning("chat route %s failed (%s); falling back", route, exc.code)
+                continue
+            answered = (route, run, getattr(backend, "label", None) or "")
+            break
+        if answered is None:
+            reason = svc.ensure_tablet_ready()
+            if reason == "model_loading":
+                raise ApiError(503, "ai_starting", "AI is starting.", detail="model_loading")
+            if reason == "chat_model_missing":
+                raise ApiError(503, "ai_unavailable", offline_message,
+                               detail=f"chat_model_missing: '{svc.config.models.chat}' is not installed on this tablet")
+            if reason is not None:
+                raise ApiError(503, "ai_unavailable", offline_message, detail=reason)
+            try:
+                run = run_chat(
+                    body,
+                    backend=svc.backend,
+                    registry=svc.registry,
+                    tool_ctx=tool_ctx,
+                    system_prompt=svc.system_prompt,
+                )
+            except ChatUnavailable as exc:
+                raise ApiError(503, exc.code, offline_message if exc.code == "ai_unavailable" else "AI is starting.",
+                               detail=exc.detail) from exc
+            answered = (TABLET, run, svc.config.models.chat)
+    route, run, model_label = answered
     if svc.unloader is not None:
         svc.unloader.touch()
     log_event(
         "chat",
+        route=route,
         model_turns=run.model_turns,
         tool_calls=run.tool_calls,
         sources=run.sources_used,
@@ -140,7 +177,7 @@ def chat(body: ChatRequest, request: Request) -> ChatResponse:
         total_ms=run.total_ms,
         unverified_note=run.unverified_note_added,
     )
-    return run.response
+    return run.response.model_copy(update={"route": route, "model": model_label or None})
 
 
 @router.post("/search/manuals", response_model=SearchManualsResponse)

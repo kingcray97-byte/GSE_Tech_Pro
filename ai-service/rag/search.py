@@ -143,7 +143,7 @@ def hybrid_search(
     """Hybrid search over live manual chunks.
 
     `query_embedder` (search_query prefix) is optional. When omitted, the default query embedder is
-    probed once; if Ollama/the model is absent the search runs BM25-only and reports fallback=True.
+    probed once; if the embedding server is absent the search runs BM25-only and reports fallback=True.
     """
     if not isinstance(query, str) or not query.strip():
         raise ValueError("query must be a non-empty string")

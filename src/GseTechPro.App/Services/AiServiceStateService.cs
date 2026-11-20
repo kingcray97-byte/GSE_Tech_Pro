@@ -17,7 +17,7 @@ public enum AiUiState
     /// <summary>Chat and manual search are both available (<c>status == "ok"</c> and <c>chat_available == true</c>).</summary>
     Ready,
 
-    /// <summary>Chat is unavailable (e.g. Ollama unreachable), but manual search is available (<c>search_available == true</c>).</summary>
+    /// <summary>Chat is unavailable (e.g. the local model runtime is not running), but manual search is available (<c>search_available == true</c>).</summary>
     DegradedSearch,
 
     /// <summary>AI service is unreachable or both chat and search are unavailable.</summary>
@@ -96,7 +96,7 @@ public sealed partial class AiServiceStateService : ObservableObject, IAsyncDisp
     private string _statusIndicatorText = "AI: Unavailable";
 
     [ObservableProperty]
-    private string _statusBannerText = "AI unavailable — check that Ollama is running. Manual search remains available when the AI service is online.";
+    private string _statusBannerText = "AI unavailable — the local model is not running. Manual search remains available when the AI service is online.";
 
     [ObservableProperty]
     private string _modelSummaryText = "Models: waiting for AI service config";
@@ -115,7 +115,8 @@ public sealed partial class AiServiceStateService : ObservableObject, IAsyncDisp
         }
 
         if (health.Status == AiServiceStatus.Starting ||
-            string.Equals(health.DegradationReason, AiErrorCodes.AiStarting, StringComparison.OrdinalIgnoreCase))
+            string.Equals(health.DegradationReason, AiErrorCodes.AiStarting, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(health.DegradationReason, "model_loading", StringComparison.OrdinalIgnoreCase))
         {
             return AiUiState.WarmingUp;
         }
@@ -161,18 +162,18 @@ public sealed partial class AiServiceStateService : ObservableObject, IAsyncDisp
 
             AiUiState.DegradedSearch => health?.DegradationReason switch
             {
-                "ollama_unreachable" =>
-                    "AI unavailable — check that Ollama is running. Manual search remains available (BM25 text search).",
+                "model_runtime_unreachable" or "ollama_unreachable" =>
+                    "AI unavailable — the local model (llama.cpp) is not running. Manual search remains available (BM25 text search).",
                 "chat_model_missing" =>
-                    $"AI chat model ({modelLabel}) is not installed in Ollama. Manual search remains available.",
+                    $"AI chat model ({modelLabel}) is not installed on this tablet. Manual search remains available.",
                 "embedding_model_missing" =>
                     "Embedding model unavailable — manual search is running in BM25 text-only fallback mode.",
                 _ =>
-                    "AI unavailable — check that Ollama is running. Manual search remains available.",
+                    "AI unavailable — the local model is not running. Manual search remains available.",
             },
 
             _ =>
-                "AI unavailable — check that the local AI service and Ollama are running.",
+                "AI unavailable — check that the local AI service is running.",
         };
     }
 

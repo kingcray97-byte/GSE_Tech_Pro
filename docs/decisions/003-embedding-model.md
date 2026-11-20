@@ -1,6 +1,6 @@
 # ADR-003 — Embedding model: nomic-embed-text
 
-- **Status:** Accepted (pending user approval)
+- **Status:** Accepted; amended by ADR-012 (2026-11-19): same model and dimension, now a GGUF file served by `llama-server --embedding` instead of Ollama
 - **Date:** 2026-11-15
 - **Owner:** architect
 

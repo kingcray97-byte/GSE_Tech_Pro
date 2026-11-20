@@ -1,14 +1,16 @@
 ; ============================================================================
 ; GSE Tech Pro — Full Installer Script (Inno Setup)
-; Phase 8: Complete installer with signing, runtime bundling, Ollama service,
-;          model progress, driver detection, and update checking.
+; Phase 8: Complete installer with signing, runtime bundling, model progress,
+;          driver detection, and update checking.
+; Phase 10A: llama.cpp (llama-server, GGUF) replaces Ollama (ADR-012). No Windows
+;          service: the AI service starts and stops llama-server itself.
 ;
 ; Architecture reference: docs/ARCHITECTURE.md §1.1 (unpackaged + Inno, ADR-001)
 ; Spec reference:         docs/PROMPT.md deployment section
 ; ============================================================================
 
 #define AppName "GSE Tech Pro"
-#define AppVersion "0.3.0"
+#define AppVersion "0.4.0"
 #define AppPublisher "Commercial Truck and Auto (CTA)"
 #define AppURL "https://www.commercialtruckandauto.com"
 #define AppSupportURL "https://support.commercialtruckandauto.com/gse-tech-pro"
@@ -41,7 +43,7 @@ WizardStyle=modern
 SignTool=signtool.exe sign /f "$SIGNTOOL_CERT" /p "$SIGNTOOL_PASS" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "$f"
 
 [Types]
-Name: "full"; Description: "Full installation (app, AI service, Ollama, model, manuals)"; Flags: iscustom
+Name: "full"; Description: "Full installation (app, AI service, llama.cpp, models, manuals)"; Flags: iscustom
 Name: "core"; Description: "Core app only (no AI/model — for shops using remote AI)"
 
 [Components]
@@ -51,9 +53,9 @@ Name: "device-host"; Description: "32-bit device host (J2534/RP1210)"; Types: fu
 
 ; AI stack — optional for shops using remote/cloud AI
 Name: "ai-service"; Description: "Python AI service (FastAPI, RAG, tools)"; Types: full
-Name: "ollama"; Description: "Ollama local model runtime"; Types: full
-Name: "model-lfm3-omni"; Description: "lfm3-omni chat/vision/audio model (~2.4 GB)"; Types: full; DependsOn: ollama
-Name: "model-nomic-embed"; Description: "nomic-embed-text embedding model (~274 MB)"; Types: full; DependsOn: ollama
+Name: "llama-cpp"; Description: "llama.cpp local model runtime (llama-server, CPU build)"; Types: full
+Name: "model-lfm3-omni"; Description: "lfm3-omni chat/vision/audio model, GGUF (~2.4 GB)"; Types: full; DependsOn: llama-cpp
+Name: "model-nomic-embed"; Description: "nomic-embed-text embedding model, GGUF (~274 MB)"; Types: full; DependsOn: llama-cpp
 
 ; Content
 Name: "manuals-default"; Description: "Default manual library (TUG 660-28, 600i seed)"; Types: full core
@@ -87,17 +89,23 @@ Source: "..\ai-service\voice\*"; DestDir: "{app}\AiService\voice"; Flags: ignore
 Source: "..\ai-service\vision\*"; DestDir: "{app}\AiService\vision"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
 
 ; ============================================================================
-; OLLAMA PAYLOAD — Bundled with service installation
+; LLAMA.CPP PAYLOAD (ADR-012) — pinned CPU (AVX2) build of llama-server + GGUF models
+; No Windows service: the AI service starts llama-server on 127.0.0.1 and stops it on idle/exit.
 ; ============================================================================
 
-; Ollama binary (MIT license, bundle permitted)
-Source: "..\Reference\ollama-windows-amd64.exe"; DestDir: "{app}\Ollama"; Flags: ignoreversion; Components: ollama
+; llama-server.exe and its DLLs from the pinned llama.cpp Windows CPU release (MIT)
+Source: "..\Reference\llama.cpp\*"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: llama-cpp
+; MIT LICENSE goes into the third-party notices (ARCHITECTURE §7.1)
+Source: "..\Reference\llama.cpp\LICENSE"; DestDir: "{app}\third-party"; DestName: "llama.cpp-LICENSE.txt"; Flags: ignoreversion; Components: llama-cpp
 
-; lfm3-omni model (~2.4 GB on disk) — LFM Open License v1.0 (revenue threshold applies)
-Source: "..\Reference\models\lfm3-omni.gguf"; DestDir: "{app}\Ollama\models"; Flags: ignoreversion; Components: model-lfm3-omni
+; lfm3-omni chat model, GGUF (~2.4 GB on disk) — LFM Open License v1.0 (revenue threshold; owner sign-off pending)
+Source: "..\Reference\models\lfm3-omni.gguf"; DestDir: "{app}\models"; Flags: ignoreversion; Components: model-lfm3-omni
 
-; nomic-embed-text embedding model (~274 MB) — Apache-2.0
-Source: "..\Reference\models\nomic-embed-text.gguf"; DestDir: "{app}\Ollama\models"; Flags: ignoreversion; Components: model-nomic-embed
+; nomic-embed-text embedding model, GGUF (~274 MB) — Apache-2.0
+Source: "..\Reference\models\nomic-embed-text.gguf"; DestDir: "{app}\models"; Flags: ignoreversion; Components: model-nomic-embed
+
+; AI service config template; CurStepChanged fills in the bundled paths and writes AiService\config\config.yaml
+Source: "..\installer\ai-service-config.yaml"; DestDir: "{tmp}"; Flags: deleteafterinstall; Components: ai-service
 
 ; ============================================================================
 ; DEFAULT MANUAL LIBRARY
@@ -142,11 +150,18 @@ var
   TechniciansCSV: string;
   DevicesCSV: string;
   DataDirOverride: string;
-  InstallOllamaModel: Boolean;
+  InstallLocalModel: Boolean;
+  AllowCloudAi: Boolean;
+  ShopServerUrl: string;
   CheckUpdatesOnStartup: Boolean;
 
 procedure InitializeWizard();
 begin
+  // Defaults when no /CONFIG file is given: install the local model; cloud AI off (ADR-013).
+  InstallLocalModel := True;
+  AllowCloudAi := False;
+  ShopServerUrl := '';
+
   // Parse /CONFIG= parameter from command line
   ConfigFile := '';
   if ParamCount() > 0 then
@@ -171,9 +186,61 @@ begin
     DevicesCSV := GetPrivateProfileString('devices', 'list', '', ConfigFile);
     DataDirOverride := GetPrivateProfileString('install', 'data_dir', '', ConfigFile);
     
-    var installOllamaStr := GetPrivateProfileString('install', 'install_ollama_model', 'true', ConfigFile);
-    InstallOllamaModel := (Uppercase(installOllamaStr) = 'TRUE');
+    // install_ollama_model is the pre-0.4.0 name of install_local_model; still read for old config files.
+    var installModelStr := GetPrivateProfileString('install', 'install_local_model',
+      GetPrivateProfileString('install', 'install_ollama_model', 'true', ConfigFile), ConfigFile);
+    InstallLocalModel := (Uppercase(installModelStr) = 'TRUE');
+
+    // ADR-013: the cloud AI route is OFF unless this file turns it on (still needs the admin PIN in the app).
+    AllowCloudAi := (Uppercase(GetPrivateProfileString('ai', 'allow_cloud', 'false', ConfigFile)) = 'TRUE');
+    ShopServerUrl := GetPrivateProfileString('ai', 'shop_server_url', '', ConfigFile);
   end;
+end;
+
+// ============================================================================
+// PHASE 10A: AI SERVICE CONFIG (ADR-012/013)
+// Fills installer/ai-service-config.yaml with the bundled paths. Paths only: route keys
+// live in Windows Credential Manager and are set by an administrator, never by setup.
+// ============================================================================
+
+function YamlPath(const Path: string): string;
+begin
+  // Single-quoted YAML scalar: backslashes are literal; a quote is doubled.
+  Result := Path;
+  StringChangeEx(Result, , '', True);
+  Result :=  + Result + ;
+end;
+
+procedure WriteAiServiceConfig();
+var
+  Template: AnsiString;
+  Text: string;
+  Binary, ChatModel, EmbedModel: string;
+begin
+  if not LoadStringFromFile(ExpandConstant('{tmp}\ai-service-config.yaml'), Template) then
+    Exit;
+  Text := String(Template);
+  Binary := '';
+  ChatModel := '';
+  EmbedModel := '';
+  if IsComponentSelected('llama-cpp') and InstallLocalModel then
+  begin
+    Binary := ExpandConstant('{app}\llama.cpp\llama-server.exe');
+    if IsComponentSelected('model-lfm3-omni') then
+      ChatModel := ExpandConstant('{app}\models\lfm3-omni.gguf');
+    if IsComponentSelected('model-nomic-embed') then
+      EmbedModel := ExpandConstant('{app}\models\nomic-embed-text.gguf');
+  end;
+  StringChangeEx(Text, '@LLAMA_SERVER@', YamlPath(Binary), True);
+  StringChangeEx(Text, '@CHAT_MODEL@', YamlPath(ChatModel), True);
+  StringChangeEx(Text, '@EMBED_MODEL@', YamlPath(EmbedModel), True);
+  StringChangeEx(Text, '@SHOP_SERVER_URL@', YamlPath(ShopServerUrl), True);
+  if ShopServerUrl <> '' then
+    StringChangeEx(Text, '@SHOP_SERVER_ENABLED@', 'true', True)
+  else
+    StringChangeEx(Text, '@SHOP_SERVER_ENABLED@', 'false', True);
+  ForceDirectories(ExpandConstant('{app}\AiService\config'));
+  SaveStringToFile(ExpandConstant('{app}\AiService\config\config.yaml'), AnsiString(Text), False);
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -196,10 +263,14 @@ begin
       json := json + '"technicians":"[' + TechniciansCSV + ']","' ;
     if DevicesCSV <> '' then
       json := json + '"devices":"[' + DevicesCSV + ']","' ;
-    if InstallOllamaModel then
-      json := json + '"install_ollama_model":true,'
+    if InstallLocalModel then
+      json := json + '"install_local_model":true,'
     else
-      json := json + '"install_ollama_model":false,';
+      json := json + '"install_local_model":false,';
+    if AllowCloudAi then
+      json := json + '"allow_cloud_ai":true,'
+    else
+      json := json + '"allow_cloud_ai":false,';
     
     if CheckUpdatesOnStartup then
       json := json + '"check_updates_on_startup":true}'
@@ -208,15 +279,14 @@ begin
     
     SaveStringToFile(configPath, json, False);
 
-    // Phase 8: Install Ollama as a Windows service for auto-start on boot
-    if IsComponentSelected('ollama') then
-    begin
-      var ollamaExe := ExpandConstant('{app}\Ollama\ollama-windows-amd64.exe');
-      Exec('sc', 'create GSE-Ollama binPath="' + ollamaExe + ' serve" start=auto DisplayName="GSE Tech Pro Ollama Service"', '', SW_HIDE, ewWaitUntilTerminated, RESULT);
-      
-      // Set service to run as LocalSystem with proper environment
-      Exec('sc', 'config GSE-Ollama obj=LocalSystem password=', '', SW_HIDE, ewWaitUntilTerminated, RESULT);
-    end;
+    // Phase 10A (ADR-012): upgrades from 0.3.x remove the old GSE-Ollama service. Nothing replaces it:
+    // the AI service starts llama-server itself, on 127.0.0.1 only.
+    Exec('sc', 'stop GSE-Ollama', '', SW_HIDE, ewWaitUntilTerminated, RESULT);
+    Exec('sc', 'delete GSE-Ollama', '', SW_HIDE, ewWaitUntilTerminated, RESULT);
+
+    // Write the AI service config with the bundled llama-server and GGUF paths (never a key: ADR-013).
+    if IsComponentSelected('ai-service') then
+      WriteAiServiceConfig();
 
     // Phase 8: Driver presence detection and guidance
     DetectAndReportMissingDrivers();
@@ -442,7 +512,7 @@ begin
       DelTree(userDataDir, True, True, True);
     end;
 
-    // Phase 8: Remove Ollama service on uninstall
+    // Legacy (<= 0.3.x): remove the GSE-Ollama service if an old install left it behind.
     Exec('sc', 'delete GSE-Ollama', '', SW_HIDE, ewWaitUntilTerminated, RESULT);
   end;
 end;

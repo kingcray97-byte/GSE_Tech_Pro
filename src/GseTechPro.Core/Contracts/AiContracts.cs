@@ -1,3 +1,5 @@
+using GseTechPro.Core.Ai;
+
 namespace GseTechPro.Core.Contracts;
 
 /// <summary>Message roles for the AI chat boundary (matches LiteLLM/OpenAI roles).</summary>
@@ -27,6 +29,8 @@ public sealed record AiChatRequest
     public string? AssetId { get; init; }
     public bool UseTools { get; init; } = true;
     public string? SystemInstruction { get; init; }
+    /// <summary>Route choice (ADR-013). Null = this tablet only.</summary>
+    public AiRoutingOptions? Routing { get; init; }
 }
 
 /// <summary>A manual search hit (one chunk) with a human-readable citation. Phase 3.</summary>

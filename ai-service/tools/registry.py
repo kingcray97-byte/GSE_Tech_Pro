@@ -46,7 +46,7 @@ class ToolContext:
 
     db_path: Optional[Any]  # pathlib.Path | None
     config: Any  # rag.config.Config
-    # Query-side embedder from the service (None = BM25-only). Resolved from the cached Ollama probe.
+    # Query-side embedder from the service (None = BM25-only). Resolved from the cached llama-server probe.
     embedder: Optional[Callable[[list[str]], Optional[list[list[float]]]]] = None
 
 
@@ -95,7 +95,7 @@ class ToolRegistry:
         return self._specs.get(name)
 
     def schemas(self) -> list[dict[str, Any]]:
-        """OpenAI-style function tool definitions (what LiteLLM passes to Ollama)."""
+        """OpenAI-style function tool definitions (what LiteLLM passes to the model route)."""
         out = []
         for spec in self._specs.values():
             params = spec.args_model.model_json_schema()

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-service"
-version = "0.3.0"
+version = "0.4.0"
 description = "GSE Tech Pro local AI service (FastAPI on 127.0.0.1): technician chat, manual RAG, ingestion, tools. Offline only."
 requires-python = ">=3.11"
 license = { text = "Proprietary" }
@@ -12,6 +12,7 @@ dependencies = [
     "fastapi>=0.110",
     "uvicorn>=0.29",
     "litellm>=1.40",
+    "keyring>=24",  # ADR-013: route keys from Windows Credential Manager
     "httpx>=0.27",
     "pydantic>=2.6",
     "sqlite-vec>=0.1.6",

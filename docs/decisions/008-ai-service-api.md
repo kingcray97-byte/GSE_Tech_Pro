@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-16
 - **Owner:** architect
+- **Amended:** ADR-012 (`model_runtime_reachable`, `model_runtime_unreachable`, `model_loading`; `ollama_reachable` kept one release) and ADR-013 (`routing` on `/chat`, `route`/`model` on the answer, `routes` on `/health`), 2026-11-19
 
 ## Context
 

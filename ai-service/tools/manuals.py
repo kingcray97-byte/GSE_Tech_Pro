@@ -1,6 +1,6 @@
 """Manual search: the one place that runs rag.search for both POST /search/manuals and the search_manuals tool.
 
-Embedding is probed through the configured Ollama (never the default host). When vectors are unavailable
+Embedding is probed through the configured embedding llama-server (never a default host). When vectors are unavailable
 the search runs BM25-only and reports fallback=True (ADR-008 degradation rule 3).
 """
 
@@ -38,7 +38,7 @@ def run_manual_search(
 ) -> dict[str, Any]:
     """Returns {"results": [...], "fallback": bool}. Raises ValueError for bad input, sqlite3.Error for DB trouble.
 
-    `query_embedder` comes from the service (cached Ollama probe, see ServiceState.query_embedder). It is never
+    `query_embedder` comes from the service (cached llama-server probe, see ServiceState.query_embedder). It is never
     probed here: when None, the search is BM25-only.
     """
     conn = connect(db_path, readonly=True)

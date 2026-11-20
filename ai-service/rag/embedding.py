@@ -1,7 +1,10 @@
-"""Embeddings via local Ollama (nomic-embed-text, 768-d, ADR-003).
+"""Embeddings via the tablet's embedding llama-server (nomic-embed-text GGUF, 768-d; ADR-003 amended by ADR-012).
 
-Never fabricates vectors. When Ollama or the model is absent, callers get `None` and must fall back
-(BM25-only search; chunks stored without embedding rows). A dimension mismatch is a hard error.
+The server is `llama-server --embedding --pooling mean` on 127.0.0.1 (`llama_server.embedding.port`). Requests use its
+OpenAI-compatible `POST /v1/embeddings`. Embeddings never leave the tablet, whatever the chat route (ADR-013 rule 8).
+
+Never fabricates vectors. When the server is down or still loading, callers get `None` and must fall back (BM25-only
+search; chunks stored without embedding rows). A dimension mismatch is a hard error.
 """
 
 from __future__ import annotations
@@ -29,22 +32,28 @@ class EmbeddingDimensionError(ValueError):
     """The model returned vectors whose length differs from config (dimensions must never mix)."""
 
 
-def _names_match(wanted: str, present: str) -> bool:
-    if ":" in wanted:
-        return present == wanted or present == f"{wanted}:latest"
-    return present.split(":")[0] == wanted
-
-
 def is_embedding_available(config: Config | None = None) -> bool:
-    """Probe Ollama for the configured embedding model. Returns False on any failure."""
+    """True when the embedding llama-server answers /health with 200 (model loaded). False on anything else."""
     cfg = config or load_config()
     try:
-        resp = httpx.get(f"{cfg.ollama.base_url}/api/tags", timeout=PROBE_TIMEOUT_S)
-        resp.raise_for_status()
-        names = [m.get("name", "") for m in resp.json().get("models", [])]
-    except (httpx.HTTPError, ValueError):
+        resp = httpx.get(f"{cfg.llama_server.embedding.base_url}/health", timeout=PROBE_TIMEOUT_S)
+    except httpx.HTTPError:
         return False
-    return any(_names_match(cfg.models.embedding, n) for n in names)
+    return resp.status_code == 200
+
+
+def _vectors_from(body: object, count: int) -> list | None:
+    """OpenAI shape: {"data": [{"index": i, "embedding": [...]}, ...]}. Ordered by index."""
+    if not isinstance(body, dict):
+        return None
+    data = body.get("data")
+    if not isinstance(data, list) or len(data) != count:
+        return None
+    try:
+        rows = sorted(data, key=lambda d: int(d.get("index", 0)))
+        return [row["embedding"] for row in rows]
+    except (AttributeError, KeyError, TypeError, ValueError):
+        return None
 
 
 def embed_texts(
@@ -54,7 +63,7 @@ def embed_texts(
 ) -> list[list[float]] | None:
     """Embed texts with task 'search_document' or 'search_query'.
 
-    Returns None when Ollama or the model is unavailable (callers fall back). Raises
+    Returns None when the embedding server is unavailable (callers fall back). Raises
     EmbeddingDimensionError when the model returns vectors of the wrong size.
     """
     if task_prefix not in TASK_PREFIXES:
@@ -65,21 +74,24 @@ def embed_texts(
     payload = {
         "model": cfg.models.embedding,
         "input": [TASK_PREFIXES[task_prefix] + t for t in texts],
+        "encoding_format": "float",
     }
     try:
         resp = httpx.post(
-            f"{cfg.ollama.base_url}/api/embed",
+            f"{cfg.llama_server.embedding.base_url}/v1/embeddings",
             json=payload,
             timeout=httpx.Timeout(EMBED_TIMEOUT_S, connect=PROBE_TIMEOUT_S),
         )
         if resp.status_code != 200:
             return None
-        vectors = resp.json().get("embeddings")
+        vectors = _vectors_from(resp.json(), len(texts))
     except (httpx.HTTPError, ValueError):
         return None
-    if not isinstance(vectors, list) or len(vectors) != len(texts):
+    if vectors is None:
         return None
     for vec in vectors:
+        if not isinstance(vec, list):
+            return None
         if len(vec) != cfg.models.embedding_dim:
             raise EmbeddingDimensionError(
                 f"embedding model returned {len(vec)}-d vectors; config expects {cfg.models.embedding_dim}"

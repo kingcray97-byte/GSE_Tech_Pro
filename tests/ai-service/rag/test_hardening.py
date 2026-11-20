@@ -34,13 +34,13 @@ def test_embed_texts_rejects_non_finite_from_model(monkeypatch):
         status_code = 200
 
         def json(self):
-            return {"embeddings": [[math.nan] + [0.0] * 767]}
+            return {"data": [{"index": 0, "embedding": [math.nan] + [0.0] * 767}]}
 
     monkeypatch.setattr(emb.httpx, "post", lambda *a, **k: _Resp())
     from rag.config import load_config
 
     with pytest.raises(ValueError, match="non-finite"):
-        emb.embed_texts(["x"], "search_document", load_config(overrides={"ollama.host": "127.0.0.1:9"}))
+        emb.embed_texts(["x"], "search_document", load_config(overrides={"llama_server.embedding.port": 10}))
 
 
 def test_all_invalid_paths_yield_failed_job(conn, offline_config, tmp_path):

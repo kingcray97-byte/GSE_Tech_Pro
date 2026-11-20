@@ -1,4 +1,4 @@
-"""Schema safety net (app/bootstrap.py) and the availability/degradation rules (app/ollama.py)."""
+"""Schema safety net (app/bootstrap.py) and the availability/degradation rules (app/runtime.py)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import sqlite3
 import pytest
 
 from app.bootstrap import MIGRATIONS, _strip_vec0, ensure_schema
-from app.ollama import Availability, OllamaMonitor, OllamaProbe, names_match
+from app.runtime import Availability, CachedProbe, RuntimeProbe
 from app.perf import rss_mb
 from app.security import token_matches
 from rag.db import connect, is_vec0_available
@@ -71,50 +71,45 @@ def test_vec0_table_exists_only_when_sqlite_vec_loads(tmp_path):
         conn.close()
 
 
-@pytest.mark.parametrize(
-    "wanted,present,ok",
-    [
-        ("nomic-embed-text", "nomic-embed-text:latest", True),
-        ("nomic-embed-text", "nomic-embed-text:v1.5", True),
-        ("lfm3-omni", "lfm3-omni", True),
-        ("lfm3-omni:q4", "lfm3-omni:q4", True),
-        ("lfm3-omni:q4", "lfm3-omni:latest", False),
-        ("lfm3-omni", "other-model", False),
-    ],
-)
-def test_model_name_matching(wanted, present, ok):
-    assert names_match(wanted, present) is ok
+def _avail(reachable=True, chat=True, loading=False, embed=True, db=True):
+    return Availability(model_runtime_reachable=reachable, chat_model_present=chat, chat_loading=loading,
+                        embedding_model_present=embed, db_ok=db)
 
 
 def test_availability_reason_priority():
-    down = Availability(ollama_reachable=False, chat_model_present=False, embedding_model_present=False, db_ok=True)
-    assert down.degradation_reason == "ollama_unreachable"
+    down = _avail(reachable=False, embed=False)
+    assert down.degradation_reason == "model_runtime_unreachable"
     assert down.status == "degraded" and down.chat_available is False
 
-    no_db = Availability(ollama_reachable=False, chat_model_present=False, embedding_model_present=False, db_ok=False)
+    no_db = _avail(reachable=False, chat=False, embed=False, db=False)
     assert no_db.degradation_reason == "db_unavailable"
     assert no_db.search_available is False
 
-    no_chat = Availability(ollama_reachable=True, chat_model_present=False, embedding_model_present=True, db_ok=True)
+    no_chat = _avail(chat=False)
     assert no_chat.degradation_reason == "chat_model_missing"
+    assert no_chat.chat_available is False
 
-    no_embed = Availability(ollama_reachable=True, chat_model_present=True, embedding_model_present=False, db_ok=True)
+    loading = _avail(loading=True)
+    assert loading.degradation_reason == "model_loading"
+    assert loading.status == "starting" and loading.chat_available is False
+
+    no_embed = _avail(embed=False)
     assert no_embed.degradation_reason == "embedding_model_missing"
     assert no_embed.chat_available is True
 
-    ok = Availability(ollama_reachable=True, chat_model_present=True, embedding_model_present=True, db_ok=True)
+    ok = _avail()
     assert ok.degradation_reason is None and ok.status == "ok"
 
 
-def test_monitor_caches_within_ttl_and_refreshes_after():
+def test_probe_caches_within_ttl_and_refreshes_after():
     calls = []
     now = {"t": 0.0}
 
     def probe(_base):
         calls.append(1)
-        return OllamaProbe(True, model_names=("lfm3-omni",))
+        return RuntimeProbe("ready")
 
-    monitor = OllamaMonitor("http://x", probe_fn=probe, ttl_s=5.0, clock=lambda: now["t"])
+    monitor = CachedProbe("http://x", probe_fn=probe, ttl_s=5.0, clock=lambda: now["t"])
     monitor.probe()
     monitor.probe()
     assert len(calls) == 1

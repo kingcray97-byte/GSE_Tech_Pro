@@ -1,3 +1,4 @@
+using GseTechPro.Core.Ai;
 using GseTechPro.Core.Enums;
 
 namespace GseTechPro.Core.Contracts;
@@ -54,7 +55,7 @@ public static class AiErrorCodes
     public const string ValidationError = "validation_error";
     public const string NotFound = "not_found";
     public const string Conflict = "conflict";
-    /// <summary>Chat capability unavailable (Ollama unreachable or chat model missing).</summary>
+    /// <summary>Chat capability unavailable (model runtime unreachable or chat model missing, on every allowed route).</summary>
     public const string AiUnavailable = "ai_unavailable";
     /// <summary>Chat model still warming up / loading (transient).</summary>
     public const string AiStarting = "ai_starting";
@@ -84,9 +85,17 @@ public sealed record AiErrorEnvelope
 public sealed record AiServiceHealth
 {
     public AiServiceStatus Status { get; init; } = AiServiceStatus.Starting;
-    /// <summary>Whether the Ollama server answered its version probe.</summary>
+    /// <summary>The tablet's chat <c>llama-server</c> answered its health check (ADR-012).</summary>
+    public bool ModelRuntimeReachable { get; init; }
+    /// <summary>
+    /// Deprecated wire field kept one release for older services (ADR-012); same value as
+    /// <see cref="ModelRuntimeReachable"/>. Read <see cref="RuntimeReachable"/> instead.
+    /// </summary>
     public bool OllamaReachable { get; init; }
-    /// <summary>Chat is usable now (Ollama reachable and chat model present/ready).</summary>
+    /// <summary>True when either the new or the deprecated field says the runtime answered.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool RuntimeReachable => ModelRuntimeReachable || OllamaReachable;
+    /// <summary>Chat is usable now on the tablet route (runtime ready and chat model loaded).</summary>
     public bool ChatAvailable { get; init; }
     /// <summary>Manual search is usable (SQLite open; BM25-only when no embedding model).</summary>
     public bool SearchAvailable { get; init; }
@@ -94,8 +103,13 @@ public sealed record AiServiceHealth
     public string? ChatModel { get; init; }
     /// <summary>Configured embedding model name (from config).</summary>
     public string? EmbeddingModel { get; init; }
-    /// <summary>e.g. "ollama_unreachable"; null when <see cref="Status"/> is <see cref="AiServiceStatus.Ok"/>.</summary>
+    /// <summary>
+    /// e.g. "model_runtime_unreachable", "model_loading" (older services: "ollama_unreachable");
+    /// null when <see cref="Status"/> is <see cref="AiServiceStatus.Ok"/>.
+    /// </summary>
     public string? DegradationReason { get; init; }
+    /// <summary>One entry per route (tablet, shop server, cloud), ADR-013. Empty from older services.</summary>
+    public IReadOnlyList<AiRouteStatus> Routes { get; init; } = Array.Empty<AiRouteStatus>();
     /// <summary>Service build version string.</summary>
     public string Version { get; init; } = "";
 }
@@ -109,7 +123,7 @@ public sealed record AiServiceConfig
     public string EmbeddingModel { get; init; } = "";
     /// <summary>Vector dimension (768 for nomic-embed-text); never mix dimensions.</summary>
     public int EmbeddingDimension { get; init; } = 768;
-    /// <summary>Minutes of idle traffic before the service asks Ollama to unload models.</summary>
+    /// <summary>Minutes of idle traffic before the service stops its llama-server processes (ADR-012).</summary>
     public int IdleUnloadMinutes { get; init; } = 10;
 }
 
@@ -123,6 +137,10 @@ public sealed record ChatResponse
     /// <summary>True for every model-generated answer (the service always sets true for AI text).</summary>
     public bool IsSuggestion { get; init; } = true;
     public IReadOnlyList<Citation> Citations { get; init; } = Array.Empty<Citation>();
+    /// <summary>Route that produced the answer (ADR-013). Null from older services, which are tablet-only.</summary>
+    public AiRoute? Route { get; init; }
+    /// <summary>Model label that answered (from the service config).</summary>
+    public string? Model { get; init; }
 }
 
 /// <summary>A source cited by the model (manual page, past work order, or DTC).</summary>

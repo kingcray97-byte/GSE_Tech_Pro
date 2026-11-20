@@ -390,7 +390,7 @@ def ingest_files(
 ) -> IngestionJob:
     """Ingest PDFs synchronously and return the job (state succeeded/failed/cancelled).
 
-    `embedder`: document-side embedder. When None, one Ollama probe decides; if the model is absent, chunks
+    `embedder`: document-side embedder. When None, one embedding-server probe decides; if the model is absent, chunks
     are stored with no vectors and `chunks_embedded` stays 0.
     `manual_overrides`: keyed by file name or full path -> {title, manufacturer, model_family}.
     """

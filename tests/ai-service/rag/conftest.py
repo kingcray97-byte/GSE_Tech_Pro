@@ -78,13 +78,13 @@ def vec(conn) -> bool:
 
 @pytest.fixture
 def offline_config():
-    """Ollama pointed at a closed port: the embedding probe fails fast and deterministically."""
-    return load_config(overrides={"ollama.host": "127.0.0.1:9"})
+    """Embedding llama-server pointed at a closed port: the probe fails fast and deterministically."""
+    return load_config(overrides={"llama_server.port": 9, "llama_server.embedding.port": 10})
 
 
 @pytest.fixture
 def unavailable_embedder():
-    """Stands in for 'Ollama absent' at the callable boundary: always returns None."""
+    """Stands in for 'embedding server absent' at the callable boundary: always returns None."""
 
     def _none(texts):
         return None

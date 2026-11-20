@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 import time
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import AbstractSet, Any, Optional
 
 from app.llm import AssistantTurn, ChatBackend
 from app.models import ChatRequest, ChatResponse, Citation
@@ -37,6 +37,7 @@ _SPEC_LIKE = re.compile(
 )
 
 _ALLOWED_CLIENT_ROLES = frozenset({"user", "assistant"})
+NOT_OFFERED_TOOL = "This tool is not available on this route. Answer from the manual passages you have."
 
 
 @dataclass
@@ -50,15 +51,21 @@ class ChatRun:
     unverified_note_added: bool = False
 
 
-def build_messages(req: ChatRequest, system_prompt: str) -> list[dict[str, Any]]:
+def build_messages(req: ChatRequest, system_prompt: str, *, include_job_context: bool = True) -> list[dict[str, Any]]:
     """System prompt, one short context line, then the most recent client turns (bounded)."""
     system = system_prompt
     if req.system_instruction:
         system += "\n\nApp instruction: " + req.system_instruction.strip()
-    context = (
-        f"Context: work order {req.work_order_id or 'none'}; asset {req.asset_id or 'none'}. "
-        "Look up asset, repair, and part history with the tools; do not guess from memory."
-    )
+    if include_job_context:
+        context = (
+            f"Context: work order {req.work_order_id or 'none'}; asset {req.asset_id or 'none'}. "
+            "Look up asset, repair, and part history with the tools; do not guess from memory."
+        )
+    else:
+        context = (
+            "Context: job details are not shared on this route. Use manual search for facts; "
+            "do not guess values from memory."
+        )
     history = [m for m in req.messages if m.role in _ALLOWED_CLIENT_ROLES][-MAX_HISTORY_MESSAGES:]
     # One system message: small local models handle a single system turn more reliably.
     messages: list[dict[str, Any]] = [{"role": "system", "content": f"{system}\n\n{context}"}]
@@ -100,6 +107,11 @@ def apply_unverified_guard(text: str, citations: list[Citation]) -> tuple[str, b
     return f"{text}\n\n{UNVERIFIED_NOTE}".strip(), True
 
 
+def _tool_name(schema: dict[str, Any]) -> str:
+    fn = schema.get("function") if isinstance(schema, dict) else None
+    return str(fn.get("name", "")) if isinstance(fn, dict) else ""
+
+
 def run_chat(
     req: ChatRequest,
     *,
@@ -107,9 +119,13 @@ def run_chat(
     registry: ToolRegistry,
     tool_ctx: ToolContext,
     system_prompt: str,
+    include_job_context: bool = True,
+    allowed_tools: Optional[AbstractSet[str]] = None,
 ) -> ChatRun:
-    messages = build_messages(req, system_prompt)
+    messages = build_messages(req, system_prompt, include_job_context=include_job_context)
     tools = registry.schemas() if req.use_tools else None
+    if tools is not None and allowed_tools is not None:
+        tools = [s for s in tools if _tool_name(s) in allowed_tools] or None
     run_sources: list[ToolSource] = []
     tool_calls = 0
     model_turns = 0
@@ -137,6 +153,10 @@ def run_chat(
             }
         )
         for call in turn.tool_calls[:MAX_TOOL_CALLS_PER_STEP]:
+            if allowed_tools is not None and call.name not in allowed_tools:
+                # A tool that was not offered on this route returns nothing, so job data never leaves on it.
+                messages.append({"role": "tool", "tool_call_id": call.id, "content": NOT_OFFERED_TOOL})
+                continue
             result = registry.invoke(call.name, call.arguments, tool_ctx)
             tool_calls += 1
             run_sources.extend(result.sources)

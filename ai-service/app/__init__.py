@@ -4,4 +4,4 @@ Keep this package initializer empty of imports: `app.main` pulls in the whole st
 nothing from app/. Importing `app` must stay cheap.
 """
 
-SERVICE_VERSION = "0.3.0"
+SERVICE_VERSION = "0.4.0"

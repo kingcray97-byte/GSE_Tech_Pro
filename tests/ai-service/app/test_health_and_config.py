@@ -1,4 +1,4 @@
-"""/health and /config shapes and the ADR-008 degradation rules (no Ollama, Ollama with missing models, starting)."""
+"""/health and /config shapes and the ADR-008/012 degradation rules (runtime down, model missing, loading, starting)."""
 
 from __future__ import annotations
 
@@ -7,25 +7,30 @@ import threading
 from ai_support import blocking_probe, fake_probe
 
 HEALTH_KEYS = {
-    "status", "ollama_reachable", "chat_available", "search_available", "chat_model",
-    "embedding_model", "degradation_reason", "version",
+    "status", "model_runtime_reachable", "ollama_reachable", "chat_available", "search_available", "chat_model",
+    "embedding_model", "degradation_reason", "version", "routes",
 }
 
 
-def test_no_ollama_is_honest_degraded_and_still_200(make_client, seeded_db):
+def test_no_runtime_is_honest_degraded_and_still_200(make_client, seeded_db):
     client = make_client(db_path=seeded_db)
     resp = client.get("/health")
     assert resp.status_code == 200
     body = resp.json()
     assert set(body) == HEALTH_KEYS
     assert body["status"] == "degraded"
-    assert body["ollama_reachable"] is False
+    assert body["model_runtime_reachable"] is False
+    assert body["ollama_reachable"] is False  # deprecated alias keeps the same value
     assert body["chat_available"] is False
     assert body["search_available"] is True
-    assert body["degradation_reason"] == "ollama_unreachable"
+    assert body["degradation_reason"] == "model_runtime_unreachable"
+    routes = {r["route"]: r for r in body["routes"]}
+    assert set(routes) == {"tablet", "shop-server", "cloud"}
+    assert routes["tablet"]["configured"] is True and routes["tablet"]["available"] is False
+    assert routes["cloud"]["configured"] is False and routes["cloud"]["available"] is False
     assert body["chat_model"] == "lfm3-omni"
     assert body["embedding_model"] == "nomic-embed-text"
-    assert body["version"] == "0.3.0"
+    assert body["version"] == "0.4.0"
 
 
 def test_ready_when_chat_and_embedding_models_present(make_client, seeded_db):
@@ -35,18 +40,34 @@ def test_ready_when_chat_and_embedding_models_present(make_client, seeded_db):
     )
     body = client.get("/health").json()
     assert body["status"] == "ok"
+    assert body["model_runtime_reachable"] is True
     assert body["ollama_reachable"] is True
     assert body["chat_available"] is True
+    assert {r["route"]: r["available"] for r in body["routes"]}["tablet"] is True
     assert body["degradation_reason"] is None
 
 
-def test_chat_model_missing_is_reported(make_client, seeded_db):
-    client = make_client(db_path=seeded_db, probe_fn=fake_probe(models=("nomic-embed-text:latest",)))
+def test_chat_model_missing_is_reported(make_client, seeded_db, tmp_path):
+    # Spawn mode with no chat GGUF on disk: nothing is started, and /health says the model is missing.
+    client = make_client(
+        db_path=seeded_db,
+        probe_fn=fake_probe(models=("nomic-embed-text:latest",)),
+        overrides={"llama_server.binary": str(tmp_path / "llama-server.exe"),
+                   "llama_server.model": str(tmp_path / "missing.gguf")},
+    )
     body = client.get("/health").json()
     assert body["status"] == "degraded"
-    assert body["ollama_reachable"] is True
     assert body["chat_available"] is False
     assert body["degradation_reason"] == "chat_model_missing"
+
+
+def test_model_loading_is_reported_as_starting(make_client, seeded_db):
+    client = make_client(db_path=seeded_db, probe_fn=fake_probe(models=("nomic-embed-text",), loading=("lfm3-omni",)))
+    body = client.get("/health").json()
+    assert body["status"] == "starting"
+    assert body["model_runtime_reachable"] is True
+    assert body["chat_available"] is False
+    assert body["degradation_reason"] == "model_loading"
 
 
 def test_embedding_model_missing_keeps_chat_and_says_bm25_only(make_client, seeded_db):
@@ -81,7 +102,7 @@ def test_starting_while_first_probe_is_pending(make_client, empty_db):
 
 
 def test_real_probe_on_a_closed_port_reports_unreachable(seeded_db):
-    """The one test that uses the real network probe (no injected fake). Port 9 is closed by design."""
+    """The one test that uses the real llama-server probe (no injected fake). Ports 9/10 are closed by design."""
     from fastapi.testclient import TestClient
 
     from ai_support import TEST_TOKEN, offline_config
@@ -92,11 +113,11 @@ def test_real_probe_on_a_closed_port_reports_unreachable(seeded_db):
     with TestClient(app, headers={"X-GSE-Token": TEST_TOKEN}) as client:
         assert app.state.svc.warm.wait(30)
         body = client.get("/health").json()
-    assert body["ollama_reachable"] is False
-    assert body["degradation_reason"] == "ollama_unreachable"
+    assert body["model_runtime_reachable"] is False
+    assert body["degradation_reason"] == "model_runtime_unreachable"
 
 
-def test_config_reports_effective_port_and_no_ollama_host(make_client, empty_db):
+def test_config_reports_effective_port_and_no_runtime_host(make_client, empty_db):
     client = make_client(db_path=empty_db, port=9123, overrides={"idle_unload_minutes": 10})
     body = client.get("/config").json()
     assert body == {
@@ -107,3 +128,4 @@ def test_config_reports_effective_port_and_no_ollama_host(make_client, empty_db)
         "idle_unload_minutes": 10,
     }
     assert "ollama" not in str(body).lower()
+    assert "8081" not in str(body)  # the llama-server port is internal to the service

@@ -1,6 +1,6 @@
 # ADR-006 — Model routing: local-first with opt-in cloud fallback
 
-- **Status:** Accepted (pending user approval)
+- **Status:** Superseded by ADR-013 (2026-11-19): three routes (tablet / shop server / cloud), llama.cpp instead of Ollama
 - **Date:** 2026-11-15
 - **Owner:** architect
 

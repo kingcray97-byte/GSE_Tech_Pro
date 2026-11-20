@@ -517,7 +517,7 @@ public sealed class AiServiceClientAndStateTests
         using var client = new AiServiceClient(httpClient, TestToken);
         await using var stateService = new AiServiceStateService(client);
 
-        // 1. Degraded (no Ollama, search available)
+        // 1. Degraded (an older service reporting ollama_unreachable, search available)
         await stateService.RefreshOnceAsync();
         Assert.Equal(AiUiState.DegradedSearch, stateService.UiState);
         Assert.False(stateService.IsChatAvailable);
@@ -525,7 +525,7 @@ public sealed class AiServiceClientAndStateTests
         Assert.Equal("config-driven-chat-model", stateService.ChatModel);
         Assert.Equal("config-driven-embed-model", stateService.EmbeddingModel);
         Assert.Equal("AI: Degraded (Search Only)", stateService.StatusIndicatorText);
-        Assert.Contains("Ollama", stateService.StatusBannerText);
+        Assert.Contains("llama.cpp", stateService.StatusBannerText);
 
         // 2. Starting / Warming up
         currentHealth = currentHealth with

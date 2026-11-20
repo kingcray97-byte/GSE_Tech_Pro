@@ -1,23 +1,54 @@
-# ai-service default config (ADR-008). Owned by ai-engineer.
+# ai-service default config (ADR-008; llama_server per ADR-012; routes per ADR-013). Owned by ai-engineer.
 # The app launches the service with --port/--token (CLI overrides this file). These service.* values
-# are standalone-run defaults only (dev/test: `python -m app.main`). installer-deploy relocates a
-# production copy to ai-service/config/config.yaml in Phase 8; the loader accepts any path via --config.
+# are standalone-run defaults only (dev/test: `python -m app.main`). installer-deploy ships a production copy
+# to ai-service/config/config.yaml with the bundled llama-server and GGUF paths filled in.
 service:
   host: 127.0.0.1            # never 0.0.0.0
   port: 8765                 # standalone default; the App overrides via --port at runtime
   token: "dev-local-token"   # standalone default; the App overrides via --token at runtime
 
-ollama:
-  host: "127.0.0.1:11434"    # no scheme: rag.config adds http:// (base_url); the scheme form is also accepted
-  no_cloud: true             # sets OLLAMA_NO_CLOUD=1 for the Ollama process/client
+# llama.cpp runtime (ADR-012). The service starts, watches and stops these processes itself, always on 127.0.0.1.
+# binary empty = do not spawn: attach to a llama-server already listening on the ports below (dev and tests).
+llama_server:
+  binary: ""                 # e.g. {app}\llama.cpp\llama-server.exe (installer fills this in)
+  model: ""                  # chat GGUF, e.g. {app}\models\<lfm3-omni>.gguf
+  mmproj: ""                 # optional projector GGUF for image/audio input
+  port: 8081
+  ctx: 8192
+  threads: 0                 # 0 = llama.cpp default
+  extra_args: []             # release-specific flags (check `llama-server --help` on the pinned build)
+  start_timeout_s: 120       # cold load on a CPU tablet can be slow
+  embedding:
+    model: ""                # embedding GGUF, e.g. {app}\models\<nomic-embed-text>.gguf
+    port: 8082
+    pooling: mean            # must match the embedding model
+    ctx: 2048
+    extra_args: []
 
 models:
-  chat: "lfm3-omni"          # config-only; never hardcoded in code
+  chat: "lfm3-omni"          # label only (llama-server --alias); config-only, never hardcoded in code
   embedding: "nomic-embed-text"
   embedding_dim: 768         # MUST match the vec0 dimension (fixed at 768); changing it means re-embedding
 
-idle_unload_minutes: 10      # unload models after idle (RAM budget)
+# Remote routes (ADR-013). Off by default. Keys are NEVER written here: key_name is a Windows Credential Manager
+# entry (service "GSE Tech Pro AI"). The cloud is used only when enabled here AND the app's administrator allows it.
+routes:
+  shop_server:
+    enabled: false
+    model: ""                # e.g. litellm_proxy/<model on the shop proxy>
+    api_base: ""             # e.g. http://shop-ai.local:4000
+    key_name: ""             # Credential Manager entry holding the proxy's virtual key
+  cloud:
+    enabled: false
+    model: ""                # LiteLLM provider/model; left blank until the owner picks one
+    api_base: ""
+    key_name: ""
+    probe_host: ""           # host:port for the online check (TCP connect only)
+  health_ttl_s: 15
+  health_timeout_s: 1.5
+
+idle_unload_minutes: 10      # stop the llama-server processes after idle (RAM budget)
 
 degradation:
-  offline_chat_message: "AI assistant is unavailable (Ollama not reachable). Manual search remains available."
+  offline_chat_message: "AI assistant is unavailable (the local model is not running). Manual search remains available."
   fallback_search: "bm25"    # when no embedding model: rank by FTS5 BM25 only (deterministic, no model)

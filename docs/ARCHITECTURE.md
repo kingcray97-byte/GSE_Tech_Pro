@@ -24,16 +24,16 @@ Four long-lived processes, one per responsibility, so that a 32-bit vendor DLL, 
 |---|---|---|---|
 | `GseTechPro.App.exe` | WinUI 3 / Windows App SDK, .NET 8, **x64, unpackaged** | UI, orchestration, navigation, state | device host (named pipes), AI service (HTTP), scope (in-proc) |
 | `GseTechPro.Devices.Host32.exe` | .NET 8, **x86** | Loads 32-bit J2534/RP1210 vendor DLLs; decodes J1939/J1708/J1587/OBD/UDS; simulator | App (named pipes) |
-| `GseTechPro.AiService` | Python 3.12 (embedded runtime), FastAPI | RAG, ingestion, LiteLLM→Ollama, tools, voice, vision, recommender | App (HTTP 127.0.0.1), Ollama (HTTP 127.0.0.1:11434) |
-| `ollama.exe serve` | Go (installed by setup) | Local model runtime (`lfm3-omni`, `nomic-embed-text`) | AI service (HTTP 127.0.0.1:11434) |
+| `GseTechPro.AiService` | Python 3.12 (embedded runtime), FastAPI | RAG, ingestion, LiteLLM routing (tablet / shop server / cloud, ADR-013), tools, voice, vision, recommender | App (HTTP 127.0.0.1), its own `llama-server` children (HTTP 127.0.0.1) |
+| `llama-server.exe` x2 | C++ (llama.cpp, bundled, MIT) | Local model runtime, started and stopped by the AI service (ADR-012): chat (`lfm3-omni` GGUF) and embeddings (`nomic-embed-text` GGUF) | AI service (HTTP 127.0.0.1, ports from config) |
 
 Scope support runs **fully in-process, x64** (ADR-011): **PicoSDK is 64-bit** and loads in-process inside `GseTechPro.Scope`, and the **Hantek 6074BE SDK is dual-architecture** (x64 + x86 DLLs/Libs confirmed in `Reference/HT6074BE_SDK/Dll/`, driver `Hantek6000BAMD64.Sys`) so Hantek capture also loads x64 in-process. **No new 32-bit process and no host32 routing for scope.** Vendor scope DLLs are loaded only behind `IScopeDevice` implementations, so the app never touches them. Note: PicoSDK is compiled against the published API but **not exercised against hardware** in Phase 6 (same clean-room pattern as J2534/RP1210); Hantek SDK license + unsigned driver remain "needs verification" (user-installed).
 
 **IPC choices (concrete):**
 
 1. **App ↔ 32-bit device host: named pipes** (`System.IO.Pipes`, duplex, per-session). Request/response for commands (connect, read DTCs, clear codes) and a streaming channel for live data / CAN capture. Framing: a **1-byte frame-kind tag + a little-endian 4-byte length + payload** (see §1.1.1): JSON for control, raw byte arrays for bus/scope streaming. Named pipes beat gRPC here: no HTTP port management, no TLS/HTTP2 stack on a low-power tablet, works in-process under one Windows user session, and is the Windows-native choice for "one local process to another." gRPC is *not* used anywhere — it adds a dependency and a port for zero benefit on a single machine.
-2. **App ↔ AI service: local HTTP on `127.0.0.1` only.** FastAPI is HTTP-native and LiteLLM/Ollama are HTTP-native, so this is the path of least resistance. The service binds a fixed port (default `8765`, configurable) and requires a random per-install token in a header (`X-GSE-Token`) as defense-in-depth against other local processes. Never bind `0.0.0.0`.
-3. **AI service ↔ Ollama: HTTP on `127.0.0.1:11434`** (Ollama default). Ollama is configured with `OLLAMA_HOST=127.0.0.1` and `OLLAMA_NO_CLOUD=1` so it never phones home and never exposes the port.
+2. **App ↔ AI service: local HTTP on `127.0.0.1` only.** FastAPI, LiteLLM and llama-server are HTTP-native, so this is the path of least resistance. The service binds a fixed port (default `8765`, configurable) and requires a random per-install token in a header (`X-GSE-Token`) as defense-in-depth against other local processes. Never bind `0.0.0.0`.
+3. **AI service ↔ llama-server: HTTP on `127.0.0.1`** (ports from config). The AI service starts both `llama-server` processes itself with `--host 127.0.0.1`, so the model ports are never exposed (ADR-012).
 
 ### 1.1.1 App ↔ 32-bit device host — concrete IPC contract (ADR-007)
 
@@ -87,9 +87,9 @@ Command set (Phase 2) — name, params, result:
 
 **Startup / shutdown / crash recovery:**
 
-- `GseTechPro.App.exe` is the orchestrator. On launch it: (1) migrates the SQLite DB, (2) starts `GseTechPro.AiService` if not already running, (3) connects Ollama lazily (the AI service pulls the model on first use, not at boot).
+- `GseTechPro.App.exe` is the orchestrator. On launch it: (1) migrates the SQLite DB, (2) starts `GseTechPro.AiService` if not already running, (3) the AI service starts its `llama-server` processes in the background (GGUF files from `{app}\models\`; nothing is downloaded).
 - Each child process is independently supervised: the app holds process handles and a heartbeat over the IPC channel. If the AI service dies, the app restarts it once and degrades the Tech Chat panel to "AI is starting…" until it returns. If the device host dies, the app reconnects and re-negotiates the device session; an in-flight recording is marked "interrupted."
-- **Idle unload**: the AI service tells Ollama to unload the model after a configurable idle timeout (default 10 min) so the RAM budget is met when the tablet is idle.
+- **Idle unload**: the AI service stops its `llama-server` processes after a configurable idle timeout (default 10 min) so the RAM budget is met when the tablet is idle; the next chat/search starts them again.
 - **Cold-start target**: main window interactive in < 10 s; the model loads in the background and the Tech Chat shows a "warming up" state. Measured in Phase 1 (propose and verify the number).
 
 ### 1.2 Database design — SQLite per tablet, FTS5 + sqlite-vec
@@ -110,13 +110,13 @@ Full palette, icon decision, screen map, touch rules, and units in §5-equivalen
 
 ### 1.5 AI integration
 
-Local Python FastAPI service → LiteLLM → Ollama → `lfm3-omni` (chat/vision/audio) + `nomic-embed-text` (embeddings). Full workflow, tool list, and safety rules in §4. The model is swapped by config only — **no model name is ever hardcoded** — so a bigger server model or a cloud model is a config change.
+Local Python FastAPI service → LiteLLM → `llama-server` (llama.cpp, ADR-012) → `lfm3-omni` GGUF (chat/vision/audio) + `nomic-embed-text` GGUF (embeddings). Optional shop-server and cloud routes per ADR-013. Full workflow, tool list, and safety rules in §4. The model is swapped by config only — **no model name is ever hardcoded** — so a bigger server model or a cloud model is a config change.
 
 **Model routing is local-first with an opt-in cloud fallback (ADR-006):** local `lfm3-omni` is the default and always works offline. If (and only if) the shop enables it in settings *and* the internet is reachable, LiteLLM may route to a cloud/hosted model as a higher-capability fallback. Offline behavior is unchanged and fully local. This is an **opt-in exception to the offline-first rule** — disabled by default, never a runtime dependency, sends nothing unless turned on, and sends no telemetry.
 
 ### 1.6 Future scalability
 
-**Multi-tablet sync** (later, Phase 9): an optional shop server with **PostgreSQL + pgvector**. Because every row already has a GUID, `updated_at`, and soft-delete, sync is change-data-capture over those columns — no schema rewrites. Tablets work fully without it. **USB update channel** ships from Phase 1 (skeleton installer) onward. **Bigger server model** slots in by pointing LiteLLM at the server's Ollama/OpenAI-compatible endpoint in config.
+**Multi-tablet sync** (later, Phase 9): an optional shop server with **PostgreSQL + pgvector**. Because every row already has a GUID, `updated_at`, and soft-delete, sync is change-data-capture over those columns — no schema rewrites. Tablets work fully without it. **USB update channel** ships from Phase 1 (skeleton installer) onward. **Bigger server model** slots in by the ADR-013 `shop-server` route (the shop's LiteLLM proxy), config only.
 
 ---
 
@@ -733,7 +733,7 @@ GSE-Tech-Pro/
 │   └── GseTechPro.Scope/         # scope — IScopeDevice impls (PicoSDK x64, Hantek), waveform math
 ├── ai-service/                   # Python 3.12 (embedded)
 │   ├── pyproject.toml, requirements*.txt
-│   ├── app/                      # ai-engineer — FastAPI app, endpoints, config, Ollama/LiteLLM wiring
+│   ├── app/                      # ai-engineer — FastAPI app, endpoints, config, llama-server/LiteLLM routing
 │   ├── tools/                    # ai-engineer — AI skills/tools (lookup, record reading, note, DTC, etc.)
 │   ├── voice/                    # ai-engineer — STT/TTS (lfm3-omni audio first, whisper.cpp/Piper fallback)
 │   ├── vision/                   # ai-engineer — photo inspection, OCR (Tesseract/Windows.Media.Ocr)
@@ -757,19 +757,19 @@ The folders in this tree that do **not** exist yet are created in Phase 1 (the `
 
 ```
 GseTechPro.App (WinUI) ──HTTP 127.0.0.1:8765──▶ GseTechPro.AiService (FastAPI)
-                                                    │  LiteLLM (config-only model routing)
+                                                    │  LiteLLM (config-only routes, ADR-013)
                                                     ▼
                           ┌─────────────────────────┴──────────────────────────────┐
-                          │ default (always, offline): Ollama 127.0.0.1:11434      │
-                          │   ├── lfm3-omni        (chat / vision / audio)         │
-                          │   └── nomic-embed-text (embeddings, 768-d)             │
-                          │ opt-in + online only: cloud/hosted model               │
-                          │   └── Ollama Cloud / OpenAI-compatible endpoint        │
+                          │ tablet (always, offline): llama-server on 127.0.0.1    │
+                          │   ├── lfm3-omni GGUF        (chat / vision / audio)    │
+                          │   └── nomic-embed-text GGUF (embeddings, 768-d)        │
+                          │ shop-server (optional): the shop's LiteLLM proxy       │
+                          │ cloud (admin opt-in + online only): LiteLLM provider   │
                           └────────────────────────────────────────────────────────┘
 ```
 
-- **Model names and endpoints live only in config** (`ai-service/config/*.yaml`), never in code. LiteLLM sits between the service and the model provider, so a shop-server model or a cloud model is a config change. Embeddings always stay local (`nomic-embed-text`) — the cloud tier is for chat/reasoning only, never for embedding customer documents.
-- **Routing (ADR-006):** local `lfm3-omni` is the default and always works offline. When the shop opts in (settings) *and* the internet is reachable, LiteLLM may route chat to a cloud/hosted model as a higher-capability fallback; it falls back to local automatically when offline. Disabled by default, no telemetry, nothing leaves the tablet unless the shop turns it on.
+- **Model names, paths and endpoints live only in config** (`config.yaml`: `models`, `llama_server`, `routes`), never in code. Embeddings always stay on the tablet; remote routes are for chat only.
+- **Routing (ADR-013):** `tablet-only` (default), `prefer-shop-server`, `prefer-cloud`. Fallback cloud → shop server → tablet. Cloud needs both the service config (`routes.cloud.enabled`) and the app's administrator setting; job details go to the cloud only when the administrator also allows it. Every answer carries its `route`. Keys live in Windows Credential Manager, never in config or logs.
 - **Embedding model: `nomic-embed-text`** (137M params, 768-d, ~274 MB, Apache-2.0, runs on CPU). Uses its `search_document:`/`search_query:` task prefixes. ADR-003.
 - **Deterministic code does the exact work** (OCR, PDF text/table extraction, waveform measurements, unit conversion, SPN/FMI decode). The model **explains and connects**, it never computes exact values.
 - **Prompt discipline for a 2B model**: short prompts, heavy retrieval, tool-first. The model looks things up instead of guessing (spec: "be honest about the 2B model's limits").
@@ -872,8 +872,8 @@ is present (else `fallback:true`). Smoothing = **Wilson lower bound (95%)** with
 
 ### 4.6 Future scalability for AI
 
-- **Bigger server model**: add a LiteLLM provider entry pointing at the shop server's Ollama (or any OpenAI-compatible endpoint); tablets that can reach it use it, otherwise fall back to local `lfm3-omni`. Config-only.
-- **Cloud model fallback (opt-in + online only, ADR-006)**: an additional LiteLLM provider entry for a cloud/hosted model (Ollama Cloud or any OpenAI-compatible endpoint) that is used only when the shop enables it *and* the internet is reachable; otherwise the app stays fully local. Config-only, disabled by default, no hardcoded provider/model names, no telemetry.
+- **Bigger server model**: the ADR-013 `shop-server` route (the shop's LiteLLM proxy); tablets that can reach it use it, otherwise fall back to the tablet's `llama-server`. Config-only.
+- **Cloud route (opt-in + online only, ADR-013)**: a LiteLLM provider entry used only when an administrator enables it *and* the internet is reachable; otherwise the app stays fully local. Config-only, disabled by default, no hardcoded provider/model names, no telemetry.
 - **Fleet-wide learning**: when sync (Phase 9) is on, the recommendation engine queries the server's PostgreSQL + pgvector so rankings use the whole fleet's repair history, not just one tablet.
 
 ---
@@ -1001,7 +1001,7 @@ Anything not listed here is either already in the spec or not present in the ref
 
 | Component | License | Bundle in installer? | Notes |
 |---|---|---|---|
-| **Ollama** | MIT | ✅ bundle | MIT permits redistribution; keep copyright notice |
+| **llama.cpp (`llama-server`)** | MIT | ✅ bundle | MIT permits redistribution; copy its LICENSE into third-party notices (ADR-012). Replaces Ollama. |
 | **`lfm3-omni`** (Liquid AI LFM3-Omni-2B) | **LFM Open License v1.0** (Apache-2.0 base + **$10M/yr revenue threshold**) | ✅ bundle (see note) | Free commercial use **only if the legal entity's annual revenue < $10M**; above that, contact Liquid AI. Include license + notices. Downstream customer revenue is their own concern. **Verify the customer's revenue before shipping.** |
 | **`nomic-embed-text`** (Nomic AI) | Apache-2.0 | ✅ bundle | 137M, 768-d, ~274 MB |
 | **PicoSDK** (Pico Technology) | Proprietary-permissive ("copy & distribute SDK without restriction, keep copyright; use only with Pico products") | ✅ bundle (with copyright intact) | Not OSI open source; redistributable per terms. Requires Pico hardware. |
@@ -1022,19 +1022,19 @@ Anything not listed here is either already in the spec or not present in the ref
 
 ### 7.2 AI model check
 
-- **Available for Ollama: ✅ yes** — `ollama run lfm3-omni` (library page, ~59k downloads, 2.0–2.4 GB). Requires **Ollama ≥ 0.40.13** on Windows (Linux/Windows support landed 0.40.13; Apple was 0.40.12).
+- **Runtime (ADR-012): llama.cpp `llama-server`** with the LiquidAI GGUF build. Liquid's llama.cpp guide names a minimum llama.cpp build for LFM3 and `--reasoning off` for the server (set in `llama_server.extra_args`). **Needs verification** on our pinned build, including image/audio via the projector. (The Ollama tag checked earlier no longer applies.)
 - **License: ✅ with a caveat** — LFM Open License v1.0. Free commercial use **under $10M annual revenue** (whole legal entity); a customer above that threshold needs a separate Liquid AI license. The license terminates on any breach. Include the license + NOTICE in the installer.
-- **Size/RAM:** 2.17B params; GGUF `Q4_K_M` ≈ 1.73B model (~1.1 GB) + 475M vision projector (BF16, ~950 MB) ≈ **2.0–2.4 GB on disk**, similar in RAM when loaded, plus KV cache and Ollama/Python overhead → expect the AI stack ≈ **3–3.5 GB**, inside the 5 GB budget. Embedding model adds ~300 MB transiently.
+- **Size/RAM:** 2.17B params; GGUF `Q4_K_M` ≈ 1.73B model (~1.1 GB) + 475M vision projector (BF16, ~950 MB) ≈ **2.0–2.4 GB on disk**, similar in RAM when loaded, plus KV cache and llama-server/Python overhead → expect the AI stack ≈ **3–3.5 GB**, inside the 5 GB budget. Embedding model adds ~300 MB transiently.
 - **Speed on 8th-gen i5, 8 GB CPU-only:** **needs measurement** (spec requires it). Rough expectation for a 2B-class Q4 model on that CPU is single-digit-to-low-teens tokens/sec for text, slower with audio; plan for retrieval-heavy, tool-first prompts and short context (use the **32K context** figure from the spec table, not the 125K page header).
 - **Honest limits:** Liquid's own card says it is **not recommended for agentic coding or complex multi-step reasoning** — consistent with our design (deterministic code does the exact work; the model explains/connects). Audio quality on CPU also needs verification before committing voice to `lfm3-omni` instead of whisper.cpp + Piper.
 
 **Fallback models (config-swappable):**
 
-Local `lfm3-omni` is the default and always works offline. The cloud tier is an **opt-in, online-only** exception (ADR-006) — disabled by default, never a runtime dependency, no telemetry, and nothing leaves the tablet unless the shop enables it. Embeddings stay local (`nomic-embed-text`) regardless of which chat model is in use.
+Local `lfm3-omni` is the default and always works offline. The cloud route is an **opt-in, online-only** exception (ADR-013) — disabled by default, never a runtime dependency, no telemetry, and nothing leaves the tablet unless the shop enables it. Embeddings stay local (`nomic-embed-text`) regardless of which chat model is in use.
 
 | Priority | Model | License | Why |
 |---|---|---|---|
-| 0 (cloud, opt-in) | **Cloud/hosted model** — Ollama Cloud or any OpenAI-compatible endpoint (config-only) | varies by provider | Higher capability when online **and** the shop opts in; auto-falls back to local `lfm3-omni` offline. No hardcoded provider/model names. |
+| 0 (shop server / cloud, opt-in) | **ADR-013 remote routes** — shop LiteLLM proxy, or any LiteLLM cloud provider (config-only) | varies by provider | Higher capability when online **and** the shop opts in; auto-falls back to local `lfm3-omni` offline. No hardcoded provider/model names. |
 | 1 | **Qwen2.5-Omni-3B** | Apache-2.0 | Closest omni-modal fallback (text+vision+audio), 3B class, CPU-viable, no revenue threshold |
 | 2 | **Split pipeline**: `Qwen3`-4B or `Phi-3.5-mini` (MIT) + `whisper.cpp` STT + `Piper` TTS + a small vision model (e.g. moondream/llava) | Apache-2.0 / MIT | If on-device omni audio is too slow; matches spec's stated fallback |
 | 3 | **LFM3-1.7B** text-only (same LFM license) | LFM Open License v1.0 | Text/tool-calling only; same license caveat |
@@ -1067,13 +1067,15 @@ Key irreversible decisions are recorded as ADRs in `docs/decisions/`:
 
 - `001-packaging-unpackaged-inno.md` — unpackaged + Inno Setup (vs MSIX)
 - `002-encryption-at-rest.md` — BitLocker now, SQLCipher deferred (vs SQLCipher now)
-- `003-embedding-model.md` — `nomic-embed-text` (vs bge-m3 / mxbai / all-minilm)
+- `003-embedding-model.md` — `nomic-embed-text` (vs bge-m3 / mxbai / all-minilm); runtime amended by 012
 - `004-app-icon.md` — separate GSE Tech Pro icon (Option A, approved)
 - `005-pdf-library.md` — avoid PyMuPDF (AGPL); permissive PDF stack
-- `006-ai-model-routing.md` — local-first `lfm3-omni` + opt-in, online-only cloud fallback
+- `006-ai-model-routing.md` — local-first `lfm3-omni` + opt-in cloud fallback (**superseded by 013**)
 - `007-host32-ipc-contract.md` — app↔host32 pipe handoff + token, JSON command envelope, binary streaming frames, `IsSimulated` provenance
 - `008-ai-service-api.md` — app↔AI-service HTTP contract: `X-GSE-Token`, error envelope, `/health` `/config` `/chat` `/search/manuals` `/ingest` `/guided`, config schema, offline/BM25-only degradation, SQLite/sqlite-vec sharing
 - `009-gse-troubleshooting.md` — Phase-4 content schema (five JSON files, slug PKs), spec-unit convention (authoring unit → canonical SI), guided `/guided/*` resolution flow, `safety_warnings` table, `readings.is_simulated` provenance
 - `010-recommendation-engine.md` — Phase-5 recommendation engine: ownership boundary, 3-tier search, deterministic similarity + optional vector/RRF, Wilson smoothing, comeback detection, evidence-string format, `/search/repair-history` wire contract
 - `011-scope-interface.md` — Phase-6 oscilloscope: x64 in-process for both brands (no host32), block-capture `IScopeDevice`/`IScopeDeviceFactory`, six measurement algorithms + units/status, `ReferenceExpectations` comparison (deterministic C#, AI only explains), `.wfm` binary persistence, guided-test flow
+- `012-llama-cpp-runtime.md` — llama.cpp `llama-server` (GGUF) replaces Ollama; service-supervised child processes, idle stop, `/health` field changes
+- `013-ai-routing-tablet-shop-cloud.md` — tablet / shop-server / cloud routes via LiteLLM, fallback order, two-key cloud opt-in, job-detail stripping, Credential Manager keys, route on every answer
 - `§6 feature inventory` — keep/drop/later decisions (Mitchell1/NAPA TRACS RO integration, 5-gas, NVH, and Bosch MTS hardware dropped; Mitchell1 repair-info → later) recorded inline in §6 rather than a separate ADR

@@ -16,8 +16,10 @@ ChunkKindCode = Literal[
 ChatRole = Literal["system", "user", "assistant", "tool"]
 ServiceStatus = Literal["starting", "ok", "degraded"]
 DegradationReason = Literal[
-    "ollama_unreachable", "chat_model_missing", "embedding_model_missing", "db_unavailable"
+    "model_runtime_unreachable", "model_loading", "chat_model_missing", "embedding_model_missing", "db_unavailable"
 ]
+RouteName = Literal["tablet", "shop-server", "cloud"]
+RoutingMode = Literal["tablet-only", "prefer-shop-server", "prefer-cloud"]
 IngestState = Literal["pending", "running", "succeeded", "failed", "cancelled"]
 Verdict = Literal["pass", "fail", "na"]
 CitationKind = Literal["manual-page", "work-order", "dtc"]
@@ -47,15 +49,25 @@ class AiErrorEnvelope(_Wire):
 # ---------------------------------------------------------------- health / config
 
 
+class RouteStatusOut(_Wire):
+    route: RouteName
+    configured: bool
+    available: bool
+    model: Optional[str] = None
+    message: Optional[str] = None
+
+
 class AiServiceHealth(_Wire):
     status: ServiceStatus
-    ollama_reachable: bool
+    model_runtime_reachable: bool
+    ollama_reachable: bool  # deprecated (ADR-012): same value as model_runtime_reachable, kept one release
     chat_available: bool
     search_available: bool
     chat_model: str
     embedding_model: str
     degradation_reason: Optional[DegradationReason] = None
     version: str
+    routes: list[RouteStatusOut] = Field(default_factory=list)
 
 
 class AiServiceConfigResponse(_Wire):
@@ -79,6 +91,16 @@ class ChatMessageIn(BaseModel):
     tool_call_id: Optional[str] = None
 
 
+class RoutingIn(BaseModel):
+    """ADR-013. Missing = tablet only. cloud_allowed / share_job_details_with_cloud are administrator settings."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    mode: RoutingMode = "tablet-only"
+    cloud_allowed: bool = False
+    share_job_details_with_cloud: bool = False
+
+
 class ChatRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -87,6 +109,7 @@ class ChatRequest(BaseModel):
     asset_id: Optional[str] = None
     use_tools: bool = True
     system_instruction: Optional[str] = Field(default=None, max_length=2000)
+    routing: Optional[RoutingIn] = None
 
 
 class Citation(_Wire):
@@ -101,6 +124,8 @@ class ChatResponse(_Wire):
     text: str
     is_suggestion: bool = True
     citations: list[Citation] = Field(default_factory=list)
+    route: RouteName = "tablet"  # ADR-013: which route answered
+    model: Optional[str] = None
 
 
 # ---------------------------------------------------------------- search

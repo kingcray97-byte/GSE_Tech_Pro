@@ -28,7 +28,7 @@
 | 7 | Vision & voice, ECOM/CANCapture | ⬜ |
 | 8 | Full installer (signing, silent multi-tablet, upgrades, updates) | ✅ Done |
 | 9 | Optional shop-server sync | ⬜ |
-| 10 | Owner change request 2026-11-19: llama.cpp + cloud route, Shop Foreman Pro look, GSE components, PicoScope-style scope | ⬜ Next |
+| 10 | Owner change request 2026-11-19: llama.cpp + cloud route, Shop Foreman Pro look, GSE components, PicoScope-style scope | 🔄 10A service side done (UI part pending); 10B–10D next |
 
 ## Phase 10 — Owner change request (2026-11-19) ⬜ Next
 
@@ -49,6 +49,14 @@ Four workstreams. 10A and 10B can run in parallel (different owners and folders)
 7. **Tests** (`tester`): pytest with a fake llama-server (ready/loading/down), route fallback, context stripping for cloud, no key in logs; xUnit for route badge + routing settings. Acceptance: chat works with the network unplugged; with cloud allowed and online, the answer is tagged `cloud`; unplug mid-session and the next answer comes from the tablet.
 
 **Open (owner sign-off):** `lfm3-omni` GGUF license (LFM Open License revenue threshold) and RAM/speed on an 8 GB 8th-gen i5; which cloud provider/model to put in the default config template (leave blank until chosen).
+
+**10A status (2026-11-19):**
+- ✅ 10A.1 ADR-012 (llama.cpp runtime) + ADR-013 (routing) written on top of the ADR-008 API; drafts 0001/0002 folded in and removed. ADR-006 superseded, ADR-003 and ADR-008 amended. ARCHITECTURE §1.1, §1.5, §4.1, §4.6, §7.1, §7.2 updated. No `GseTechPro.AiClient` project (the drafts' streaming API was not adopted).
+- ✅ 10A.2 `app/ollama.py` removed. New `app/runtime.py` (llama-server `/health` probe, supervised chat + embedding processes, `--host 127.0.0.1` always, attach mode when no binary), `app/routing.py` (route plan, remote health, Credential Manager keys via `keyring`), `LlamaCppChatBackend` + remote backends in `app/llm.py`. Config: `llama_server:` and `routes:` blocks; a config holding a key is refused; the old `ollama:` block is ignored. `/health` adds `model_runtime_reachable` + `routes` (keeps `ollama_reachable`); `/chat` takes `routing` and answers with `route` + `model`. Service 0.4.0.
+- ✅ 10A.3 `rag/embedding.py` uses the embedding llama-server's `/v1/embeddings` (same prefixes, 768-d). **Still open:** nomic-embed-text GGUF checked on the pinned build (runs, license, CPU speed).
+- 🔄 10A.4 Core contracts done (`AiRoute`, `AiRoutingMode`, `AiRoutingOptions`, `AiRouteStatus`, `AiRouting.Plan`/`BadgeText`, `AiChatRequest.Routing`, `ChatResponse.Route/Model`, `AiServiceHealth.ModelRuntimeReachable/Routes`); status banner says llama.cpp. **Not done (ui-winui):** route badge on chat answers, Setup > AI service (admin PIN: allow cloud, share job details, shop-server address), per-job "This tablet only". The chat send code is in `MainShellViewModel.cs`, which holds the uncommitted 10B sidebar rework, so this waits for 10B.1 to land; three "check that Ollama is running" strings there go with it.
+- ✅ 10A.5 Installer: `GSE-Ollama` service dropped (removed on upgrade/uninstall), `llama-cpp` component bundles `Reference\llama.cpp\*` + LICENSE into third-party notices, GGUFs under `{app}\models\`, setup writes `AiService\config\config.yaml` from `installer/ai-service-config.yaml`; `[ai] allow_cloud = false` in `config-template.ini`. **Still open:** pin the llama.cpp release and put it in `Reference\llama.cpp\`; confirm its flags (`extra_args`).
+- ✅ 10A.7 Tests: pytest 510 pass (fake llama-server ready/loading/down over real HTTP, real LiteLLM → llama-server chat, embeddings, supervisor, idle stop + restart, route fallback, mid-session cloud loss → tablet, cloud context stripping, two-key cloud opt-in, keys never logged). xUnit: `AiRoutingTests` (route table shared with pytest, wire fields, banner). Acceptance on a real tablet with a real model is **not** done.
 
 ### 10B — UI: closer to Shop Foreman Pro (Windows 11 styling kept)
 

@@ -93,9 +93,12 @@ def test_defaults_match_the_contract(tmp_path):
     cfg = _Config()
     assert cfg.service.host == "127.0.0.1"
     assert cfg.service.port == 8765
-    assert cfg.ollama.host == "127.0.0.1:11434"
-    assert cfg.ollama.base_url == "http://127.0.0.1:11434"
-    assert cfg.ollama.no_cloud is True
+    assert cfg.llama_server.binary == ""  # attach mode unless the installer fills it in
+    assert cfg.llama_server.base_url == "http://127.0.0.1:8081"
+    assert cfg.llama_server.embedding.base_url == "http://127.0.0.1:8082"
+    assert cfg.llama_server.embedding.pooling == "mean"
+    assert cfg.routes.shop_server.enabled is False
+    assert cfg.routes.cloud.enabled is False  # cloud is off by default (ADR-013)
     assert cfg.models.chat == "lfm3-omni"
     assert cfg.models.embedding == "nomic-embed-text"
     assert cfg.models.embedding_dim == 768

@@ -1,0 +1,48 @@
+# GSE Tech Pro AI service config, written by setup (installer/GSE-Tech-Pro-Setup.iss, WriteAiServiceConfig).
+# Placeholders (@...@) are replaced with the bundled paths at install time. Shape: ai-service/app/config.yaml.
+# NEVER put a key, token or password here (ADR-013): the service refuses to start if this file holds one.
+service:
+  host: 127.0.0.1
+  port: 8765                 # the app passes --port/--token at launch
+
+llama_server:                # ADR-012: started and stopped by the AI service, 127.0.0.1 only
+  binary: @LLAMA_SERVER@
+  model: @CHAT_MODEL@
+  mmproj: ''
+  port: 8081
+  ctx: 8192
+  threads: 0
+  extra_args: []             # TODO: confirm flags for the pinned llama.cpp build (e.g. LFM3 "--reasoning off")
+  start_timeout_s: 120
+  embedding:
+    model: @EMBED_MODEL@
+    port: 8082
+    pooling: mean
+    ctx: 2048
+    extra_args: []
+
+models:
+  chat: "lfm3-omni"
+  embedding: "nomic-embed-text"
+  embedding_dim: 768
+
+routes:                      # ADR-013: off by default
+  shop_server:
+    enabled: @SHOP_SERVER_ENABLED@
+    model: ""                # TODO: model name on the shop proxy (set by the shop's administrator)
+    api_base: @SHOP_SERVER_URL@
+    key_name: ""
+  cloud:
+    enabled: false           # an administrator turns this on; provider/model left blank until the owner picks one
+    model: ""
+    api_base: ""
+    key_name: ""
+    probe_host: ""
+  health_ttl_s: 15
+  health_timeout_s: 1.5
+
+idle_unload_minutes: 10
+
+degradation:
+  offline_chat_message: "AI assistant is unavailable (the local model is not running). Manual search remains available."
+  fallback_search: "bm25"
