@@ -14,4 +14,8 @@
     <ProjectReference Include="..\GseTechPro.Core\GseTechPro.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="GseTechPro.Devices.Tests" />
+  </ItemGroup>
+
 </Project>
