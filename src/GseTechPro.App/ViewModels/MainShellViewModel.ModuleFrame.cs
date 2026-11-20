@@ -29,6 +29,9 @@ public sealed partial class MainShellViewModel
         nameof(IsScopeSimulated),
         nameof(ScopeDeviceName),
         nameof(ActiveWorkOrder),
+        nameof(IsCanMonitoring),
+        nameof(IsCanSimulated),
+        nameof(CanMonitorName),
     };
 
     /// <summary>True on screens that use the diagnostic module frame.</summary>
@@ -39,7 +42,12 @@ public sealed partial class MainShellViewModel
     public Visibility ModuleFrameVisibility => IsModuleFrameVisible ? Visibility.Visible : Visibility.Collapsed;
 
     /// <summary>The Scope module reports the scope; every other module reports the diagnostic adapter.</summary>
-    public bool IsModuleConnected => CurrentSidebarSectionKey == "Scope" ? IsScopeConnected : IsConnected;
+    public bool IsModuleConnected => CurrentSidebarSectionKey switch
+    {
+        "Scope" => IsScopeConnected,
+        "CanCapture" => IsCanMonitoring,
+        _ => IsConnected,
+    };
 
     public Visibility ModuleConnectedVisibility => IsModuleConnected ? Visibility.Visible : Visibility.Collapsed;
 
@@ -50,6 +58,9 @@ public sealed partial class MainShellViewModel
     {
         get
         {
+            if (CurrentSidebarSectionKey == "CanCapture")
+                return CanModuleConnectionText;
+
             if (CurrentSidebarSectionKey == "Scope")
             {
                 if (!IsScopeConnected)

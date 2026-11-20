@@ -477,7 +477,8 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         !IsReadingsViewVisible &&
         !IsRecommendationsViewVisible &&
         !IsSettingsViewVisible &&
-        !IsScopeViewVisible;
+        !IsScopeViewVisible &&
+        !IsCanMonitorViewVisible;
 
     // Section-filtering inside Diagnostics / Equipment Health (Screenshot 04 shows all; sub-nav focuses or shows all)
     public Visibility DtcSectionVisibility =>
@@ -1975,7 +1976,9 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     };
 
     public Visibility DeviceCommandBarVisibility =>
-        CurrentSidebarSectionKey is "Diagnostics" or "CanCapture" ? Visibility.Visible : Visibility.Collapsed;
+        CurrentSidebarSectionKey == "Diagnostics" || (CurrentSidebarSectionKey == "CanCapture" && !IsCanMonitorViewVisible)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
 
     public Visibility WorkOrdersCommandBarVisibility =>
         CurrentSidebarSectionKey == "WorkOrders" ? Visibility.Visible : Visibility.Collapsed;
@@ -2198,11 +2201,13 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
 
             case "CanCapture":
                 ActiveTool = "CAN Capture";
-                ActiveSectionKey = "LiveData";
+                ActiveSectionKey = "CanMonitor";
                 SelectedLiveDataMode = LiveDataDisplayMode.List;
                 BreadcrumbRoot = "Equipment Selection";
                 BreadcrumbCategory = "CAN / Bus Capture";
-                BreadcrumbLeaf = "Live Data Recording & VCR Playback";
+                BreadcrumbLeaf = "Bus Monitor (listen-only)";
+                RefreshCanDevices();
+                StatusBannerMessage = CanStatusText;
                 break;
 
             case "Camera":
@@ -2299,9 +2304,10 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
 
             // CAN Capture pages (Phase 10B.3 menu; the bus monitor itself is Phase 10C.2)
             case "CanMonitor":
-                ActiveSectionKey = "LiveData";
-                SelectedLiveDataMode = LiveDataDisplayMode.List;
-                BreadcrumbLeaf = "Live Data Recording & VCR Playback";
+                ActiveSectionKey = "CanMonitor";
+                BreadcrumbLeaf = "Bus Monitor (listen-only)";
+                if (CanDevices.Count == 0)
+                    RefreshCanDevices();
                 break;
 
             case "CanGraph":
@@ -2477,6 +2483,9 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         OnPropertyChanged(nameof(ReadingsViewVisibility));
         OnPropertyChanged(nameof(RecommendationsViewVisibility));
         OnPropertyChanged(nameof(ScopeViewVisibility));
+        OnPropertyChanged(nameof(IsCanMonitorViewVisible));
+        OnPropertyChanged(nameof(CanMonitorViewVisibility));
+        OnPropertyChanged(nameof(DeviceCommandBarVisibility));
         SyncScopePanelToSection();
         OnPropertyChanged(nameof(ToolPlaceholderVisibility));
         OnPropertyChanged(nameof(IsSettingsViewVisible));
@@ -5382,6 +5391,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
             disposableClient.Dispose();
         }
         await DisconnectScopeDeviceAsync();
+        await DisposeCanMonitorAsync();
         await DisconnectSimulatorAsync();
         await _adapterFactory.DisposeAsync();
     }

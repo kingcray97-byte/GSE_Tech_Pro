@@ -52,9 +52,24 @@ public static class J1939LiveData
         for (var i = 0; i < byteCount; i++)
             raw |= (ulong)payload[firstIndex + i] << (8 * i);
 
+        if (!IsValidRaw(raw, byteCount))
+            return false; // error indicator or "not available": no value, never a made-up number
+
         value = raw * def.Resolution + def.Offset;
         return true;
     }
+
+    /// <summary>
+    /// SAE J1939-71 parameter ranges: the top of each field's range is reserved for indicators — for 1 byte, values
+    /// above 0xFA (0xFE = error, 0xFF = not available); for 2 bytes, above 0xFAFF; for 4 bytes, above 0xFAFFFFFF.
+    /// </summary>
+    public static bool IsValidRaw(ulong raw, int byteCount) => byteCount switch
+    {
+        1 => raw <= 0xFA,
+        2 => raw <= 0xFAFF,
+        4 => raw <= 0xFAFF_FFFF,
+        _ => true,
+    };
 
     private sealed record SpnDefinition(int Spn, string Name, int StartByte, int LengthBits, double Resolution, double Offset, string Unit);
 

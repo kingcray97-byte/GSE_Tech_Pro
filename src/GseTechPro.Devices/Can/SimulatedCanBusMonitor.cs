@@ -113,7 +113,7 @@ public sealed class SimulatedCanBusMonitor : CanBusMonitorBase
                 break;
             }
             case J1939Pgn.EngineFluidLevelPressure1:
-                data[3] = (byte)Math.Round(300 / 4.0); // SPN 100, 4 kPa/bit — demo value only
+                data[4] = (byte)Math.Round(300 / 4.0); // SPN 100 at the byte J1939LiveData reads, 4 kPa/bit — demo value only
                 break;
             case J1939Pgn.EngineTemperature1:
                 data[0] = (byte)(85 + 40); // SPN 110, 1 °C/bit, −40 offset — demo value only
