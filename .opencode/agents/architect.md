@@ -31,7 +31,7 @@ You are the software architect for GSE Tech Pro. Read `AGENTS.md` and `docs/PROM
 
 ## Your first job
 Write `docs/ARCHITECTURE.md` covering:
-1. **Software architecture:** processes (WinUI app, 32-bit device host, Python AI service, Ollama), how they talk (named pipes or gRPC for device host; local HTTP on 127.0.0.1 for AI service), startup/shutdown, crash recovery
+1. **Software architecture:** processes (WinUI app, 32-bit device host, Python AI service, llama.cpp `llama-server`), how they talk (named pipes or gRPC for device host; local HTTP on 127.0.0.1 for AI service), startup/shutdown, crash recovery
 2. **Database design:** every table with fields, keys, and indexes: assets, equipment_models, vehicles, work_orders, symptoms, complaints, readings (type, value, unit, test point, spec min/max), dtcs, diagnoses, repairs, parts_replaced, outcomes, comebacks, technicians, notes, attachments, manuals, manual_chunks, embeddings (sqlite-vec), fts tables, troubleshooting_trees, waveforms, sync metadata
 3. **Folder structure** (match `AGENTS.md`, refine if needed)
 4. **User interface:** screen map and navigation, mapped to the reference screenshots

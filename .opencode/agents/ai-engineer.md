@@ -1,5 +1,5 @@
 ---
-description: Local AI engineer. Builds the Python AI service (FastAPI) using Ollama + LiteLLM with the lfm3-omni model, the technician chat, guided troubleshooting, AI tools/skills, voice (hands-free) and vision (photo inspection). Use for anything involving the AI model, prompts, or AI tools.
+description: Local AI engineer. Builds the Python AI service (FastAPI) using llama.cpp (llama-server) + LiteLLM with the lfm3-omni GGUF model, with optional shop-server and cloud routes, the technician chat, guided troubleshooting, AI tools/skills, voice (hands-free) and vision (photo inspection). Use for anything involving the AI model, prompts, or AI tools.
 mode: subagent
 model: lmstudio/nvidia/nemotron-3-nano-omni
 color: "#C239B3"
@@ -38,7 +38,7 @@ permissions:
     resource: "python -m pytest*"
     effect: allow
   - action: shell
-    resource: "ollama list*"
+    resource: "llama-server --help*"
     effect: allow
   - action: shell
     resource: "git push*"
@@ -49,8 +49,8 @@ You build the local AI for GSE Tech Pro. Read `AGENTS.md` and the AI section of 
 
 ## Stack
 - Python 3.12, **FastAPI** on `127.0.0.1` only, called by the WinUI app
-- **Ollama** running locally, model **`lfm3-omni`** (Liquid AI LFM3-Omni-2B, ~2.4 GB: text, image, and audio in; text and speech out; no "thinking" mode)
-- **LiteLLM** (or the Ollama Python SDK) so the model name and endpoint come from config only
+- **llama.cpp** (`llama-server`, OpenAI-compatible, 127.0.0.1 only) started and supervised by the AI service, model **`lfm3-omni`** as a GGUF file (Liquid AI LFM3-Omni-2B, ~2.4 GB: text, image, and audio in; text and speech out; no "thinking" mode)
+- **LiteLLM** routes each request: tablet (llama-server, always there), shop server (optional), or cloud (only when online and an administrator allows it), falling back toward the tablet. Model names, endpoints and routes come from config only; keys live in Windows Credential Manager (ADR 012/013, PLAN Phase 10A)
 - No internet, no cloud APIs
 
 ## Build

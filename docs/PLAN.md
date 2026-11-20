@@ -11,7 +11,8 @@
 - **Feature inventory expanded** from the installed Shop Foreman Pro's help file + readme (clean-room; no binaries). User decisions: Mitchell1 repair-info → later, 5-gas → drop, NVH → drop, Bosch MTS hardware → drop.
 - **Phase 1: DONE.**
 - **Phase 2: DONE** (2026-11-16). Device abstraction + 32-bit host + J2534/RP1210 wrappers + J1939/J1708/OBD II/ISO 15765-UDS decoders + Equipment Health / live data / recording-playback UI + 540-row DTC library. 243 xUnit tests pass. Real-hardware verification deferred (no RLink X3 / Nexiq on the dev machine).
-- **Phase 3: DONE** (2026-11-16). Manuals & AI: `ai-service` (FastAPI + LiteLLM→Ollama + RAG hybrid search + ingestion), `AiServiceClient` + Tech Chat + guided-troubleshooting + Manual-RAG UI, sqlite-vec migration. 600i RAG acceptance 15/15. **468 tests pass** (265 C# + 201 Python + 2 placeholder). Model/embedding runtime unmeasured (Ollama present but no models pulled on the dev machine).
+- **Phase 3: DONE** (2026-11-16). Manuals & AI: `ai-service` (FastAPI + LiteLLM→Ollama + RAG hybrid search + ingestion), `AiServiceClient` + Tech Chat + guided-troubleshooting + Manual-RAG UI, sqlite-vec migration. 600i RAG acceptance 15/15. **468 tests pass** (265 C# + 201 Python + 2 placeholder). Model/embedding runtime unmeasured (Ollama present but no models pulled on the dev machine). **Backend swap to llama.cpp pending — see Phase 10.**
+- **Owner change request (2026-11-19) → Phase 10.** (1) Replace Ollama with **llama.cpp + LiteLLM**, and allow a **cloud model when the internet is available**. (2) Make the UI look **more like Shop Foreman Pro**. (3) Build GSE components from `Reference/GSE diagnostic apps/`. (4) Base the scope on **PicoScope 7 Automotive** and **PicoDiagnostics**. Live runs of all three apps were captured on 2026-11-19 in `docs/reference-screenshots/live-2026-11-19/` (reading only, never bundled — AGENTS.md rules 11–12).
 
 ## Phases
 
@@ -20,13 +21,86 @@
 | 0 | Architecture & ADRs | ✅ Done |
 | 1 | Shell, data, build pipeline | ✅ Done |
 | 2 | Diagnostics (device abstraction, J2534/RP1210, J1939/J1708/OBD II, Equipment Health, live data, recording) | ✅ Done |
-| 3 | Manuals & AI (ingestion, hybrid search, Ollama + model, Tech Chat, guided troubleshooting) | ✅ Done |
+| 3 | Manuals & AI (ingestion, hybrid search, Ollama + model, Tech Chat, guided troubleshooting) | ✅ Done (runtime moves to llama.cpp in Phase 10A) |
 | 4 | GSE troubleshooting (readings entry, decision trees, safety warnings — TUG 660-28 first) | ✅ Done |
 | 5 | Repair history learning (recommendation engine, outcomes, comebacks) | ✅ Done |
 | 6 | Oscilloscope (PicoSDK, then Hantek, shared interface) | 🔄 In progress |
 | 7 | Vision & voice, ECOM/CANCapture | ⬜ |
 | 8 | Full installer (signing, silent multi-tablet, upgrades, updates) | ✅ Done |
 | 9 | Optional shop-server sync | ⬜ |
+| 10 | Owner change request 2026-11-19: llama.cpp + cloud route, Shop Foreman Pro look, GSE components, PicoScope-style scope | ⬜ Next |
+
+## Phase 10 — Owner change request (2026-11-19) ⬜ Next
+
+Four workstreams. 10A and 10B can run in parallel (different owners and folders). 10C and 10D build on the 10B shell. Each task is one small change that builds and passes tests (rule 9).
+
+### 10A — AI runtime: llama.cpp + LiteLLM, with a cloud route when online
+
+**Where we are:** `ai-service/app/llm.py` (`OllamaChatBackend`, LiteLLM route `ollama_chat/`), `app/ollama.py` (`OllamaMonitor`), `config.yaml` `ollama:` block, `/health` field `ollama_reachable`, and the installer's `GSE-Ollama` service are all Ollama-specific. Untracked drafts `docs/decisions/0001-llama-cpp-and-chat-api.md` and `0002-ai-routing-shop-server-and-cloud.md` record the owner's decision, but they define a **new** chat API and refer to a `GseTechPro.AiClient` project that is not on `master`. The working API is ADR-008 (`AiServiceClient`).
+
+**Target:** the app → AI service (ADR-008 API, localhost, token) → LiteLLM routes the request to one of three places: **tablet** (`llama-server` on 127.0.0.1, OpenAI-compatible, GGUF model; always there), **shop server** (optional, the shop's own LiteLLM proxy), or **cloud** (any LiteLLM provider, only when online and an administrator allows it). If a route fails, it falls back cloud → shop server → tablet. Embeddings always stay on the tablet.
+
+1. **Decision records** (`architect`): rename the drafts to `012-llama-cpp-runtime.md` and `013-ai-routing-tablet-shop-cloud.md` (they clash with ADR 001/002). **Keep the ADR-008 API** and add only `routing` to the request, `routes` to the status, and a `route` field on the response. Mark ADR-006 as superseded by 013 and ADR-003 as amended (embedding model runs on `llama-server --embedding` as a GGUF file). Update ARCHITECTURE.md §1.5, §4.1, §4.6 and §7.2. Remove the `AiClient` project references, or add the project.
+2. **AI service backend** (`ai-engineer`): replace `OllamaChatBackend` with `LlamaCppChatBackend` (LiteLLM `openai/` route with `api_base` set to llama-server), and `OllamaMonitor` with a `/health` probe (200 = ready, 503 = loading). Add a `llama_server:` config block (binary path, model path, ctx, threads, port; spawned and supervised by the service, with an idle unload that stops the process). Keep the routes **config-only**: `routes.tablet|shop_server|cloud` each holds a LiteLLM model entry, with keys in Windows Credential Manager, never in config or logs. Rename `ollama_reachable` → `model_runtime_reachable` (keep the old field one release for older tablets). Apply route-fallback order, strip job details for the cloud unless allowed, add a `route` tag on every answer, and keep `LITELLM_TELEMETRY=False`.
+3. **Embeddings** (`rag-ingest`): `ai-service/rag/embedding.py` calls a second `llama-server --embedding --pooling <model's>` instance (or the same one if the model allows). Re-embed on model change (vector dimensions must match). The GGUF build of `nomic-embed-text` must be checked: runs, license, CPU speed.
+4. **Core + app** (`architect` → `ui-winui`): `AiRoutingMode` (tablet-only / prefer-shop-server / prefer-cloud) + `AiServiceHealth.Routes`. Setup > AI service (admin PIN): allow cloud, share job details with cloud, shop-server address. Chat shows a route badge on each answer (`CLOUD` clearly marked). Any technician can switch to "This tablet only" for a job.
+5. **Installer** (`installer-deploy`): drop the `GSE-Ollama` service. Bundle the pinned llama.cpp CPU build (AVX2, MIT LICENSE in third-party notices) and the GGUF chat + embedding models under `{app}\models\`. The AI service starts llama-server; nothing listens beyond 127.0.0.1. Cloud is off in `config-template.ini` by default.
+6. **Docs** (`gse-lead`): AGENTS.md tech stack + rule 1 (offline first, cloud is an opt-in exception per ADR 013) — ✅ done 2026-11-19. Agent files under `.opencode/agents/` still say Ollama (platform-protected; owner to update).
+7. **Tests** (`tester`): pytest with a fake llama-server (ready/loading/down), route fallback, context stripping for cloud, no key in logs; xUnit for route badge + routing settings. Acceptance: chat works with the network unplugged; with cloud allowed and online, the answer is tagged `cloud`; unplug mid-session and the next answer comes from the tablet.
+
+**Open (owner sign-off):** `lfm3-omni` GGUF license (LFM Open License revenue threshold) and RAM/speed on an 8 GB 8th-gen i5; which cloud provider/model to put in the default config template (leave blank until chosen).
+
+### 10B — UI: closer to Shop Foreman Pro (Windows 11 styling kept)
+
+What the live run shows (`live-2026-11-19/sfp-*.png`, plus the existing `docs/reference-screenshots/01–29`):
+
+- **Shell:** menu bar (File, Edit, View, Tools, Data, Setup, Window, Help); a big icon+label **toolbar** grouped by separators — document (New, Open, Search, Save, Print, Home, Screen), a **Current User** dropdown, modules (VCI, Scan, Engine, OBD II, [5-Gas, NVH dropped]), then context buttons that change per screen (Import, Memo, List, Notes; Capture on diagnostic screens); a **document tab strip** (one tab per open work order, e.g. `EventFile1`); a **status bar** (Customer | Repair Order | Technician on the work order; Status / connection on diagnostics).
+- **Work order document:** two sub-tabs — **RO Viewer** and **Integrated Diagnostics**.
+  - RO Viewer is a single scrolling form: dark navy **section tiles on the left** (icon + label: Repair Order, Vehicle, Symptoms, RO Notes, Customer, Technician, Shop Info, RepairLink→drop, Tech Notes) with label/value grid rows on the right.
+  - Integrated Diagnostics is a record grid (✓, Record Type, Origin, Date/Time, Technician, Record Note), a preview pane, and a **Record Note** tile + editor at the bottom.
+- **Diagnostic module:** a navy **left nav** (New Scan, Recent Vehicles ▸, then module menu items), a **breadcrumb link** on top ("Vehicle Selection"), a light blue-grey content area, and a connection status strip ("No Vehicle Connection").
+
+GSE mapping: Vehicle → **Equipment** (asset #, make, model, serial, hour meter instead of odometer), Customer → **Station / airline / owner**, RO → **Work order**.
+
+1. **Shell** (`ui-winui`): finish the uncommitted sidebar/shell rework in the working tree, then match the layout above. Use Segoe Fluent Icons in colour-coded rounded tiles (no Bosch art, rule 12), 44 px+ touch targets, Mica title bar, and the existing light/dark/sunlight themes. Navy `#1F3A5F`-family section tiles become a theme resource (tokens in ARCHITECTURE §5.3, `architect` to confirm).
+2. **Work order document** (`ui-winui`): RO Viewer section-tile form + Integrated Diagnostics grid/preview/note, bound to the existing work order, equipment and records data.
+3. **Diagnostic module frame** (`ui-winui`): a shared left-nav + breadcrumb + status-strip frame reused by Scan/Engine/OBD II/J1939, Scope, CAN capture and Guided tests.
+4. **Check** (`tester` + owner): side-by-side screenshots against the `live-2026-11-19` and `01–29` references at 1920×1080 and on the 7220 (1920×1080, 11.6"); a human/vision sign-off (still open from Phase 2).
+
+### 10C — GSE components from `Reference/GSE diagnostic apps/`
+
+What's there: **ECOM** (CAN-to-USB adapter: `E2046013B1_00.pdf` manual, `ecommlib` C/C#/Java/LabVIEW **examples**, `CanCapture V2.55`, ASC recorder script, driver setup), **PCS** transmission controls (2800 TCM / 4L60E/4L70E/4LHD software + `PCS Transmission Diagnostic Device User Guide v3.0`, technician guides, TCM block diagram/description, electronic shifter IES2000, park brake), and **Power Stow / TUG GAS** manuals (Ford 2.5, PCS transmission, TUG manual and parts).
+
+Clean-room (rule 11): build from the PDFs and the published ECOM API **examples/header only**. Never decompile or run-and-copy `CanCapture`, `CD-PCS_*` tools, or the `.bin`/`SOF` TCM firmware. No TCM flashing.
+
+1. **ECOM adapter** (`device-comms`): `EcomCanAdapter : IDiagnosticAdapter` via P/Invoke on `ecommlib` (CANOpen/Transmit/Receive per the C example), with a 32- or 64-bit host decided by the DLL's bitness. Simulator first. **Check before shipping:** ECOM driver/DLL redistribution license (still open), or require the shop to install the vendor driver.
+2. **CAN capture screen** (`ui-winui` + `device-comms`): listen-only bus monitor (ID/DLC/data/count/period), filters, J1939 decode (existing decoders), record/replay, export `.asc` (Vector ASCII, published format) and CSV, and save to the work order.
+3. **PCS TCM diagnostics** (`device-comms` + `gse-domain-expert`): read PCS TCM status/fault codes over CAN, **only** where the PCS user/technician guides document the messages (cite guide + page); otherwise `TODO: needs spec from manual`. Fault-code content in `data/dtc/pcs.json` (cited).
+4. **Troubleshooting content** (`gse-domain-expert`): trees for TUG/Power Stow transmission (4LHD/4L60E shift inhibit, park brake burnishing per PCS doc) and Ford 2.5 gas engine. Every spec cited or `TODO`; safety warnings first.
+5. **Manual ingestion** (`rag-ingest`): ingest the PCS, IES2000, park-brake and Power Stow/TUG PDFs into the manual library (seed list in `ai-service/ingest/`), with an acceptance question set per manual.
+
+### 10D — Oscilloscope: PicoScope 7 Automotive + PicoDiagnostics model
+
+What the live runs show (`live-2026-11-19/picoscope7-demo.png`, `picodiag-*.png`):
+
+- **PicoScope 7 Automotive:** a big **Running/Stopped** button; **Scope** (timebase, samples, sample rate), **Trigger** (source, level, %, type, Auto/Repeat/Single) and **Waveform buffer** (n of 64) as ± spinners in the top bar; then Setup wizard, Waveform library, Guided tests, Auto setup, Open, Save, Print, Vehicle details. A **left channel stack** A–D (range, coupling AC/DC, probe, ±, on/off). A **tool palette**: Views (multi-viewport), Full screen, Measurements, Rulers, Math channels, Channel labels, Serial decoding, Notes, Masks, Reference waveforms, DeepMeasure (per-cycle measurements), Actions (alarms/on-trigger actions). Dark plot with per-channel coloured axes and zoom.
+- **Guided test library** (`GuidedTests/menus`): topics Charging & starting, Sensors, Actuators, Ignition, Communications (CAN, FlexRay, K-line, LIN, SENT…), System tests (belt tension, relative timing), Pressure transducers, Electric vehicles, **Heavy-Duty/Off-Highway**. Each test has safety pages and warnings.
+- **PicoDiagnostics:** a left rail of one-tap tests (Battery, Compression, Cylinder balance, NVH, Propshaft). Each test is a chart on top, a **Parameter / Value / Comment** result table, and a bottom bar with **Start / Analyse** plus test inputs (e.g. battery voltage, type, temperature, CCA, CCA unit).
+
+Reference only: we copy the **workflow**, not Pico's guided-test text, images, `.psdata` files or icons (rules 11–12). Our guided-test content stays ours, cited from GSE/OEM manuals.
+
+1. **Scope screen parity** (`ui-winui` + `scope`), on top of the Phase 6 screen: top-bar spinners (timebase/trigger/buffer), Auto setup, waveform buffer (keep the last N captures, step through them), multi-view layouts, channel labels, notes, and full screen. **New engine features** (`scope`): math channels (A+B, A−B, A×B, invert, RPM-from-frequency, filter), masks (pass/fail from a reference), DeepMeasure-style per-cycle table, serial decoding (CAN first, reusing the J1939 decoder; LIN/K-line later), and Actions/alarms (on mask fail: stop, beep, save). Simulator first.
+2. **Guided test library browser** (`ui-winui` + `gse-domain-expert`): a topic → subtopic → test tree with our own GSE topics (Charging & starting, Sensors, Actuators, Hydraulics/pressure, CAN/J1939 comms, **GSE/Heavy-Duty**). Each test: safety page first → probe/connection picture (our own) → apply setup → capture → compare to reference. Extends the Phase 6 `guided_tests` content.
+3. **PicoDiagnostics-style one-tap tests** (`scope` + `ui-winui`): **Battery/cranking test** and **Relative compression** (cranking-current per cylinder), then **Cylinder balance**. Use the chart + Parameter/Value/Comment + Start/Analyse/inputs layout. Pass/fail thresholds come only from a cited manual or the battery's own rating entered by the tech; otherwise show the value with no verdict. NVH and propshaft stay **dropped** (owner decision 2026-11-15) unless the owner reopens them.
+4. **Pressure transducer support** (`scope`): a generic pressure-transducer channel scaling (V→psi/bar from the transducer's published spec, entered by the tech) for hydraulic GSE tests. No invented specs.
+5. **Phase 6 step 6** (test + review) finishes first, so 10D builds on a reviewed base.
+
+### Phase 10 order and owners
+
+1. `architect`: ADR 012/013 + Core routing contracts (10A.1, 10A.4 contracts) — **first, it blocks 10A.**
+2. In parallel: `ai-engineer` (10A.2), `rag-ingest` (10A.3 then 10C.5), `ui-winui` (10B.1–3), `device-comms` (10C.1), `scope` (Phase 6 review fixes, then 10D.1 engine).
+3. Then: `ui-winui` (10A.4 UI, 10C.2, 10D.1–3 screens), `gse-domain-expert` (10C.3–4, 10D.2 content), `installer-deploy` (10A.5).
+4. `tester` + `reviewer` per workstream; owner screenshot sign-off for 10B.
 
 ## Done (Phase 1)
 
@@ -131,7 +205,7 @@ Order: contracts → data → RAG → AI engine → UI → tests/review.
 
 - **Code signing**: Authenticode signing via `SIGNTOOL_CERT`/`SIGNTOOL_PASS` environment variables, DigiCert timestamping (`installer/GSE-Tech-Pro-Setup.iss`).
 - **Runtime bundling**: Self-contained .NET 8 Desktop Runtime (x64 + x86) and Windows App SDK bundled in installer — zero prerequisites on target tablets.
-- **Ollama service installation**: Ollama installed as `GSE-Ollama` Windows service with auto-start on boot; cleanly removed on uninstall.
+- **Ollama service installation**: Ollama installed as `GSE-Ollama` Windows service with auto-start on boot; cleanly removed on uninstall. ⚠️ **Superseded 2026-11-19** — replaced by bundled llama.cpp (Phase 10A.5).
 - **Model download progress indication**: Installer displays progress messages during large model file installation (lfm3-omni ~2.4 GB, nomic-embed-text ~274 MB).
 - **Driver presence detection**: Post-install check for missing vendor drivers (TOPDON RLink X3, Nexiq USB-Link, Noregon DLA+, PicoScope, Hantek 6074BE) with user guidance.
 - **Automatic update checking**: Optional "Check for updates on startup" task; checks `updates.commercialtruckandauto.com` and prompts for download; fails silently when offline (offline-first).

@@ -1,10 +1,10 @@
 # GSE Tech Pro — Project Rules
 
-These rules apply to every agent working in this repo. The full product spec is in `docs/PROMPT.md`. Reference screenshots of Shop Foreman Pro (the app we are remaking) are in `docs/reference-screenshots/`.
+These rules apply to every agent working in this repo. The full product spec is in `docs/PROMPT.md`. Reference screenshots of Shop Foreman Pro (the app we are remaking) are in `docs/reference-screenshots/` (live captures of Shop Foreman Pro, PicoScope 7 Automotive and PicoDiagnostics in `live-2026-11-19/`).
 
 ## What we're building
 
-An offline-first Windows 11 diagnostic and troubleshooting app for Ground Support Equipment (GSE) and heavy-duty/fleet vehicles. Shop Foreman Pro's layout with Windows 11 styling, a local AI (Ollama + `lfm3-omni`), PDF manual search (RAG), J2534/RP1210 diagnostics, oscilloscopes, fleet repair history, and a self-learning repair recommendation engine. Target device: Dell Latitude 7220 Rugged Tablet (8th-gen Intel CPU, 8–16 GB RAM, no GPU, touch, gloves).
+An offline-first Windows 11 diagnostic and troubleshooting app for Ground Support Equipment (GSE) and heavy-duty/fleet vehicles. Shop Foreman Pro's layout with Windows 11 styling, a local AI (llama.cpp + `lfm3-omni` GGUF, with an optional shop-server or cloud model through LiteLLM when online), PDF manual search (RAG), J2534/RP1210 diagnostics, oscilloscopes, fleet repair history, and a self-learning repair recommendation engine. Target device: Dell Latitude 7220 Rugged Tablet (8th-gen Intel CPU, 8–16 GB RAM, no GPU, touch, gloves).
 
 ## Tech stack
 
@@ -12,7 +12,7 @@ An offline-first Windows 11 diagnostic and troubleshooting app for Ground Suppor
 |---|---|
 | UI | WinUI 3 (Windows App SDK), .NET 8+, C#, MVVM (CommunityToolkit.Mvvm) |
 | Device services | C# (.NET 8), plus a **32-bit** helper process for J2534/RP1210 DLLs |
-| AI service | Python 3.12, FastAPI, Ollama, LiteLLM, local only |
+| AI service | Python 3.12, FastAPI, llama.cpp (`llama-server`, GGUF models), LiteLLM routing: tablet always, shop server or cloud optional |
 | Database | SQLite + FTS5 + sqlite-vec |
 | Installer | Inno Setup (or WiX), producing `GSE-Tech-Pro-Setup.exe` |
 | Tests | xUnit (C#), pytest (Python) |
@@ -39,7 +39,7 @@ Each folder has one owning agent. Only the owner edits it, unless `gse-lead` ass
 
 ## Rules for all agents
 
-1. **Offline first.** Nothing may require the internet at runtime except optional sync and updates. No cloud APIs, no telemetry.
+1. **Offline first.** Nothing may require the internet at runtime except optional sync and updates. No telemetry. The one cloud exception is an optional AI model reached through LiteLLM: off by default, turned on by an administrator, used only when online, always falling back to the tablet's llama.cpp model (ADR 013, PLAN Phase 10A). The app itself never calls a cloud API; only the AI service does.
 2. **Read before you write.** Check `docs/ARCHITECTURE.md`, `docs/PLAN.md`, and `src/GseTechPro.Core/` contracts before starting.
 3. **Stay in your folders.** If you need a change elsewhere, say so in your handoff instead of making it.
 4. **Simulator first.** Every device feature must work against the simulator before real hardware.

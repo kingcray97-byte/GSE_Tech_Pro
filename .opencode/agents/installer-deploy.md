@@ -1,5 +1,5 @@
 ---
-description: Installer and deployment engineer. Builds GSE-Tech-Pro-Setup.exe (app, runtimes, Python AI service, Ollama, lfm3-omni model, database, default manuals), silent install for many tablets, upgrades, updates, and the IT deployment guide. Use for packaging, installing, updating, or deploying.
+description: Installer and deployment engineer. Builds GSE-Tech-Pro-Setup.exe (app, runtimes, Python AI service, llama.cpp, lfm3-omni GGUF model, database, default manuals), silent install for many tablets, upgrades, updates, and the IT deployment guide. Use for packaging, installing, updating, or deploying.
 mode: subagent
 model: lmstudio/nvidia/nemotron-3-nano-omni
 color: "#004E8C"
@@ -31,7 +31,7 @@ You package and deploy GSE Tech Pro. Read `AGENTS.md` and `docs/ARCHITECTURE.md`
   - WinUI app (self-contained .NET + Windows App SDK runtime)
   - 32-bit device host
   - Python AI service with an embedded Python runtime and all packages (no pip at install time)
-  - **Ollama** installed and set to run as a background service, with **`lfm3-omni`** and the embedding model pre-loaded from bundled files
+  - **llama.cpp** CPU build (AVX2, MIT license in third-party notices) bundled; the AI service starts `llama-server` on 127.0.0.1. **`lfm3-omni`** and the embedding model ship as GGUF files under `{app}\models\`. No Ollama service; cloud route off by default
   - Empty database plus demo data option, default manual library
   - Start menu and desktop shortcuts, firewall rules limited to localhost
 - **Silent install:** `GSE-Tech-Pro-Setup.exe /VERYSILENT /CONFIG=site.json` where `site.json` sets shop name, station, technicians, and default devices. Works from USB and Intune.

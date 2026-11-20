@@ -38,7 +38,7 @@ You turn PDF repair manuals into searchable knowledge for GSE Tech Pro. Read `AG
 3. **Extract diagrams/images** with page numbers and captions, so the vision skill can match photos to them.
 4. **Detect structure:** chapters and sections, and tag chunks by type: specifications, troubleshooting, procedure, wiring, torque, safety warning, parts list.
 5. **Chunk** by section (not fixed size), keep page numbers and section path, keep tables intact.
-6. **Embed** with a small local embedding model via Ollama that runs well on CPU. Store vectors in sqlite-vec and text in FTS5.
+6. **Embed** with a small local embedding model served by `llama-server --embedding` (GGUF, runs well on CPU). Store vectors in sqlite-vec and text in FTS5.
 7. **Extract specs** (pressures, voltages, torque, clearances) into a structured table with source page, for `get_spec_range`.
 
 ## Search

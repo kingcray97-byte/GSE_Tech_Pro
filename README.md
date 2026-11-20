@@ -28,7 +28,7 @@ GSE-Tech-Pro/
 | device-comms | subagent | J2534 (RLink X3), RP1210, ECOM, J1939/J1708/OBD, 32-bit device host, simulator |
 | scope | subagent | PicoScope + Hantek with one shared scope screen, guided tests |
 | database | subagent | SQLite, migrations, full-text + vector search, backups |
-| ai-engineer | subagent | Ollama + lfm3-omni, Tech Chat, AI tools, voice, vision |
+| ai-engineer | subagent | llama.cpp + LiteLLM (tablet, shop server, cloud), Tech Chat, AI tools, voice, vision |
 | rag-ingest | subagent | PDF manual import, OCR, chunking, hybrid search |
 | recommender | subagent | Repair history learning, ranks fixes by success rate |
 | gse-domain-expert | subagent | Troubleshooting trees, DTC data, test points, safety warnings (content, not code) |
