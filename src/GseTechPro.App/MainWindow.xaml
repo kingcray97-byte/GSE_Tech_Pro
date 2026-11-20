@@ -93,6 +93,7 @@
                     <MenuFlyoutItem Text="Scan Tool / VCI Setup…" Click="OnOpenDeviceSetupDialogClick" />
                     <MenuFlyoutItem Text="Find 32-bit Devices" Click="OnDiscoverDevicesClick" />
                     <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="AI Service…" Tag="Settings" Click="OnToolbarButtonClick" />
                     <MenuFlyoutItem Text="Settings…" Tag="Settings" Click="OnToolbarButtonClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="Help">
@@ -1868,7 +1869,7 @@
                         </Grid>
                     </Border>
 
-                    <!-- Degraded / Warming-Up State Banner (Shown when Ollama or AI Service is unavailable/starting) -->
+                    <!-- Degraded / Warming-Up State Banner (Shown when the local model (llama.cpp) or AI service is unavailable/starting) -->
                     <Border Grid.Row="1"
                             Background="{ThemeResource SimBadgeBackgroundBrush}"
                             BorderBrush="{ThemeResource SimBadgeBorderBrush}"
@@ -1947,9 +1948,40 @@
                                                         <TextBlock Text="{x:Bind Timestamp}" FontSize="{StaticResource FontSizeSmall}" Foreground="{ThemeResource AppTextSecondaryBrush}" VerticalAlignment="Center" />
                                                     </StackPanel>
 
+                                                    <!-- Route badge (ADR-013): where this answer came from. CLOUD is marked in amber. -->
+                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <Border BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="{StaticResource BadgeCornerRadius}"
+                                                            Padding="8,3"
+                                                            ToolTipService.ToolTip="{x:Bind RouteBadgeToolTip}"
+                                                            Visibility="{x:Bind RouteBadgeVisibility}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE70A;" FontSize="12" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                            <TextBlock Text="{x:Bind RouteBadgeText}"
+                                                                       FontSize="{StaticResource FontSizeSmall}"
+                                                                       FontWeight="SemiBold"
+                                                                       Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Background="{ThemeResource SimBadgeBackgroundBrush}"
+                                                            BorderBrush="{ThemeResource SimBadgeBorderBrush}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="{StaticResource BadgeCornerRadius}"
+                                                            Padding="8,3"
+                                                            ToolTipService.ToolTip="{x:Bind RouteBadgeToolTip}"
+                                                            Visibility="{x:Bind CloudRouteBadgeVisibility}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE753;" FontSize="12" Foreground="{ThemeResource SimBadgeTextBrush}" />
+                                                            <TextBlock Text="{x:Bind RouteBadgeText}"
+                                                                       FontSize="{StaticResource FontSizeSmall}"
+                                                                       FontWeight="Bold"
+                                                                       Foreground="{ThemeResource SimBadgeTextBrush}" />
+                                                        </StackPanel>
+                                                    </Border>
+
                                                     <!-- Mandatory "AI SUGGESTION" Label whenever IsSuggestion == true -->
-                                                    <Border Grid.Column="2"
-                                                            Background="{ThemeResource AiSuggestionBadgeBackgroundBrush}"
+                                                    <Border Background="{ThemeResource AiSuggestionBadgeBackgroundBrush}"
                                                             BorderBrush="{ThemeResource AiSuggestionBadgeBorderBrush}"
                                                             BorderThickness="1"
                                                             CornerRadius="{StaticResource BadgeCornerRadius}"
@@ -1963,6 +1995,7 @@
                                                                        Foreground="{ThemeResource AiSuggestionBadgeTextBrush}" />
                                                         </StackPanel>
                                                     </Border>
+                                                    </StackPanel>
                                                 </Grid>
 
                                                 <!-- Degraded Notice Indicator (when /chat returned 503 ai_unavailable or ai_starting) -->
@@ -2057,6 +2090,17 @@
                                               Margin="8,0,0,0"
                                               IsChecked="{x:Bind ViewModel.UseChatTools, Mode=TwoWay}"
                                               Content="Use RAG &amp; History Tools" />
+                                    <ToggleSwitch MinHeight="{StaticResource MinTouchSize}"
+                                                  Margin="8,0,0,0"
+                                                  OnContent="This tablet only (this job)"
+                                                  OffContent="This tablet only (this job)"
+                                                  IsOn="{x:Bind ViewModel.IsJobTabletOnly, Mode=TwoWay}"
+                                                  ToolTipService.ToolTip="Keep this job's AI questions on this tablet, whatever the shop route setting" />
+                                    <TextBlock VerticalAlignment="Center"
+                                               Margin="8,0,0,0"
+                                               FontSize="{StaticResource FontSizeSmall}"
+                                               Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                               Text="{x:Bind ViewModel.ChatRouteSummaryText, Mode=OneWay}" />
                                 </StackPanel>
                             </ScrollViewer>
 
@@ -4564,6 +4608,81 @@
                                         Command="{x:Bind ViewModel.ToggleUnitSystemCommand}"
                                         Content="{x:Bind ViewModel.UnitSystemLabel, Mode=OneWay}"
                                         ToolTipService.ToolTip="Switch shop default display units (per-reading overrides are kept)" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{ThemeResource AppSurfaceBrush}"
+                                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource CardCornerRadius}"
+                                Padding="20">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="AI service" FontSize="18" FontWeight="SemiBold" />
+                                <TextBlock TextWrapping="Wrap"
+                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                           Text="Where AI Tech Chat answers come from. This tablet always works offline. The shop server and the cloud are used only when set up and reachable, and fall back to this tablet." />
+                                <ComboBox Header="Route preference (any technician)"
+                                          MinHeight="{StaticResource MinTouchSize}"
+                                          MinWidth="420"
+                                          ItemsSource="{x:Bind ViewModel.AiRouteModeLabels}"
+                                          SelectedIndex="{x:Bind ViewModel.SelectedAiRouteModeIndex, Mode=TwoWay}" />
+                                <TextBlock TextWrapping="Wrap"
+                                           FontWeight="SemiBold"
+                                           Text="{x:Bind ViewModel.ChatRouteSummaryText, Mode=OneWay}" />
+
+                                <TextBlock Text="Route status" FontWeight="SemiBold" Margin="0,4,0,0" />
+                                <ItemsControl ItemsSource="{x:Bind ViewModel.AiRouteStatusLines, Mode=OneWay}" />
+                                <TextBlock TextWrapping="Wrap"
+                                           FontSize="{StaticResource FontSizeSmall}"
+                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                           Text="The shop server address and the cloud server are set in the AI service config by the installer (shop_server_url, allow_cloud). Keys live in Windows Credential Manager, never in the app." />
+
+                                <Border BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0">
+                                    <StackPanel Spacing="10">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE72E;" FontSize="16" />
+                                            <TextBlock Text="Administrator" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                        <TextBlock TextWrapping="Wrap"
+                                                   FontSize="{StaticResource FontSizeSmall}"
+                                                   Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                   Text="{x:Bind ViewModel.AdminPinHintText, Mode=OneWay}" />
+                                        <ToggleSwitch Header="Allow the cloud model when online"
+                                                      MinHeight="{StaticResource MinTouchSize}"
+                                                      IsOn="{x:Bind ViewModel.AdminCloudAllowedDraft, Mode=TwoWay}" />
+                                        <ToggleSwitch Header="Send work order and equipment details to the cloud"
+                                                      MinHeight="{StaticResource MinTouchSize}"
+                                                      IsEnabled="{x:Bind ViewModel.AdminCloudAllowedDraft, Mode=OneWay}"
+                                                      IsOn="{x:Bind ViewModel.AdminShareJobDetailsDraft, Mode=TwoWay}" />
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <PasswordBox Header="Administrator PIN"
+                                                         MinHeight="{StaticResource MinTouchSize}"
+                                                         Width="200"
+                                                         InputScope="NumericPin"
+                                                         MaxLength="8"
+                                                         Password="{x:Bind ViewModel.AdminPinInput, Mode=TwoWay}" />
+                                            <PasswordBox Header="New PIN (4–8 digits)"
+                                                         MinHeight="{StaticResource MinTouchSize}"
+                                                         Width="200"
+                                                         InputScope="NumericPin"
+                                                         MaxLength="8"
+                                                         Password="{x:Bind ViewModel.AdminNewPinInput, Mode=TwoWay}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                                    Command="{x:Bind ViewModel.SaveAdminAiSettingsCommand}"
+                                                    Content="Save cloud settings" />
+                                            <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                                    Command="{x:Bind ViewModel.SetAdminPinCommand}"
+                                                    Content="{x:Bind ViewModel.AdminPinActionLabel, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <TextBlock TextWrapping="Wrap"
+                                           FontWeight="SemiBold"
+                                           Visibility="{x:Bind ViewModel.AiRoutingStatusMessageVisibility, Mode=OneWay}"
+                                           Text="{x:Bind ViewModel.AiRoutingStatusMessage, Mode=OneWay}" />
                             </StackPanel>
                         </Border>
 

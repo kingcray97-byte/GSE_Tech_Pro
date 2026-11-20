@@ -607,6 +607,8 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     [RelayCommand]
     public async Task ReloadDatabaseRecordsAsync()
     {
+        await LoadAiRoutingSettingsAsync();
+
         var shops = await _dataServices.Shops.GetAllAsync();
         if (shops.Count > 0)
         {
@@ -2542,6 +2544,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         OnPropertyChanged(nameof(AiDegradedBadgeVisibility));
         OnPropertyChanged(nameof(AiUnavailableBadgeVisibility));
         OnPropertyChanged(nameof(AiChatOfflineBannerVisibility));
+        OnPropertyChanged(nameof(AiRouteStatusLines));
     }
 
     [RelayCommand]
@@ -2628,6 +2631,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                 WorkOrderId = WorkOrders.FirstOrDefault()?.Id ?? SelectedTab?.Id,
                 AssetId = Assets.FirstOrDefault()?.Id,
                 UseTools = UseChatTools,
+                Routing = CurrentChatRouting,
             };
 
             var response = await _aiClient.ChatFullAsync(request);
@@ -2636,7 +2640,9 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                 AiChatRoles.Assistant,
                 response.Text,
                 isSuggestion: response.IsSuggestion,
-                citations: response.Citations));
+                citations: response.Citations,
+                route: response.Route ?? AiRoute.Tablet,
+                model: response.Model));
 
             StatusBannerMessage = response.Citations.Count > 0
                 ? $"AI suggestion received ({response.Citations.Count} citation(s))."
@@ -2649,7 +2655,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
             string noticeText = ex.IsAiStarting
                 ? "AI is starting… The local model is warming up. Please retry in a moment."
                 : ex.IsAiUnavailable
-                    ? $"AI unavailable — check that Ollama is running. Manual search remains available. ({ex.Error.Message})"
+                    ? $"AI unavailable — the local model (llama.cpp) is not running. Manual search remains available. ({ex.Error.Message})"
                     : $"AI service notice ({ex.Code}): {ex.Error.Message}";
 
             ChatMessages.Add(new ChatMessageViewModel(
@@ -2665,7 +2671,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
             await AiState.HandleChatCallFailureAsync(ex);
 
             string timeoutNotice = AiState.UiState == AiUiState.Unavailable
-                ? "AI unavailable — check that Ollama and the local AI service are running. Manual search and vehicle diagnostics remain available."
+                ? "AI unavailable — check that the local AI service and its model (llama.cpp) are running. Manual search and vehicle diagnostics remain available."
                 : $"AI chat request timed out while loading or running the local model on CPU ({AiState.StatusIndicatorText}). Please retry shortly; manual search remains available.";
 
             ChatMessages.Add(new ChatMessageViewModel(
@@ -2681,7 +2687,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
             AiState.NotifyChatCallFailure(ex);
 
             const string offlineNotice =
-                "AI unavailable — check that Ollama and the local AI service are running. Manual search and vehicle diagnostics remain available.";
+                "AI unavailable — check that the local AI service and its model (llama.cpp) are running. Manual search and vehicle diagnostics remain available.";
 
             ChatMessages.Add(new ChatMessageViewModel(
                 AiChatRoles.System,
@@ -2888,6 +2894,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
 
     private void NotifyActiveWorkOrderChanged()
     {
+        NotifyAiRoutingChanged();
         OnPropertyChanged(nameof(ActiveWorkOrder));
         OnPropertyChanged(nameof(HasActiveWorkOrder));
         OnPropertyChanged(nameof(NoActiveWorkOrderBannerVisibility));

@@ -56,6 +56,7 @@ public sealed class DataServices
         GuidedTests = new GuidedTestRepository(Connections);
         ReferenceWaveforms = new ReferenceWaveformRepository(Connections);
         Waveforms = new WaveformRepository(Connections);
+        Settings = new AppSettingsRepository(Connections);
     }
 
     public DatabaseOptions Options { get; }
@@ -144,6 +145,8 @@ public sealed class DataServices
     public ReferenceWaveformRepository ReferenceWaveforms { get; }
 
     public WaveformRepository Waveforms { get; }
+
+    public AppSettingsRepository Settings { get; }
 
     public Task<DatabaseInitializationResult> InitializeAsync(CancellationToken cancellationToken = default) =>
         Initializer.InitializeAsync(cancellationToken);

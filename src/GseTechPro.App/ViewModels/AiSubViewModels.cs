@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text.Json;
+using GseTechPro.Core.Ai;
 using GseTechPro.Core.Contracts;
 using GseTechPro.Core.Enums;
 using GseTechPro.Core.Models;
@@ -92,9 +93,13 @@ public sealed class ChatMessageViewModel
         bool isSuggestion,
         IReadOnlyList<Citation>? citations = null,
         string? timestamp = null,
-        bool isDegradedNotice = false)
+        bool isDegradedNotice = false,
+        AiRoute? route = null,
+        string? model = null)
     {
         Role = role;
+        Route = route;
+        Model = string.IsNullOrWhiteSpace(model) ? null : model;
         Content = content;
         IsSuggestion = isSuggestion;
         IsDegradedNotice = isDegradedNotice;
@@ -145,6 +150,27 @@ public sealed class ChatMessageViewModel
         IsSuggestion ? Visibility.Visible : Visibility.Collapsed;
 
     public bool IsDegradedNotice { get; }
+
+    /// <summary>Route that produced this answer (ADR-013); null for technician and status rows.</summary>
+    public AiRoute? Route { get; }
+
+    /// <summary>Model label that answered, from the AI service config.</summary>
+    public string? Model { get; }
+
+    /// <summary>"This tablet", "Shop server" or "CLOUD" (upper-case so it is never mistaken for an on-tablet answer).</summary>
+    public string RouteBadgeText => AiRouting.BadgeText(Route);
+
+    public string RouteBadgeToolTip => Model is null
+        ? $"Answered by: {RouteBadgeText}"
+        : $"Answered by: {RouteBadgeText} — model {Model}";
+
+    public bool IsCloudAnswer => Route == AiRoute.Cloud;
+
+    public Visibility RouteBadgeVisibility =>
+        Route is not null && !IsCloudAnswer ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility CloudRouteBadgeVisibility =>
+        IsCloudAnswer ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility DegradedNoticeVisibility =>
         IsDegradedNotice ? Visibility.Visible : Visibility.Collapsed;
