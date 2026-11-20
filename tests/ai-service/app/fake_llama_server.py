@@ -4,6 +4,8 @@
 - `POST /v1/chat/completions`: OpenAI-style SSE stream of `reply` (only when ready).
 - `POST /v1/embeddings`: OpenAI-style vectors of `dim` floats (only when ready).
 Stopping the server makes it "down" (connection refused), like a llama-server that was never started.
+With `required_key`, POSTs without `Authorization: Bearer <key>` get 401 (stands in for an OpenAI-compatible cloud
+server that checks the API key the owner's website issued).
 """
 
 from __future__ import annotations
@@ -15,8 +17,11 @@ from typing import Optional
 
 
 class FakeLlamaServer:
-    def __init__(self, *, state: str = "ready", reply: str = "From the tablet.", dim: int = 768) -> None:
+    def __init__(self, *, state: str = "ready", reply: str = "From the tablet.", dim: int = 768,
+                 required_key: Optional[str] = None) -> None:
         self.state = state
+        self.required_key = required_key
+        self.auth_headers: list[Optional[str]] = []
         self.reply = reply
         self.dim = dim
         self.requests: list[tuple[str, Optional[dict]]] = []
@@ -47,6 +52,10 @@ class FakeLlamaServer:
                 length = int(self.headers.get("Content-Length") or 0)
                 payload = json.loads(self.rfile.read(length) or b"{}")
                 fake.requests.append((self.path, payload))
+                fake.auth_headers.append(self.headers.get("Authorization"))
+                if fake.required_key is not None and self.headers.get("Authorization") != f"Bearer {fake.required_key}":
+                    self._send(401, b'{"error":{"message":"invalid api key","type":"invalid_request_error"}}')
+                    return
                 if fake.state != "ready":
                     self._send(503, b'{"error":{"code":503,"message":"Loading model"}}')
                     return

@@ -34,12 +34,12 @@ routes:                      # ADR-013: off by default
     model: ""                # TODO: model name on the shop proxy (set by the shop's administrator)
     api_base: @SHOP_SERVER_URL@
     key_name: ""
-  cloud:
-    enabled: false           # an administrator turns this on; provider/model left blank until the owner picks one
-    model: ""
-    api_base: ""
-    key_name: ""
-    probe_host: ""
+  cloud:                     # the owner's hosted inference server (OpenAI-compatible REST API), ADR-013
+    enabled: false           # an administrator turns this on once model and api_base are filled in
+    model: ""                # TODO: "openai/<model name the server serves>" (openai/ = OpenAI-compatible API)
+    api_base: ""             # TODO: https://<your server>/v1 (https required: the key is a Bearer token)
+    key_name: "gse-cloud-api-key"  # Credential Manager entry holding the API key issued by the owner's website
+    probe_host: ""           # blank = check the api_base host on port 443 (TCP connect only)
   health_ttl_s: 15
   health_timeout_s: 1.5
 

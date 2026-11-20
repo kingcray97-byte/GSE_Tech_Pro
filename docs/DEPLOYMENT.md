@@ -173,7 +173,7 @@ The full install bundles the pinned llama.cpp `llama-server.exe` and the GGUF mo
 ### AI Routing: Shop Server and Cloud (ADR-013)
 - **Default: this tablet only.** Nothing leaves the tablet.
 - **Shop server (optional):** set `shop_server_url` under `[ai]` in the silent-install config, or edit `routes.shop_server` in `AiService\config\config.yaml`. If the proxy needs a key, store it in Windows Credential Manager (generic credential, internet/network address `GSE Tech Pro AI`, user name = the `key_name` in config).
-- **Cloud (off by default):** needs `routes.cloud.enabled: true` plus a provider/model in `config.yaml`, the key in Windows Credential Manager (same rule), **and** an administrator turning it on in Setup > AI service. Job details go to the cloud only if the administrator also allows that.
+- **Cloud (off by default):** the owner's hosted inference server (OpenAI-compatible API). Needs, in `config.yaml`: `routes.cloud.enabled: true`, `model: "openai/<model it serves>"` and `api_base: "https://<server>/v1"` (https is required). It also needs the tablet's API key from the owner's website in Windows Credential Manager under `gse-cloud-api-key`, **and** an administrator turning the cloud on in Setup > AI service. Job details go to the cloud only if the administrator also allows that. If a tablet is lost, revoke its key on the website; that tablet then answers from its own model only.
 - **Never put a key in `config.yaml` or the `.ini`.** The AI service refuses to start if its config contains one.
 - To store a key, run as the tablet user (it prompts; the key is not echoed or logged): `"C:\Program Files\GSE Tech Pro\Python\python.exe" -m keyring set "GSE Tech Pro AI" <key_name>`.
 

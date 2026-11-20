@@ -40,12 +40,12 @@ routes:
     model: ""                # e.g. litellm_proxy/<model on the shop proxy>
     api_base: ""             # e.g. http://shop-ai.local:4000
     key_name: ""             # Credential Manager entry holding the proxy's virtual key
-  cloud:
+  cloud:                     # the owner's hosted inference server (OpenAI-compatible REST API), ADR-013
     enabled: false
-    model: ""                # LiteLLM provider/model; left blank until the owner picks one
-    api_base: ""
-    key_name: ""
-    probe_host: ""           # host:port for the online check (TCP connect only)
+    model: ""                # TODO: "openai/<model name the server serves>" (openai/ = OpenAI-compatible API)
+    api_base: ""             # TODO: https://<your server>/v1 (https required: the key is a Bearer token)
+    key_name: "gse-cloud-api-key"  # Credential Manager entry holding the API key issued by the owner's website
+    probe_host: ""           # blank = check the api_base host on port 443 (TCP connect only)
   health_ttl_s: 15
   health_timeout_s: 1.5
 

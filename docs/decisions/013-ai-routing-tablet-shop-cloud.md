@@ -78,7 +78,21 @@ The order is one pure function in both languages: `AiRouting.Plan` (`src/GseTech
 - **Fallback:** each route runs the whole tool loop; a `ChatUnavailable` from a remote route marks it down (until the
   next health check) and the next route runs from the start. The response is one JSON body, so two answers never mix.
 
+## Cloud provider (owner's decision, 2026-11-19)
+
+- **Provider:** the owner's own hosted inference server with an **OpenAI-compatible REST API**. No third-party AI
+  provider. LiteLLM reaches it on the `openai/` route: `routes.cloud.model: "openai/<model it serves>"`,
+  `routes.cloud.api_base: "https://<server>/v1"`.
+- **Authentication:** the owner's website issues a **long-lived API key per tablet** (chosen over OAuth2 client
+  credentials and per-technician sign-in). An administrator stores it once in Windows Credential Manager under
+  `GSE Tech Pro AI` / `gse-cloud-api-key`; the service sends it as `Authorization: Bearer <key>`. A lost tablet is
+  handled by revoking its key on the website: the server then answers 401 and the tablet falls back to its own model.
+- **Transport:** `routes.cloud.api_base` must be `https://` (plain `http://` is accepted only for 127.0.0.1, for
+  tests); the service refuses to start otherwise, so the key never crosses the internet in clear text.
+- **Still open:** the server's URL and model name (left blank in config, never guessed); the server's own log/retention
+  policy for questions it receives. Job details still go only when the administrator allows it (rule 3), even though
+  the server is the owner's.
+
 ## Still to decide (owner)
 
-- Which cloud provider/model and its data terms (no training on shop data, retention). Config only.
 - Tunnel product and who runs the shop server.

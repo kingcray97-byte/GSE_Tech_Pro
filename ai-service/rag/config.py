@@ -37,6 +37,15 @@ _ALIASES = {"port": "service.port", "token": "service.token", "host": "service.h
 _SECRET_KEYS = frozenset({"api_key", "apikey", "key", "token", "secret", "password"})
 
 
+def _secure_or_loopback(url: str) -> bool:
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    if parsed.scheme == "https" and parsed.hostname:
+        return True
+    return parsed.scheme == "http" and parsed.hostname in _LOOPBACK_HOSTS
+
+
 def _local_url(port: int) -> str:
     return f"http://127.0.0.1:{port}"
 
@@ -174,6 +183,10 @@ class Config:
             raise ValueError("idle_unload_minutes must be >= 0")
         if self.routes.health_ttl_s < 0 or self.routes.health_timeout_s <= 0:
             raise ValueError("routes.health_ttl_s must be >= 0 and routes.health_timeout_s > 0")
+        cloud_base = self.routes.cloud.api_base.strip()
+        if cloud_base and not _secure_or_loopback(cloud_base):
+            # The cloud key is a Bearer token: it must never cross the internet in clear text (ADR-013).
+            raise ValueError("routes.cloud.api_base must use https:// (plain http is allowed only for 127.0.0.1)")
 
 
 _SECTIONS = {
