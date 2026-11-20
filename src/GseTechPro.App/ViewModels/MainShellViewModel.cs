@@ -1933,7 +1933,15 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                     Child("Scope", "RefWaveforms", "Reference Waveforms", ""),
                 },
             },
-            new SidebarItem("CanCapture", "CAN Capture", ""),
+            new SidebarItem("CanCapture", "CAN Capture", "")
+            {
+                Children = new[]
+                {
+                    Child("CanCapture", "CanMonitor", "Bus Monitor", ""),
+                    Child("CanCapture", "CanGraph", "Line Graph", ""),
+                    Child("CanCapture", "CanSnaplist", "Snaplist", ""),
+                },
+            },
             new SidebarItem("WorkOrders", "Work Orders", ""),
             new SidebarItem("Assets", "Equipment", ""),
             new SidebarItem("AiTechChat", "AI Tech Chat", "")
@@ -2189,6 +2197,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
             case "CanCapture":
                 ActiveTool = "CAN Capture";
                 ActiveSectionKey = "LiveData";
+                SelectedLiveDataMode = LiveDataDisplayMode.List;
                 BreadcrumbRoot = "Equipment Selection";
                 BreadcrumbCategory = "CAN / Bus Capture";
                 BreadcrumbLeaf = "Live Data Recording & VCR Playback";
@@ -2284,6 +2293,26 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                 ActiveSectionKey = "CurrentData";
                 SelectedLiveDataMode = LiveDataDisplayMode.List;
                 BreadcrumbLeaf = "Current Data (Value / Units)";
+                break;
+
+            // CAN Capture pages (Phase 10B.3 menu; the bus monitor itself is Phase 10C.2)
+            case "CanMonitor":
+                ActiveSectionKey = "LiveData";
+                SelectedLiveDataMode = LiveDataDisplayMode.List;
+                BreadcrumbLeaf = "Live Data Recording & VCR Playback";
+                break;
+
+            case "CanGraph":
+                ActiveSectionKey = "LiveData";
+                SelectedLiveDataMode = LiveDataDisplayMode.LineGraph;
+                BreadcrumbLeaf = "Line Graph & Dual Cursors";
+                RefreshGraphGeometry();
+                break;
+
+            case "CanSnaplist":
+                ActiveSectionKey = "LiveData";
+                SelectedLiveDataMode = LiveDataDisplayMode.SnaplistEditor;
+                BreadcrumbLeaf = "Edit Custom Snaplist";
                 break;
 
             case "Refresh":
@@ -2446,6 +2475,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         OnPropertyChanged(nameof(ReadingsViewVisibility));
         OnPropertyChanged(nameof(RecommendationsViewVisibility));
         OnPropertyChanged(nameof(ScopeViewVisibility));
+        SyncScopePanelToSection();
         OnPropertyChanged(nameof(ToolPlaceholderVisibility));
         OnPropertyChanged(nameof(IsSettingsViewVisible));
         OnPropertyChanged(nameof(SettingsViewVisibility));

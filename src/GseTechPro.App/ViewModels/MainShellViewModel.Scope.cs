@@ -179,6 +179,7 @@ public sealed partial class MainShellViewModel
 
     partial void OnScopeTimebaseSecondsPerDivisionChanged(double value)
     {
+        RebuildScopeAxisLabels();
         if (_suppressScopeOptionSync)
             return;
 
@@ -314,10 +315,10 @@ public sealed partial class MainShellViewModel
     private double _scopeCursorBPercent = 75.0;
 
     [ObservableProperty]
-    private double _scopeCursorAX = 190.0;
+    private double _scopeCursorAX = 250.0;
 
     [ObservableProperty]
-    private double _scopeCursorBX = 570.0;
+    private double _scopeCursorBX = 750.0;
 
     [ObservableProperty]
     private string _scopeCursorALabel = "Cursor A: t = 0.000 ms | —";
@@ -547,6 +548,7 @@ public sealed partial class MainShellViewModel
         OnPropertyChanged(nameof(ScopeChannel2TraceVisibility));
         OnPropertyChanged(nameof(ScopeChannel3TraceVisibility));
         OnPropertyChanged(nameof(ScopeChannel4TraceVisibility));
+        RebuildScopeAxisLabels();
 
         if (!_suppressChannelConfigEvents && LastScopeCapture is not null && !IsScopeCapturing)
         {
@@ -1248,6 +1250,7 @@ public sealed partial class MainShellViewModel
                 ScopeReferenceOverlayRawPoints = Array.Empty<Point>();
                 ApplyPointCollectionsOnUiThread();
                 UpdateScopeCursorReadouts();
+                RebuildScopeAxisLabels();
             }
             return;
         }
@@ -1317,6 +1320,7 @@ public sealed partial class MainShellViewModel
         ScopeReferenceOverlayRawPoints = refPts;
 
         ApplyPointCollectionsOnUiThread();
+        RebuildScopeAxisLabels();
         UpdateScopeCursorReadouts();
     }
 

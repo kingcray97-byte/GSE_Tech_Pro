@@ -28,7 +28,7 @@
 | 7 | Vision & voice, ECOM/CANCapture | ⬜ |
 | 8 | Full installer (signing, silent multi-tablet, upgrades, updates) | ✅ Done |
 | 9 | Optional shop-server sync | ⬜ |
-| 10 | Owner change request 2026-11-19: llama.cpp + cloud route, Shop Foreman Pro look, GSE components, PicoScope-style scope | 🔄 10A service side done (UI part pending); 10B.1–10B.2 done, 10B.3 next; 10C–10D after |
+| 10 | Owner change request 2026-11-19: llama.cpp + cloud route, Shop Foreman Pro look, GSE components, PicoScope-style scope | 🔄 10A service side done (UI part pending); 10B.1–10B.3 done (owner screenshot sign-off open); 10C–10D after |
 
 ## Phase 10 — Owner change request (2026-11-19) ⬜ Next
 
@@ -78,7 +78,7 @@ GSE mapping: Vehicle → **Equipment** (asset #, make, model, serial, hour meter
 **10B status (2026-11-20):**
 - ✅ 10B.1 Shell: menu bar, icon-tile toolbar (document / Current User / modules / context groups), document tab strip, navy module menu with one entry per section, breadcrumb, status bar. Old nav rail and Work Orders command bar removed. `SidebarNavigationTests`.
 - ✅ 10B.2 Work order document: RO Viewer (navy section tiles: Repair Order, Equipment, Symptoms, Diagnosis & Repair, Station, Outcome, Technician, Shop Info; empty values show "—") and Integrated Diagnostics (readings, scope waveforms, repairs, outcome; preview + Record Note). `WorkOrderDocumentTests`. Checked in the running app at 1920×1080.
-- ⬜ 10B.3 Shared diagnostic module frame for Scope, CAN capture and Guided tests (Scan/Equipment Health already uses the navy left nav + breadcrumb).
+- ✅ 10B.3 Diagnostic module frame (`MainShellViewModel.ModuleFrame.cs`): on Scan (Diagnostics / J2534 / J1939 / OBD II), Scope (incl. Guided Tests), CAN Capture and the Troubleshooting / Manual Readings pages the header shows an **Equipment Selection** breadcrumb link and a connection strip ("No Equipment Connection" / "No Scope Connection", or the connected device with SIMULATED/REAL; right side "Saving to WO #…"). Scope reports the scope, every other module the diagnostic adapter. CAN Capture gets its own navy menu (Bus Monitor, Line Graph, Snaplist) over the existing live-data views until 10C.2. `ModuleFrameTests`. Checked in the running app at 1920×1080 (Scan, CAN, Scope).
 - Open: RO Notes / Tech Notes sections need a notes field on the work order (not in Core yet).
 
 4. **Check** (`tester` + owner): side-by-side screenshots against the `live-2026-11-19` and `01–29` references at 1920×1080 and on the 7220 (1920×1080, 11.6"); a human/vision sign-off (still open from Phase 2).

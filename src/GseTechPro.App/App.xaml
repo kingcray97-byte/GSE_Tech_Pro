@@ -63,6 +63,15 @@
                     <SolidColorBrush x:Key="ScopeReferenceOverlayBrush" Color="#7A3E9D" />
                     <SolidColorBrush x:Key="ScopeCursorABrush" Color="#2E3391" />
                     <SolidColorBrush x:Key="ScopeCursorBBrush" Color="#0F7B0F" />
+                    <SolidColorBrush x:Key="ScopeChromeBrush" Color="#E6E8EC" />
+                    <SolidColorBrush x:Key="ScopeToolbarBrush" Color="#F3F4F6" />
+                    <SolidColorBrush x:Key="ScopeTileBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ScopeTileBorderBrush" Color="#C9CDD4" />
+                    <SolidColorBrush x:Key="ScopeStepperBrush" Color="#2563EB" />
+                    <SolidColorBrush x:Key="ScopeStepperTextBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ScopeAxisTextBrush" Color="#4B5563" />
+                    <SolidColorBrush x:Key="ScopeRunBrush" Color="#15803D" />
+                    <SolidColorBrush x:Key="ScopeStopBrush" Color="#B91C1C" />
                     <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="#2E3391" />
                 </ResourceDictionary>
 
@@ -110,9 +119,9 @@
                     <SolidColorBrush x:Key="SafetyWarningBannerBackgroundBrush" Color="#3E1D20" />
                     <SolidColorBrush x:Key="SafetyWarningBannerBorderBrush" Color="#FF99A4" />
                     <SolidColorBrush x:Key="SafetyWarningBannerTextBrush" Color="#FFCCD2" />
-                    <SolidColorBrush x:Key="ScopeGridBackgroundBrush" Color="#14161E" />
-                    <SolidColorBrush x:Key="ScopeGridLineBrush" Color="#2C3040" />
-                    <SolidColorBrush x:Key="ScopeGridZeroLineBrush" Color="#484E66" />
+                    <SolidColorBrush x:Key="ScopeGridBackgroundBrush" Color="#0B0C0F" />
+                    <SolidColorBrush x:Key="ScopeGridLineBrush" Color="#2B4A4C" />
+                    <SolidColorBrush x:Key="ScopeGridZeroLineBrush" Color="#3E6669" />
                     <SolidColorBrush x:Key="ScopeChannel1Brush" Color="#60A5FA" />
                     <SolidColorBrush x:Key="ScopeChannel2Brush" Color="#FF8080" />
                     <SolidColorBrush x:Key="ScopeChannel3Brush" Color="#6CCB5F" />
@@ -120,6 +129,15 @@
                     <SolidColorBrush x:Key="ScopeReferenceOverlayBrush" Color="#D099FF" />
                     <SolidColorBrush x:Key="ScopeCursorABrush" Color="#8C93F0" />
                     <SolidColorBrush x:Key="ScopeCursorBBrush" Color="#6CCB5F" />
+                    <SolidColorBrush x:Key="ScopeChromeBrush" Color="#1B1C20" />
+                    <SolidColorBrush x:Key="ScopeToolbarBrush" Color="#232429" />
+                    <SolidColorBrush x:Key="ScopeTileBrush" Color="#2A2C32" />
+                    <SolidColorBrush x:Key="ScopeTileBorderBrush" Color="#3B3E46" />
+                    <SolidColorBrush x:Key="ScopeStepperBrush" Color="#2F6FE0" />
+                    <SolidColorBrush x:Key="ScopeStepperTextBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ScopeAxisTextBrush" Color="#B8BECC" />
+                    <SolidColorBrush x:Key="ScopeRunBrush" Color="#22A355" />
+                    <SolidColorBrush x:Key="ScopeStopBrush" Color="#D93636" />
                     <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="#8C93F0" />
                 </ResourceDictionary>
 
@@ -177,6 +195,15 @@
                     <SolidColorBrush x:Key="ScopeReferenceOverlayBrush" Color="#5A008A" />
                     <SolidColorBrush x:Key="ScopeCursorABrush" Color="#1E2FB8" />
                     <SolidColorBrush x:Key="ScopeCursorBBrush" Color="#007100" />
+                    <SolidColorBrush x:Key="ScopeChromeBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ScopeToolbarBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ScopeTileBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ScopeTileBorderBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="ScopeStepperBrush" Color="#1E2FB8" />
+                    <SolidColorBrush x:Key="ScopeStepperTextBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ScopeAxisTextBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="ScopeRunBrush" Color="#007100" />
+                    <SolidColorBrush x:Key="ScopeStopBrush" Color="#B30000" />
                     <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="#1E2FB8" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
@@ -201,6 +228,32 @@
 
 
 
+
+            <!-- Scope screen: bench-scope tool tile (icon over small label, 64x56, glove friendly) -->
+            <Style x:Key="ScopeToolTileButtonStyle" TargetType="Button">
+                <Setter Property="MinWidth" Value="64" />
+                <Setter Property="MinHeight" Value="56" />
+                <Setter Property="Padding" Value="4,4" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="CornerRadius" Value="{StaticResource AppCornerRadius}" />
+            </Style>
+
+            <!-- Scope screen: blue -/+ stepper strip on channel, timebase and trigger tiles -->
+            <Style x:Key="ScopeStepperButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="{StaticResource MinTouchSize}" />
+                <Setter Property="MinHeight" Value="{StaticResource MinTouchSize}" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="VerticalAlignment" Value="Stretch" />
+                <Setter Property="Background" Value="{ThemeResource ScopeStepperBrush}" />
+                <Setter Property="Foreground" Value="{ThemeResource ScopeStepperTextBrush}" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="CornerRadius" Value="3" />
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Style>
 
             <!-- Phase 10B: Shop Foreman Pro toolbar tile (icon over label, 64x60, touch and glove friendly) -->
             <Style x:Key="ToolbarTileButtonStyle" TargetType="Button">

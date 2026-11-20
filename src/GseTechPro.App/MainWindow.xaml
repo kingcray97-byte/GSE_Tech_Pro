@@ -7,6 +7,7 @@
     xmlns:vm="using:GseTechPro.App.ViewModels"
     xmlns:models="using:GseTechPro.Core.Models"
     xmlns:contracts="using:GseTechPro.Core.Contracts"
+    xmlns:controls="using:GseTechPro.App.Controls"
     mc:Ignorable="d"
     Title="GSE Tech Pro — Ground Support Equipment &amp; Heavy-Duty Diagnostics">
 
@@ -564,6 +565,17 @@
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <!-- Diagnostic module frame (10B.3): first breadcrumb part links back to Equipment Selection -->
+                                <HyperlinkButton Content="{x:Bind ViewModel.BreadcrumbRoot, Mode=OneWay}"
+                                                 Command="{x:Bind ViewModel.OpenBreadcrumbRootCommand}"
+                                                 MinHeight="44"
+                                                 Padding="4,0"
+                                                 FontSize="15"
+                                                 Visibility="{x:Bind ViewModel.ModuleFrameVisibility, Mode=OneWay}"
+                                                 AutomationProperties.Name="Back to equipment selection" />
+                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE76C;" FontSize="10"
+                                          Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                          Visibility="{x:Bind ViewModel.ModuleFrameVisibility, Mode=OneWay}" />
                                 <TextBlock Text="{x:Bind ViewModel.BreadcrumbCategory, Mode=OneWay}"
                                            FontSize="15"
                                            VerticalAlignment="Center"
@@ -585,6 +597,41 @@
                                        TextTrimming="CharacterEllipsis"
                                        Foreground="{ThemeResource AppTextSecondaryBrush}" />
 
+                        </Grid>
+                    </Border>
+
+                    <!-- CONNECTION STRIP (10B.3 diagnostic module frame, SFP's "No Vehicle Connection"):  -->
+                    <!-- Scan / CAN / guided pages show the adapter, Scope shows the scope; right side = WO -->
+                    <Border Background="{ThemeResource ModuleContentBrush}"
+                            BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                            BorderThickness="0,0,0,1"
+                            Padding="16,4"
+                            MinHeight="36"
+                            Visibility="{x:Bind ViewModel.ModuleFrameVisibility, Mode=OneWay}">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"
+                                        AutomationProperties.LiveSetting="Polite">
+                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE703;" FontSize="14"
+                                          Foreground="{ThemeResource AppSuccessBrush}"
+                                          Visibility="{x:Bind ViewModel.ModuleConnectedVisibility, Mode=OneWay}" />
+                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE7BA;" FontSize="14"
+                                          Foreground="{ThemeResource AppWarningBrush}"
+                                          Visibility="{x:Bind ViewModel.ModuleDisconnectedVisibility, Mode=OneWay}" />
+                                <TextBlock Text="{x:Bind ViewModel.ModuleConnectionText, Mode=OneWay}"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"
+                                           Foreground="{ThemeResource AppTextPrimaryBrush}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       Text="{x:Bind ViewModel.ModuleWorkOrderText, Mode=OneWay}"
+                                       FontSize="12"
+                                       VerticalAlignment="Center"
+                                       Foreground="{ThemeResource AppTextSecondaryBrush}" />
                         </Grid>
                     </Border>
 
@@ -3191,112 +3238,266 @@
                 <!-- WaveformMath + WaveformComparer verdicts, and .wfm Work Order   -->
                 <!-- Library persistence.                                            -->
                 <!-- =============================================================== -->
-                <ScrollViewer Grid.Row="2"
-                              Padding="14,12"
-                              Visibility="{x:Bind ViewModel.ScopeViewVisibility, Mode=OneWay}">
-                    <StackPanel Spacing="12">
+                <!-- Bench-scope layout: toolbar (Run/Stop, timebase, trigger, tools) across the top,
+                     channel tiles and tool palette down the left, full-size graticule with A/B axes,
+                     and a bottom panel for measurements, rulers, guided tests and the waveform library. -->
+                <Grid Grid.Row="2"
+                      Background="{ThemeResource ScopeChromeBrush}"
+                      Visibility="{x:Bind ViewModel.ScopeViewVisibility, Mode=OneWay}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                        <!-- 1. Scope Header, Device Picker & Provenance Bar -->
-                        <Border Background="{ThemeResource AppSurfaceBrush}"
-                                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="{StaticResource CardCornerRadius}"
-                                Padding="14,10">
-                            <StackPanel Spacing="10">
-                                <Grid ColumnSpacing="12">
+                    <!-- Row 0: scope toolbar -->
+                    <Grid Grid.Row="0"
+                          Background="{ThemeResource ScopeToolbarBrush}"
+                          BorderBrush="{ThemeResource ScopeTileBorderBrush}"
+                          BorderThickness="0,0,0,1"
+                          Padding="8,6"
+                          ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ScrollViewer Grid.Column="0"
+                                      HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <!-- Run / Stop -->
+                                <Button Width="132" Height="58"
+                                        Background="{ThemeResource ScopeRunBrush}" Foreground="White" BorderThickness="0"
+                                        CornerRadius="4"
+                                        Command="{x:Bind ViewModel.StartScopeCaptureCommand}"
+                                        Visibility="{x:Bind ViewModel.ScopeRunButtonVisibility, Mode=OneWay}"
+                                        AutomationProperties.Name="Run capture">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE768;" FontSize="18" />
+                                        <TextBlock Text="Run" FontSize="16" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Width="132" Height="58"
+                                        Background="{ThemeResource ScopeStopBrush}" Foreground="White" BorderThickness="0"
+                                        CornerRadius="4"
+                                        Command="{x:Bind ViewModel.StopScopeCaptureCommand}"
+                                        Visibility="{x:Bind ViewModel.ScopeStopButtonVisibility, Mode=OneWay}"
+                                        AutomationProperties.Name="Stop capture">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE71A;" FontSize="18" />
+                                        <TextBlock Text="Stop" FontSize="16" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- Timebase tile -->
+                                <Grid Width="236" Height="58" Background="{ThemeResource ScopeTileBrush}"
+                                      BorderBrush="{ThemeResource ScopeTileBorderBrush}" BorderThickness="1" CornerRadius="4">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0" Spacing="2">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <TextBlock Text="4-Channel Diagnostic Oscilloscope &amp; Guided Scope Tests"
-                                                       FontSize="{StaticResource FontSizeSubtitle}"
-                                                       FontWeight="Bold" />
-                                            <Border Background="{ThemeResource SimBadgeBackgroundBrush}"
-                                                    BorderBrush="{ThemeResource SimBadgeBorderBrush}"
-                                                    BorderThickness="1"
-                                                    CornerRadius="{StaticResource BadgeCornerRadius}"
-                                                    Padding="8,2"
-                                                    VerticalAlignment="Center"
-                                                    Visibility="{x:Bind ViewModel.ScopeSimulatedBadgeVisibility, Mode=OneWay}">
-                                                <TextBlock Text="SIMULATED"
-                                                           FontSize="{StaticResource FontSizeBadge}"
-                                                           FontWeight="Bold"
-                                                           Foreground="{ThemeResource SimBadgeTextBrush}" />
-                                            </Border>
-                                            <Border Background="{ThemeResource RealBadgeBackgroundBrush}"
-                                                    BorderBrush="{ThemeResource RealBadgeBorderBrush}"
-                                                    BorderThickness="1"
-                                                    CornerRadius="{StaticResource BadgeCornerRadius}"
-                                                    Padding="8,2"
-                                                    VerticalAlignment="Center"
-                                                    Visibility="{x:Bind ViewModel.ScopeRealBadgeVisibility, Mode=OneWay}">
-                                                <TextBlock Text="REAL HARDWARE"
-                                                           FontSize="{StaticResource FontSizeBadge}"
-                                                           FontWeight="Bold"
-                                                           Foreground="{ThemeResource RealBadgeTextBrush}" />
-                                            </Border>
-                                        </StackPanel>
-                                        <TextBlock Text="{x:Bind ViewModel.ScopeStatusMessage, Mode=OneWay}"
-                                                   FontSize="{StaticResource FontSizeSmall}"
-                                                   Foreground="{ThemeResource AppTextSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-                                        <TextBlock Text="{x:Bind ViewModel.ActiveWorkOrderSummaryText, Mode=OneWay}"
-                                                   FontSize="{StaticResource FontSizeSmall}"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{ThemeResource AppAccentBrush}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                        <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                                Command="{x:Bind ViewModel.DiscoverScopeDevicesCommand}"
-                                                Content="Discover Scopes" />
-                                        <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                                Command="{x:Bind ViewModel.OpenSelectedScopeDeviceCommand}"
-                                                Content="{x:Bind ViewModel.ScopeConnectButtonText, Mode=OneWay}" />
-                                        <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                                Command="{x:Bind ViewModel.DisconnectScopeDeviceCommand}"
-                                                Content="Disconnect" />
-                                        <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                                Command="{x:Bind ViewModel.SaveScopeCaptureToWorkOrderCommand}"
-                                                Content="Save .wfm to WO" />
-                                    </StackPanel>
+                                    <Button Grid.Column="0" Style="{StaticResource ScopeStepperButtonStyle}" Content="&#x2212;"
+                                            Command="{x:Bind ViewModel.ScopeTimebaseStepDownCommand}"
+                                            AutomationProperties.Name="Faster timebase" />
+                                    <Button Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="8,2"
+                                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                                            AutomationProperties.Name="Timebase and sample rate">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="*" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="Timebase" FontSize="{StaticResource FontSizeSmall}" />
+                                            <TextBlock Text="{x:Bind ViewModel.ScopeSampleRateDisplay, Mode=OneWay}"
+                                                       FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Right"
+                                                       Foreground="{ThemeResource ScopeAxisTextBrush}" />
+                                            <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.ScopeTimebaseShortDisplay, Mode=OneWay}"
+                                                       FontSize="15" FontWeight="SemiBold" VerticalAlignment="Bottom" />
+                                        </Grid>
+                                        <Button.Flyout>
+                                            <Flyout Placement="BottomEdgeAlignedLeft">
+                                                <StackPanel Width="260" Spacing="8">
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}"
+                                                              Header="Timebase (s/div)"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeTimebaseOptions}"
+                                                              SelectedItem="{x:Bind ViewModel.SelectedScopeTimebaseOption, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}"
+                                                              Header="Sample rate"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeSampleRateOptions}"
+                                                              SelectedItem="{x:Bind ViewModel.SelectedScopeSampleRateOption, Mode=TwoWay}" />
+                                                    <TextBlock Text="{x:Bind ViewModel.ScopeTotalWindowDisplay, Mode=OneWay}"
+                                                               FontSize="{StaticResource FontSizeSmall}"
+                                                               Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                    <Button Grid.Column="2" Style="{StaticResource ScopeStepperButtonStyle}" Content="+"
+                                            Command="{x:Bind ViewModel.ScopeTimebaseStepUpCommand}"
+                                            AutomationProperties.Name="Slower timebase" />
                                 </Grid>
 
-                                <Grid ColumnSpacing="12">
+                                <!-- Trigger tile -->
+                                <Grid Width="236" Height="58" Background="{ThemeResource ScopeTileBrush}"
+                                      BorderBrush="{ThemeResource ScopeTileBorderBrush}" BorderThickness="1" CornerRadius="4">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="380" />
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-
-                                    <ComboBox Grid.Column="0"
-                                              HorizontalAlignment="Stretch"
-                                              MinHeight="{StaticResource MinTouchSize}"
-                                              Header="Scope Hardware / Simulator Device Picker"
-                                              ItemsSource="{x:Bind ViewModel.AvailableScopeDevices, Mode=OneWay}"
-                                              SelectedItem="{x:Bind ViewModel.SelectedScopeDevice, Mode=TwoWay}" />
-
-                                    <ComboBox Grid.Column="1"
-                                              HorizontalAlignment="Stretch"
-                                              MinHeight="{StaticResource MinTouchSize}"
-                                              Header="Automotive Guided Scope Test (6 Seeded Recipes)"
-                                              PlaceholderText="Select a guided scope test (Crank CKP, Injector, Alternator Ripple, Starter, CAN, Solenoid)…"
-                                              ItemsSource="{x:Bind ViewModel.GuidedScopeTests, Mode=OneWay}"
-                                              SelectedItem="{x:Bind ViewModel.SelectedGuidedTestItem, Mode=TwoWay}" />
-
-                                    <Button Grid.Column="2"
-                                            Style="{StaticResource ActionTouchButtonStyle}"
-                                            VerticalAlignment="Bottom"
-                                            Command="{x:Bind ViewModel.RunGuidedScopeTestCommand}"
-                                            Content="Run Guided Test &amp; Compare" />
+                                    <Button Grid.Column="0" Style="{StaticResource ScopeStepperButtonStyle}" Content="&#x2212;"
+                                            Command="{x:Bind ViewModel.ScopeTriggerLevelDownCommand}"
+                                            AutomationProperties.Name="Lower trigger level" />
+                                    <Button Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="8,2"
+                                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                                            AutomationProperties.Name="Trigger setup">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="*" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="Trigger" FontSize="{StaticResource FontSizeSmall}" />
+                                            <TextBlock Text="{x:Bind ViewModel.ScopeTriggerSummary, Mode=OneWay}"
+                                                       FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Right"
+                                                       Foreground="{ThemeResource ScopeAxisTextBrush}" />
+                                            <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.ScopeTriggerLevelDisplay, Mode=OneWay}"
+                                                       FontSize="15" FontWeight="SemiBold" VerticalAlignment="Bottom" />
+                                        </Grid>
+                                        <Button.Flyout>
+                                            <Flyout Placement="BottomEdgeAlignedLeft">
+                                                <StackPanel Width="260" Spacing="8">
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}"
+                                                              Header="Trigger edge"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeTriggerModes}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeTriggerMode, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}"
+                                                              Header="Trigger channel (1 = A … 4 = D)"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeTriggerChannels}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeTriggerChannel, Mode=TwoWay}" />
+                                                    <NumberBox MinHeight="{StaticResource MinTouchSize}"
+                                                               Header="Trigger level (V)"
+                                                               SpinButtonPlacementMode="Inline"
+                                                               Value="{x:Bind ViewModel.ScopeTriggerLevelVolts, Mode=TwoWay}" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                    <Button Grid.Column="2" Style="{StaticResource ScopeStepperButtonStyle}" Content="+"
+                                            Command="{x:Bind ViewModel.ScopeTriggerLevelUpCommand}"
+                                            AutomationProperties.Name="Raise trigger level" />
                                 </Grid>
+
+                                <Rectangle Width="1" Margin="4,6" Fill="{ThemeResource ScopeTileBorderBrush}" />
+
+                                <Button Style="{StaticResource ScopeToolTileButtonStyle}" MinWidth="72" 
+                                        AutomationProperties.Name="Device">
+                                    <StackPanel Spacing="3">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE703;" FontSize="22"
+                                                  Foreground="{ThemeResource ScopeStepperBrush}" />
+                                        <TextBlock Text="Device" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                    <Button.Flyout>
+                                        <Flyout Placement="BottomEdgeAlignedLeft">
+                                            <StackPanel Width="360" Spacing="8">
+                                                <TextBlock Text="Scope device" FontWeight="Bold" />
+                                                <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}"
+                                                          Header="Hardware or simulator"
+                                                          ItemsSource="{x:Bind ViewModel.AvailableScopeDevices, Mode=OneWay}"
+                                                          SelectedItem="{x:Bind ViewModel.SelectedScopeDevice, Mode=TwoWay}" />
+                                                <TextBlock Text="{x:Bind ViewModel.ScopeConnectionStatusText, Mode=OneWay}"
+                                                           FontSize="{StaticResource FontSizeSmall}"
+                                                           Foreground="{ThemeResource AppTextSecondaryBrush}" TextWrapping="Wrap" />
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                                            Command="{x:Bind ViewModel.DiscoverScopeDevicesCommand}" Content="Discover" />
+                                                    <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                                            Command="{x:Bind ViewModel.OpenSelectedScopeDeviceCommand}"
+                                                            Content="{x:Bind ViewModel.ScopeConnectButtonText, Mode=OneWay}" />
+                                                    <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                                            Command="{x:Bind ViewModel.DisconnectScopeDeviceCommand}" Content="Disconnect" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                                <Button Style="{StaticResource ScopeToolTileButtonStyle}" MinWidth="72" Command="{x:Bind ViewModel.ToggleScopePanelCommand}" CommandParameter="Guided"
+                                        AutomationProperties.Name="Guided tests">
+                                    <StackPanel Spacing="3">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8FD;" FontSize="22"
+                                                  Foreground="{ThemeResource ScopeStepperBrush}" />
+                                        <TextBlock Text="Guided tests" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource ScopeToolTileButtonStyle}" MinWidth="72" Command="{x:Bind ViewModel.ToggleScopePanelCommand}" CommandParameter="Library"
+                                        AutomationProperties.Name="Waveform library">
+                                    <StackPanel Spacing="3">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8F1;" FontSize="22"
+                                                  Foreground="{ThemeResource ScopeStepperBrush}" />
+                                        <TextBlock Text="Waveform library" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource ScopeToolTileButtonStyle}" MinWidth="72" Command="{x:Bind ViewModel.ToggleScopePanelCommand}" CommandParameter="Measurements"
+                                        AutomationProperties.Name="Measurements">
+                                    <StackPanel Spacing="3">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE9D9;" FontSize="22"
+                                                  Foreground="{ThemeResource ScopeStepperBrush}" />
+                                        <TextBlock Text="Measurements" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource ScopeToolTileButtonStyle}" MinWidth="72" Command="{x:Bind ViewModel.ToggleScopePanelCommand}" CommandParameter="Rulers"
+                                        AutomationProperties.Name="Rulers">
+                                    <StackPanel Spacing="3">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xED5E;" FontSize="22"
+                                                  Foreground="{ThemeResource ScopeStepperBrush}" />
+                                        <TextBlock Text="Rulers" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource ScopeToolTileButtonStyle}" MinWidth="72" Command="{x:Bind ViewModel.SaveScopeCaptureToWorkOrderCommand}"
+                                        AutomationProperties.Name="Save to WO">
+                                    <StackPanel Spacing="3">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE74E;" FontSize="22"
+                                                  Foreground="{ThemeResource ScopeStepperBrush}" />
+                                        <TextBlock Text="Save to WO" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
-                        </Border>
+                        </ScrollViewer>
 
+                        <!-- Provenance badge and device name -->
+                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Right">
+                            <Border Background="{ThemeResource SimBadgeBackgroundBrush}"
+                                    BorderBrush="{ThemeResource SimBadgeBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="{StaticResource BadgeCornerRadius}"
+                                    Padding="8,2"
+                                    HorizontalAlignment="Right"
+                                    Visibility="{x:Bind ViewModel.ScopeSimulatedBadgeVisibility, Mode=OneWay}">
+                                <TextBlock Text="SIMULATED" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold"
+                                           Foreground="{ThemeResource SimBadgeTextBrush}" />
+                            </Border>
+                            <Border Background="{ThemeResource RealBadgeBackgroundBrush}"
+                                    BorderBrush="{ThemeResource RealBadgeBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="{StaticResource BadgeCornerRadius}"
+                                    Padding="8,2"
+                                    HorizontalAlignment="Right"
+                                    Visibility="{x:Bind ViewModel.ScopeRealBadgeVisibility, Mode=OneWay}">
+                                <TextBlock Text="REAL HARDWARE" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold"
+                                           Foreground="{ThemeResource RealBadgeTextBrush}" />
+                            </Border>
+                            <TextBlock Text="{x:Bind ViewModel.ScopeDeviceName, Mode=OneWay}"
+                                       FontSize="{StaticResource FontSizeSmall}"
+                                       Foreground="{ThemeResource ScopeAxisTextBrush}"
+                                       MaxWidth="220" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Row 1: mandatory safety warnings, shown before probing or capturing (ADR-011 §7 / AGENTS.md Rule 6) -->
+                    <Grid Grid.Row="1" Margin="8,8,8,0">
                         <!-- 2. MANDATORY SAFETY WARNINGS BANNER — SHOWN FIRST BEFORE PROCEDURE & CAPTURE (ADR-011 §7 / AGENTS.md Rule 6) -->
                         <Border Background="{ThemeResource SafetyWarningBannerBackgroundBrush}"
                                 BorderBrush="{ThemeResource SafetyWarningBannerBorderBrush}"
@@ -3354,830 +3555,955 @@
                                 </ItemsControl>
                             </StackPanel>
                         </Border>
+                    </Grid>
 
-                        <!-- Guided Test Recipe & Reference Citation Card -->
-                        <Border Background="{ThemeResource AppSurfaceBrush}"
-                                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="{StaticResource CardCornerRadius}"
-                                Padding="14,10"
-                                Visibility="{x:Bind ViewModel.SelectedGuidedTestVisibility, Mode=OneWay}">
+                    <!-- Row 2: channel tiles + tool palette | graticule + bottom panel -->
+                    <Grid Grid.Row="2" Padding="8" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
                             <StackPanel Spacing="6">
-                                <Grid ColumnSpacing="12">
+                                <!-- CH 1 tile: -/+ steps the range, tap the middle for full channel setup -->
+                                <Grid Background="{ThemeResource ScopeTileBrush}"
+                                      BorderBrush="{ThemeResource ScopeTileBorderBrush}"
+                                      BorderThickness="1"
+                                      CornerRadius="4"
+                                      Height="58">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="{x:Bind ViewModel.SelectedGuidedTestNameDisplay, Mode=OneWay}"
-                                               FontSize="{StaticResource FontSizeSubtitle}"
-                                               FontWeight="Bold" />
-                                    <TextBlock Grid.Column="1"
-                                               Text="{x:Bind ViewModel.ActiveReferenceCitationDisplay, Mode=OneWay}"
-                                               FontFamily="{StaticResource MonoFontFamily}"
-                                               FontSize="{StaticResource FontSizeSmall}"
-                                               FontWeight="Bold"
-                                               Foreground="{ThemeResource AppAccentBrush}"
-                                               VerticalAlignment="Center" />
-                                </Grid>
-                                <TextBlock Text="{x:Bind ViewModel.SelectedGuidedTestDescriptionDisplay, Mode=OneWay}"
-                                           FontSize="{StaticResource FontSizeBody}"
-                                           FontWeight="SemiBold"
-                                           TextWrapping="Wrap" />
-                                <TextBlock Text="{x:Bind ViewModel.SelectedGuidedTestProcedureDisplay, Mode=OneWay}"
-                                           FontSize="{StaticResource FontSizeSmall}"
-                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
-                                           TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
-
-                        <!-- 3. Channel Setup Bar (CH1–CH4) & Timebase / Sample Rate / Trigger / Capture Controls -->
-                        <Border Background="{ThemeResource AppSurfaceBrush}"
-                                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="{StaticResource CardCornerRadius}"
-                                Padding="14,12">
-                            <StackPanel Spacing="12">
-                                <TextBlock Text="Channel Setup Bar (CH1–CH4) · Timebase · Sample Rate · Trigger"
-                                           FontSize="{StaticResource FontSizeBody}"
-                                           FontWeight="Bold" />
-
-                                <!-- CH1–CH4 Setup Row -->
-                                <Grid ColumnSpacing="10" RowSpacing="10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- CH1 -->
-                                    <Border Grid.Column="0"
-                                            Padding="10"
-                                            CornerRadius="{StaticResource AppCornerRadius}"
-                                            Background="{ThemeResource AppRowAltBrush}"
-                                            BorderBrush="{ThemeResource ScopeChannel1Brush}"
-                                            BorderThickness="2">
-                                        <StackPanel Spacing="6">
-                                            <CheckBox MinHeight="{StaticResource MinTouchSize}"
-                                                      IsChecked="{x:Bind ViewModel.ScopeChannel1.IsEnabled, Mode=TwoWay}"
-                                                      Content="{x:Bind ViewModel.ScopeChannel1.SummaryText, Mode=OneWay}"
-                                                      FontWeight="Bold"
-                                                      Foreground="{ThemeResource ScopeChannel1Brush}" />
-                                            <Grid ColumnSpacing="6">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <ComboBox Grid.Column="0"
-                                                          HorizontalAlignment="Stretch"
-                                                          MinHeight="{StaticResource MinTouchSize}"
-                                                          Header="Range (±V)"
-                                                          ItemsSource="{x:Bind ViewModel.ScopeChannel1.VoltageRanges}"
-                                                          SelectedItem="{x:Bind ViewModel.ScopeChannel1.VoltageRangeVolts, Mode=TwoWay}" />
-                                                <ComboBox Grid.Column="1"
-                                                          HorizontalAlignment="Stretch"
-                                                          MinHeight="{StaticResource MinTouchSize}"
-                                                          Header="Coupling"
-                                                          ItemsSource="{x:Bind ViewModel.ScopeChannel1.Couplings}"
-                                                          SelectedItem="{x:Bind ViewModel.ScopeChannel1.Coupling, Mode=TwoWay}" />
-                                            </Grid>
-                                            <Grid ColumnSpacing="6">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <ComboBox Grid.Column="0"
-                                                          HorizontalAlignment="Stretch"
-                                                          MinHeight="{StaticResource MinTouchSize}"
-                                                          Header="Probe (x)"
-                                                          ItemsSource="{x:Bind ViewModel.ScopeChannel1.ProbeMultipliers}"
-                                                          SelectedItem="{x:Bind ViewModel.ScopeChannel1.ProbeMultiplier, Mode=TwoWay}" />
-                                                <ComboBox Grid.Column="1"
-                                                          HorizontalAlignment="Stretch"
-                                                          MinHeight="{StaticResource MinTouchSize}"
-                                                          Header="Clamp (A/V)"
-                                                          ItemsSource="{x:Bind ViewModel.ScopeChannel1.ClampScales}"
-                                                          SelectedItem="{x:Bind ViewModel.ScopeChannel1.CurrentScaleAmpsPerVolt, Mode=TwoWay}" />
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- CH2 -->
-                                    <Border Grid.Column="1"
-                                            Padding="10"
-                                            CornerRadius="{StaticResource AppCornerRadius}"
-                                            Background="{ThemeResource AppRowAltBrush}"
-                                            BorderBrush="{ThemeResource ScopeChannel2Brush}"
-                                            BorderThickness="2">
-                                        <StackPanel Spacing="6">
-                                            <CheckBox MinHeight="{StaticResource MinTouchSize}"
-                                                      IsChecked="{x:Bind ViewModel.ScopeChannel2.IsEnabled, Mode=TwoWay}"
-                                                      Content="{x:Bind ViewModel.ScopeChannel2.SummaryText, Mode=OneWay}"
-                                                      FontWeight="Bold"
-                                                      Foreground="{ThemeResource ScopeChannel2Brush}" />
-                                            <Grid ColumnSpacing="6">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <ComboBox Grid.Column="0"
-                                                          HorizontalAlignment="Stretch"
-                                                          MinHeight="{StaticResource MinTouchSize}"
-                                                          Header="Range (±V)"
-                                                          ItemsSource="{x:Bind ViewModel.ScopeChannel2.VoltageRanges}"
-                                                          SelectedItem="{x:Bind ViewModel.ScopeChannel2.VoltageRangeVolts, Mode=TwoWay}" />
-                                                <ComboBox Grid.Column="1"
-                                                          HorizontalAlignment="Stretch"
-                                                          MinHeight="{StaticResource MinTouchSize}"
-                                                          Header="Coupling"
-                                                          ItemsSource="{x:Bind ViewModel.ScopeChannel2.Couplings}"
-                                                          SelectedItem="{x:Bind ViewModel.ScopeChannel2.Coupling, Mode=TwoWay}" />
-                                            </Grid>
-                                            <Grid ColumnSpacing="6">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <ComboBox Grid.Column="0"
-                                                          HorizontalAlignment="Stretch"
-                                                          MinHeight="{StaticResource MinTouchSize}"
-                                                          Header="Probe (x)"
-                                                          ItemsSource="{x:Bind ViewModel.ScopeChannel2.ProbeMultipliers}"
-                                                          SelectedItem="{x:Bind ViewModel.ScopeChannel2.ProbeMultiplier, Mode=TwoWay}" />
-                                                <ComboBox Grid.Column="1"
-                                                          HorizontalAlignment="Stretch"
-                                                          MinHeight="{StaticResource MinTouchSize}"
-                                                          Header="Clamp (A/V)"
-                                                          ItemsSource="{x:Bind ViewModel.ScopeChannel2.ClampScales}"
-                                                          SelectedItem="{x:Bind ViewModel.ScopeChannel2.CurrentScaleAmpsPerVolt, Mode=TwoWay}" />
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- CH3 -->
-                                    <Border Grid.Column="2"
-                                            Padding="10"
-                                            CornerRadius="{StaticResource AppCornerRadius}"
-                                            Background="{ThemeResource AppRowAltBrush}"
-                                            BorderBrush="{ThemeResource ScopeChannel3Brush}"
-                                            BorderThickness="2">
-                                        <StackPanel Spacing="6">
-                                            <CheckBox MinHeight="{StaticResource MinTouchSize}"
-                                                      IsChecked="{x:Bind ViewModel.ScopeChannel3.IsEnabled, Mode=TwoWay}"
-                                                      Content="{x:Bind ViewModel.ScopeChannel3.SummaryText, Mode=OneWay}"
-                                                      FontWeight="Bold"
-                                                      Foreground="{ThemeResource ScopeChannel3Brush}" />
-                                            <Grid ColumnSpacing="6">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <ComboBox Grid.Column="0"
-                                                          HorizontalAlignment="Stretch"
-                                                          MinHeight="{StaticResource MinTouchSize}"
-                                                          Header="Range (±V)"
-                                                          ItemsSource="{x:Bind ViewModel.ScopeChannel3.VoltageRanges}"
-                                                          SelectedItem="{x:Bind ViewModel.ScopeChannel3.VoltageRangeVolts, Mode=TwoWay}" />
-                                                <ComboBox Grid.Column="1"
-                                                          HorizontalAlignment="Stretch"
-                                                          MinHeight="{StaticResource MinTouchSize}"
-                                                          Header="Coupling"
-                                                          ItemsSource="{x:Bind ViewModel.ScopeChannel3.Couplings}"
-                                                          SelectedItem="{x:Bind ViewModel.ScopeChannel3.Coupling, Mode=TwoWay}" />
-                                            </Grid>
-                                            <Grid ColumnSpacing="6">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <ComboBox Grid.Column="0"
-                                                          HorizontalAlignment="Stretch"
-                                                          MinHeight="{StaticResource MinTouchSize}"
-                                                          Header="Probe (x)"
-                                                          ItemsSource="{x:Bind ViewModel.ScopeChannel3.ProbeMultipliers}"
-                                                          SelectedItem="{x:Bind ViewModel.ScopeChannel3.ProbeMultiplier, Mode=TwoWay}" />
-                                                <ComboBox Grid.Column="1"
-                                                          HorizontalAlignment="Stretch"
-                                                          MinHeight="{StaticResource MinTouchSize}"
-                                                          Header="Clamp (A/V)"
-                                                          ItemsSource="{x:Bind ViewModel.ScopeChannel3.ClampScales}"
-                                                          SelectedItem="{x:Bind ViewModel.ScopeChannel3.CurrentScaleAmpsPerVolt, Mode=TwoWay}" />
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- CH4 -->
-                                    <Border Grid.Column="3"
-                                            Padding="10"
-                                            CornerRadius="{StaticResource AppCornerRadius}"
-                                            Background="{ThemeResource AppRowAltBrush}"
-                                            BorderBrush="{ThemeResource ScopeChannel4Brush}"
-                                            BorderThickness="2">
-                                        <StackPanel Spacing="6">
-                                            <CheckBox MinHeight="{StaticResource MinTouchSize}"
-                                                      IsChecked="{x:Bind ViewModel.ScopeChannel4.IsEnabled, Mode=TwoWay}"
-                                                      Content="{x:Bind ViewModel.ScopeChannel4.SummaryText, Mode=OneWay}"
-                                                      FontWeight="Bold"
-                                                      Foreground="{ThemeResource ScopeChannel4Brush}" />
-                                            <Grid ColumnSpacing="6">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <ComboBox Grid.Column="0"
-                                                          HorizontalAlignment="Stretch"
-                                                          MinHeight="{StaticResource MinTouchSize}"
-                                                          Header="Range (±V)"
-                                                          ItemsSource="{x:Bind ViewModel.ScopeChannel4.VoltageRanges}"
-                                                          SelectedItem="{x:Bind ViewModel.ScopeChannel4.VoltageRangeVolts, Mode=TwoWay}" />
-                                                <ComboBox Grid.Column="1"
-                                                          HorizontalAlignment="Stretch"
-                                                          MinHeight="{StaticResource MinTouchSize}"
-                                                          Header="Coupling"
-                                                          ItemsSource="{x:Bind ViewModel.ScopeChannel4.Couplings}"
-                                                          SelectedItem="{x:Bind ViewModel.ScopeChannel4.Coupling, Mode=TwoWay}" />
-                                            </Grid>
-                                            <Grid ColumnSpacing="6">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <ComboBox Grid.Column="0"
-                                                          HorizontalAlignment="Stretch"
-                                                          MinHeight="{StaticResource MinTouchSize}"
-                                                          Header="Probe (x)"
-                                                          ItemsSource="{x:Bind ViewModel.ScopeChannel4.ProbeMultipliers}"
-                                                          SelectedItem="{x:Bind ViewModel.ScopeChannel4.ProbeMultiplier, Mode=TwoWay}" />
-                                                <ComboBox Grid.Column="1"
-                                                          HorizontalAlignment="Stretch"
-                                                          MinHeight="{StaticResource MinTouchSize}"
-                                                          Header="Clamp (A/V)"
-                                                          ItemsSource="{x:Bind ViewModel.ScopeChannel4.ClampScales}"
-                                                          SelectedItem="{x:Bind ViewModel.ScopeChannel4.CurrentScaleAmpsPerVolt, Mode=TwoWay}" />
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
+                                    <Button Grid.Column="0" Style="{StaticResource ScopeStepperButtonStyle}" Content="&#x2212;"
+                                            Command="{x:Bind ViewModel.ScopeChannel1.RangeDownCommand}"
+                                            AutomationProperties.Name="Channel 1 range down"
+                                            ToolTipService.ToolTip="Smaller range (below the smallest turns the channel off)" />
+                                    <Button Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="6,2"
+                                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                                            AutomationProperties.Name="Channel 1 setup">
+                                        <Grid Opacity="{x:Bind ViewModel.ScopeChannel1.EnabledOpacity, Mode=OneWay}">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="*" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="{x:Bind ViewModel.ScopeChannel1.ChannelLetter}" FontWeight="Bold" FontSize="13"
+                                                       Foreground="{ThemeResource ScopeChannel1Brush}" />
+                                            <TextBlock Text="{x:Bind ViewModel.ScopeChannel1.DetailDisplay, Mode=OneWay}" FontSize="{StaticResource FontSizeBadge}"
+                                                       HorizontalAlignment="Right" Foreground="{ThemeResource ScopeAxisTextBrush}" />
+                                            <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.ScopeChannel1.RangeDisplay, Mode=OneWay}" FontWeight="SemiBold" FontSize="15"
+                                                       VerticalAlignment="Bottom" Foreground="{ThemeResource ScopeChannel1Brush}" />
+                                        </Grid>
+                                        <Button.Flyout>
+                                            <Flyout Placement="RightEdgeAlignedTop">
+                                                <StackPanel Width="280" Spacing="8">
+                                                    <CheckBox MinHeight="{StaticResource MinTouchSize}"
+                                                              IsChecked="{x:Bind ViewModel.ScopeChannel1.IsEnabled, Mode=TwoWay}"
+                                                              Content="{x:Bind ViewModel.ScopeChannel1.SummaryText, Mode=OneWay}"
+                                                              FontWeight="Bold"
+                                                              Foreground="{ThemeResource ScopeChannel1Brush}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Range (±V)"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeChannel1.VoltageRanges}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeChannel1.VoltageRangeVolts, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Coupling"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeChannel1.Couplings}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeChannel1.Coupling, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Probe (x)"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeChannel1.ProbeMultipliers}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeChannel1.ProbeMultiplier, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Current clamp (A/V, 0 = none)"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeChannel1.ClampScales}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeChannel1.CurrentScaleAmpsPerVolt, Mode=TwoWay}" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                    <Button Grid.Column="2" Style="{StaticResource ScopeStepperButtonStyle}" Content="+"
+                                            Command="{x:Bind ViewModel.ScopeChannel1.RangeUpCommand}"
+                                            AutomationProperties.Name="Channel 1 range up"
+                                            ToolTipService.ToolTip="Larger range (turns the channel on if it is off)" />
                                 </Grid>
 
-                                <!-- Timebase, Sample Rate, Trigger & Capture / Stop Row -->
-                                <Grid ColumnSpacing="10">
+                                <!-- CH 2 tile: -/+ steps the range, tap the middle for full channel setup -->
+                                <Grid Background="{ThemeResource ScopeTileBrush}"
+                                      BorderBrush="{ThemeResource ScopeTileBorderBrush}"
+                                      BorderThickness="1"
+                                      CornerRadius="4"
+                                      Height="58">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="210" />
-                                        <ColumnDefinition Width="160" />
-                                        <ColumnDefinition Width="150" />
-                                        <ColumnDefinition Width="120" />
-                                        <ColumnDefinition Width="150" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <ComboBox Grid.Column="0"
-                                              HorizontalAlignment="Stretch"
-                                              MinHeight="{StaticResource MinTouchSize}"
-                                              Header="Timebase (s/div)"
-                                              ItemsSource="{x:Bind ViewModel.ScopeTimebaseOptions}"
-                                              SelectedItem="{x:Bind ViewModel.SelectedScopeTimebaseOption, Mode=TwoWay}" />
-
-                                    <ComboBox Grid.Column="1"
-                                              HorizontalAlignment="Stretch"
-                                              MinHeight="{StaticResource MinTouchSize}"
-                                              Header="Sample Rate"
-                                              ItemsSource="{x:Bind ViewModel.ScopeSampleRateOptions}"
-                                              SelectedItem="{x:Bind ViewModel.SelectedScopeSampleRateOption, Mode=TwoWay}" />
-
-                                    <ComboBox Grid.Column="2"
-                                              HorizontalAlignment="Stretch"
-                                              MinHeight="{StaticResource MinTouchSize}"
-                                              Header="Trigger Edge"
-                                              ItemsSource="{x:Bind ViewModel.ScopeTriggerModes}"
-                                              SelectedItem="{x:Bind ViewModel.ScopeTriggerMode, Mode=TwoWay}" />
-
-                                    <ComboBox Grid.Column="3"
-                                              HorizontalAlignment="Stretch"
-                                              MinHeight="{StaticResource MinTouchSize}"
-                                              Header="Trigger CH"
-                                              ItemsSource="{x:Bind ViewModel.ScopeTriggerChannels}"
-                                              SelectedItem="{x:Bind ViewModel.ScopeTriggerChannel, Mode=TwoWay}" />
-
-                                    <NumberBox Grid.Column="4"
-                                               MinHeight="{StaticResource MinTouchSize}"
-                                               Header="Trigger Level (V)"
-                                               Value="{x:Bind ViewModel.ScopeTriggerLevelVolts, Mode=TwoWay}" />
-
-                                    <StackPanel Grid.Column="5"
-                                                Orientation="Horizontal"
-                                                Spacing="8"
-                                                HorizontalAlignment="Right"
-                                                VerticalAlignment="Bottom">
-                                        <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                                Command="{x:Bind ViewModel.StartScopeCaptureCommand}"
-                                                IsEnabled="{x:Bind ViewModel.IsScopeCaptureIdle, Mode=OneWay}">
-                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <FontIcon FontFamily="{StaticResource IconFontFamily}"
-                                                          Glyph="&#xE768;"
-                                                          FontSize="{StaticResource FontSizeBody}" />
-                                                <TextBlock Text="Capture" FontWeight="Bold" />
-                                            </StackPanel>
-                                        </Button>
-
-                                        <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                                Command="{x:Bind ViewModel.StopScopeCaptureCommand}">
-                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <FontIcon FontFamily="{StaticResource IconFontFamily}"
-                                                          Glyph="&#xE71A;"
-                                                          FontSize="{StaticResource FontSizeBody}" />
-                                                <TextBlock Text="Stop" FontWeight="Bold" />
-                                            </StackPanel>
-                                        </Button>
-                                    </StackPanel>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- 4. Oscilloscope Waveform Graticule, Reference Overlay, Cursors/Rulers & Zoom/Pan -->
-                        <Border Background="{ThemeResource AppSurfaceBrush}"
-                                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="{StaticResource CardCornerRadius}"
-                                Padding="14,12">
-                            <StackPanel Spacing="10">
-                                <!-- Graticule Header & Zoom Controls -->
-                                <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Style="{StaticResource ScopeStepperButtonStyle}" Content="&#x2212;"
+                                            Command="{x:Bind ViewModel.ScopeChannel2.RangeDownCommand}"
+                                            AutomationProperties.Name="Channel 2 range down"
+                                            ToolTipService.ToolTip="Smaller range (below the smallest turns the channel off)" />
+                                    <Button Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="6,2"
+                                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                                            AutomationProperties.Name="Channel 2 setup">
+                                        <Grid Opacity="{x:Bind ViewModel.ScopeChannel2.EnabledOpacity, Mode=OneWay}">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="*" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="{x:Bind ViewModel.ScopeChannel2.ChannelLetter}" FontWeight="Bold" FontSize="13"
+                                                       Foreground="{ThemeResource ScopeChannel2Brush}" />
+                                            <TextBlock Text="{x:Bind ViewModel.ScopeChannel2.DetailDisplay, Mode=OneWay}" FontSize="{StaticResource FontSizeBadge}"
+                                                       HorizontalAlignment="Right" Foreground="{ThemeResource ScopeAxisTextBrush}" />
+                                            <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.ScopeChannel2.RangeDisplay, Mode=OneWay}" FontWeight="SemiBold" FontSize="15"
+                                                       VerticalAlignment="Bottom" Foreground="{ThemeResource ScopeChannel2Brush}" />
+                                        </Grid>
+                                        <Button.Flyout>
+                                            <Flyout Placement="RightEdgeAlignedTop">
+                                                <StackPanel Width="280" Spacing="8">
+                                                    <CheckBox MinHeight="{StaticResource MinTouchSize}"
+                                                              IsChecked="{x:Bind ViewModel.ScopeChannel2.IsEnabled, Mode=TwoWay}"
+                                                              Content="{x:Bind ViewModel.ScopeChannel2.SummaryText, Mode=OneWay}"
+                                                              FontWeight="Bold"
+                                                              Foreground="{ThemeResource ScopeChannel2Brush}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Range (±V)"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeChannel2.VoltageRanges}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeChannel2.VoltageRangeVolts, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Coupling"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeChannel2.Couplings}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeChannel2.Coupling, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Probe (x)"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeChannel2.ProbeMultipliers}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeChannel2.ProbeMultiplier, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Current clamp (A/V, 0 = none)"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeChannel2.ClampScales}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeChannel2.CurrentScaleAmpsPerVolt, Mode=TwoWay}" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                    <Button Grid.Column="2" Style="{StaticResource ScopeStepperButtonStyle}" Content="+"
+                                            Command="{x:Bind ViewModel.ScopeChannel2.RangeUpCommand}"
+                                            AutomationProperties.Name="Channel 2 range up"
+                                            ToolTipService.ToolTip="Larger range (turns the channel on if it is off)" />
+                                </Grid>
 
-                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
-                                        <TextBlock Text="{x:Bind ViewModel.ScopeTimebaseDisplay, Mode=OneWay}"
-                                                   FontFamily="{StaticResource MonoFontFamily}"
-                                                   FontSize="{StaticResource FontSizeBody}"
-                                                   FontWeight="Bold" />
-                                        <TextBlock Text="{x:Bind ViewModel.ScopeSampleRateDisplay, Mode=OneWay}"
-                                                   FontFamily="{StaticResource MonoFontFamily}"
-                                                   FontSize="{StaticResource FontSizeBody}"
-                                                   FontWeight="Bold"
-                                                   Foreground="{ThemeResource AppAccentBrush}" />
-                                        <TextBlock Text="{x:Bind ViewModel.ScopeTotalWindowDisplay, Mode=OneWay}"
-                                                   FontSize="{StaticResource FontSizeSmall}"
-                                                   Foreground="{ThemeResource AppTextSecondaryBrush}"
-                                                   VerticalAlignment="Center" />
+                                <!-- CH 3 tile: -/+ steps the range, tap the middle for full channel setup -->
+                                <Grid Background="{ThemeResource ScopeTileBrush}"
+                                      BorderBrush="{ThemeResource ScopeTileBorderBrush}"
+                                      BorderThickness="1"
+                                      CornerRadius="4"
+                                      Height="58">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Style="{StaticResource ScopeStepperButtonStyle}" Content="&#x2212;"
+                                            Command="{x:Bind ViewModel.ScopeChannel3.RangeDownCommand}"
+                                            AutomationProperties.Name="Channel 3 range down"
+                                            ToolTipService.ToolTip="Smaller range (below the smallest turns the channel off)" />
+                                    <Button Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="6,2"
+                                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                                            AutomationProperties.Name="Channel 3 setup">
+                                        <Grid Opacity="{x:Bind ViewModel.ScopeChannel3.EnabledOpacity, Mode=OneWay}">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="*" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="{x:Bind ViewModel.ScopeChannel3.ChannelLetter}" FontWeight="Bold" FontSize="13"
+                                                       Foreground="{ThemeResource ScopeChannel3Brush}" />
+                                            <TextBlock Text="{x:Bind ViewModel.ScopeChannel3.DetailDisplay, Mode=OneWay}" FontSize="{StaticResource FontSizeBadge}"
+                                                       HorizontalAlignment="Right" Foreground="{ThemeResource ScopeAxisTextBrush}" />
+                                            <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.ScopeChannel3.RangeDisplay, Mode=OneWay}" FontWeight="SemiBold" FontSize="15"
+                                                       VerticalAlignment="Bottom" Foreground="{ThemeResource ScopeChannel3Brush}" />
+                                        </Grid>
+                                        <Button.Flyout>
+                                            <Flyout Placement="RightEdgeAlignedTop">
+                                                <StackPanel Width="280" Spacing="8">
+                                                    <CheckBox MinHeight="{StaticResource MinTouchSize}"
+                                                              IsChecked="{x:Bind ViewModel.ScopeChannel3.IsEnabled, Mode=TwoWay}"
+                                                              Content="{x:Bind ViewModel.ScopeChannel3.SummaryText, Mode=OneWay}"
+                                                              FontWeight="Bold"
+                                                              Foreground="{ThemeResource ScopeChannel3Brush}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Range (±V)"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeChannel3.VoltageRanges}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeChannel3.VoltageRangeVolts, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Coupling"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeChannel3.Couplings}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeChannel3.Coupling, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Probe (x)"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeChannel3.ProbeMultipliers}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeChannel3.ProbeMultiplier, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Current clamp (A/V, 0 = none)"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeChannel3.ClampScales}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeChannel3.CurrentScaleAmpsPerVolt, Mode=TwoWay}" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                    <Button Grid.Column="2" Style="{StaticResource ScopeStepperButtonStyle}" Content="+"
+                                            Command="{x:Bind ViewModel.ScopeChannel3.RangeUpCommand}"
+                                            AutomationProperties.Name="Channel 3 range up"
+                                            ToolTipService.ToolTip="Larger range (turns the channel on if it is off)" />
+                                </Grid>
+
+                                <!-- CH 4 tile: -/+ steps the range, tap the middle for full channel setup -->
+                                <Grid Background="{ThemeResource ScopeTileBrush}"
+                                      BorderBrush="{ThemeResource ScopeTileBorderBrush}"
+                                      BorderThickness="1"
+                                      CornerRadius="4"
+                                      Height="58">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Style="{StaticResource ScopeStepperButtonStyle}" Content="&#x2212;"
+                                            Command="{x:Bind ViewModel.ScopeChannel4.RangeDownCommand}"
+                                            AutomationProperties.Name="Channel 4 range down"
+                                            ToolTipService.ToolTip="Smaller range (below the smallest turns the channel off)" />
+                                    <Button Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="6,2"
+                                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                                            AutomationProperties.Name="Channel 4 setup">
+                                        <Grid Opacity="{x:Bind ViewModel.ScopeChannel4.EnabledOpacity, Mode=OneWay}">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="*" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="{x:Bind ViewModel.ScopeChannel4.ChannelLetter}" FontWeight="Bold" FontSize="13"
+                                                       Foreground="{ThemeResource ScopeChannel4Brush}" />
+                                            <TextBlock Text="{x:Bind ViewModel.ScopeChannel4.DetailDisplay, Mode=OneWay}" FontSize="{StaticResource FontSizeBadge}"
+                                                       HorizontalAlignment="Right" Foreground="{ThemeResource ScopeAxisTextBrush}" />
+                                            <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.ScopeChannel4.RangeDisplay, Mode=OneWay}" FontWeight="SemiBold" FontSize="15"
+                                                       VerticalAlignment="Bottom" Foreground="{ThemeResource ScopeChannel4Brush}" />
+                                        </Grid>
+                                        <Button.Flyout>
+                                            <Flyout Placement="RightEdgeAlignedTop">
+                                                <StackPanel Width="280" Spacing="8">
+                                                    <CheckBox MinHeight="{StaticResource MinTouchSize}"
+                                                              IsChecked="{x:Bind ViewModel.ScopeChannel4.IsEnabled, Mode=TwoWay}"
+                                                              Content="{x:Bind ViewModel.ScopeChannel4.SummaryText, Mode=OneWay}"
+                                                              FontWeight="Bold"
+                                                              Foreground="{ThemeResource ScopeChannel4Brush}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Range (±V)"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeChannel4.VoltageRanges}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeChannel4.VoltageRangeVolts, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Coupling"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeChannel4.Couplings}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeChannel4.Coupling, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Probe (x)"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeChannel4.ProbeMultipliers}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeChannel4.ProbeMultiplier, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Current clamp (A/V, 0 = none)"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeChannel4.ClampScales}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeChannel4.CurrentScaleAmpsPerVolt, Mode=TwoWay}" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                    <Button Grid.Column="2" Style="{StaticResource ScopeStepperButtonStyle}" Content="+"
+                                            Command="{x:Bind ViewModel.ScopeChannel4.RangeUpCommand}"
+                                            AutomationProperties.Name="Channel 4 range up"
+                                            ToolTipService.ToolTip="Larger range (turns the channel on if it is off)" />
+                                </Grid>
+
+                                <!-- Tool palette -->
+                                <Grid ColumnSpacing="2" RowSpacing="2" Margin="0,6,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Button Grid.Row="0" Grid.Column="0" Style="{StaticResource ScopeToolTileButtonStyle}" Command="{x:Bind ViewModel.ScopeZoomInCommand}"
+                                            AutomationProperties.Name="Zoom in">
+                                        <StackPanel Spacing="3">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8A3;" FontSize="20" />
+                                            <TextBlock Text="Zoom in" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Row="0" Grid.Column="1" Style="{StaticResource ScopeToolTileButtonStyle}" Command="{x:Bind ViewModel.ScopeZoomOutCommand}"
+                                            AutomationProperties.Name="Zoom out">
+                                        <StackPanel Spacing="3">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE71F;" FontSize="20" />
+                                            <TextBlock Text="Zoom out" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Row="1" Grid.Column="0" Style="{StaticResource ScopeToolTileButtonStyle}" Command="{x:Bind ViewModel.ScopeResetZoomCommand}"
+                                            AutomationProperties.Name="Full view">
+                                        <StackPanel Spacing="3">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE740;" FontSize="20" />
+                                            <TextBlock Text="Full view" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Row="1" Grid.Column="1" Style="{StaticResource ScopeToolTileButtonStyle}" Command="{x:Bind ViewModel.ToggleScopePanelCommand}" CommandParameter="Rulers"
+                                            AutomationProperties.Name="Rulers">
+                                        <StackPanel Spacing="3">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xED5E;" FontSize="20" />
+                                            <TextBlock Text="Rulers" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Row="2" Grid.Column="0" Style="{StaticResource ScopeToolTileButtonStyle}" Command="{x:Bind ViewModel.ToggleScopePanelCommand}" CommandParameter="Measurements"
+                                            AutomationProperties.Name="Measurements">
+                                        <StackPanel Spacing="3">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE9D9;" FontSize="20" />
+                                            <TextBlock Text="Measurements" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Row="2" Grid.Column="1" Style="{StaticResource ScopeToolTileButtonStyle}" Command="{x:Bind ViewModel.ToggleScopePanelCommand}" CommandParameter="Guided"
+                                            AutomationProperties.Name="Guided tests">
+                                        <StackPanel Spacing="3">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8FD;" FontSize="20" />
+                                            <TextBlock Text="Guided tests" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Row="3" Grid.Column="0" Style="{StaticResource ScopeToolTileButtonStyle}" Command="{x:Bind ViewModel.ToggleScopePanelCommand}" CommandParameter="Library"
+                                            AutomationProperties.Name="Waveform library">
+                                        <StackPanel Spacing="3">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8F1;" FontSize="20" />
+                                            <TextBlock Text="Waveform library" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Row="3" Grid.Column="1" Style="{StaticResource ScopeToolTileButtonStyle}" Command="{x:Bind ViewModel.SaveScopeCaptureToWorkOrderCommand}"
+                                            AutomationProperties.Name="Save to WO">
+                                        <StackPanel Spacing="3">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE74E;" FontSize="20" />
+                                            <TextBlock Text="Save to WO" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <Grid Grid.Column="1" RowSpacing="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" MinHeight="260" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Graticule: 10 x 10 dashed divisions, CH A scale left, CH B scale right, time along the bottom -->
+                            <Border Grid.Row="0"
+                                    Background="{ThemeResource ScopeGridBackgroundBrush}"
+                                    BorderBrush="{ThemeResource ScopeTileBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="6,6,6,4">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="52" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="52" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,6,4" HorizontalAlignment="Right"
+                                               FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold"
+                                               Foreground="{ThemeResource ScopeChannel1Brush}"
+                                               Visibility="{x:Bind ViewModel.ScopeLeftAxisVisibility, Mode=OneWay}">
+                                        <Run Text="A " /><Run Text="{x:Bind ViewModel.ScopeLeftAxisUnit, Mode=OneWay}" />
+                                    </TextBlock>
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="14" Margin="4,0,0,4">
                                         <TextBlock Text="{x:Bind ViewModel.ScopeZoomLabel, Mode=OneWay}"
                                                    FontFamily="{StaticResource MonoFontFamily}"
                                                    FontSize="{StaticResource FontSizeSmall}"
-                                                   FontWeight="SemiBold"
-                                                   VerticalAlignment="Center" />
+                                                   Foreground="{ThemeResource ScopeAxisTextBrush}" />
+                                        <TextBlock Text="{x:Bind ViewModel.ScopeReferenceOverlayStatusText, Mode=OneWay}"
+                                                   FontSize="{StaticResource FontSizeSmall}"
+                                                   Foreground="{ThemeResource ScopeReferenceOverlayBrush}"
+                                                   TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Margin="6,0,0,4" HorizontalAlignment="Left"
+                                               FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold"
+                                               Foreground="{ThemeResource ScopeChannel2Brush}"
+                                               Visibility="{x:Bind ViewModel.ScopeRightAxisVisibility, Mode=OneWay}">
+                                        <Run Text="B " /><Run Text="{x:Bind ViewModel.ScopeRightAxisUnit, Mode=OneWay}" />
+                                    </TextBlock>
 
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                                        <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                                Command="{x:Bind ViewModel.ScopeZoomInCommand}"
-                                                Content="Zoom In (+)" />
-                                        <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                                Command="{x:Bind ViewModel.ScopeZoomOutCommand}"
-                                                Content="Zoom Out (-)" />
-                                        <Button Style="{StaticResource ActionTouchButtonStyle}"
-                                                Command="{x:Bind ViewModel.ScopeResetZoomCommand}"
-                                                Content="1x Reset" />
-                                    </StackPanel>
+                                    <!-- CH A scale (left) -->
+                                    <ItemsControl Grid.Row="1" Grid.Column="0" Margin="0,0,6,0"
+                                                  ItemsSource="{x:Bind ViewModel.ScopeLeftAxisLabels, Mode=OneWay}"
+                                                  Visibility="{x:Bind ViewModel.ScopeLeftAxisVisibility, Mode=OneWay}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <controls:EvenSpacedPanel Orientation="Vertical" CrossAlignment="Right" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <TextBlock Text="{x:Bind}" FontSize="{StaticResource FontSizeBadge}"
+                                                           FontFamily="{StaticResource MonoFontFamily}"
+                                                           Foreground="{ThemeResource ScopeChannel1Brush}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- Graticule grid: unscaled dashed lines at every division (stroke stays 1 px whatever the plot size) -->
+                                    <Grid Grid.Row="1" Grid.Column="1" BorderBrush="{ThemeResource ScopeGridLineBrush}" BorderThickness="1">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Line Grid.Row="1" Grid.ColumnSpan="10" X1="0" Y1="0" X2="1" Y2="0" Stretch="Fill" VerticalAlignment="Top" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Row="2" Grid.ColumnSpan="10" X1="0" Y1="0" X2="1" Y2="0" Stretch="Fill" VerticalAlignment="Top" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Row="3" Grid.ColumnSpan="10" X1="0" Y1="0" X2="1" Y2="0" Stretch="Fill" VerticalAlignment="Top" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Row="4" Grid.ColumnSpan="10" X1="0" Y1="0" X2="1" Y2="0" Stretch="Fill" VerticalAlignment="Top" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Row="5" Grid.ColumnSpan="10" X1="0" Y1="0" X2="1" Y2="0" Stretch="Fill" VerticalAlignment="Top" Stroke="{ThemeResource ScopeGridZeroLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Row="6" Grid.ColumnSpan="10" X1="0" Y1="0" X2="1" Y2="0" Stretch="Fill" VerticalAlignment="Top" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Row="7" Grid.ColumnSpan="10" X1="0" Y1="0" X2="1" Y2="0" Stretch="Fill" VerticalAlignment="Top" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Row="8" Grid.ColumnSpan="10" X1="0" Y1="0" X2="1" Y2="0" Stretch="Fill" VerticalAlignment="Top" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Row="9" Grid.ColumnSpan="10" X1="0" Y1="0" X2="1" Y2="0" Stretch="Fill" VerticalAlignment="Top" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Column="1" Grid.RowSpan="10" X1="0" Y1="0" X2="0" Y2="1" Stretch="Fill" HorizontalAlignment="Left" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Column="2" Grid.RowSpan="10" X1="0" Y1="0" X2="0" Y2="1" Stretch="Fill" HorizontalAlignment="Left" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Column="3" Grid.RowSpan="10" X1="0" Y1="0" X2="0" Y2="1" Stretch="Fill" HorizontalAlignment="Left" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Column="4" Grid.RowSpan="10" X1="0" Y1="0" X2="0" Y2="1" Stretch="Fill" HorizontalAlignment="Left" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Column="5" Grid.RowSpan="10" X1="0" Y1="0" X2="0" Y2="1" Stretch="Fill" HorizontalAlignment="Left" Stroke="{ThemeResource ScopeGridZeroLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Column="6" Grid.RowSpan="10" X1="0" Y1="0" X2="0" Y2="1" Stretch="Fill" HorizontalAlignment="Left" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Column="7" Grid.RowSpan="10" X1="0" Y1="0" X2="0" Y2="1" Stretch="Fill" HorizontalAlignment="Left" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Column="8" Grid.RowSpan="10" X1="0" Y1="0" X2="0" Y2="1" Stretch="Fill" HorizontalAlignment="Left" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line Grid.Column="9" Grid.RowSpan="10" X1="0" Y1="0" X2="0" Y2="1" Stretch="Fill" HorizontalAlignment="Left" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                                    </Grid>
+
+                                    <!-- Plot surface: fixed 1000 x 600 drawing space stretched to fill the view -->
+                                    <Viewbox Grid.Row="1" Grid.Column="1" Stretch="Fill">
+                                        <Canvas Width="1000" Height="600">
+
+                                            <!-- Reference waveform overlay (dashed, distinct colour) -->
+                                            <Polyline Points="{Binding ScopeReferenceOverlayPoints}"
+                                                      Stroke="{ThemeResource ScopeReferenceOverlayBrush}"
+                                                      StrokeThickness="1.6"
+                                                      StrokeDashArray="4,2"
+                                                      Visibility="{x:Bind ViewModel.ScopeReferenceOverlayVisibility, Mode=OneWay}" />
+
+                                            <!-- CH A-D decimated traces -->
+                                            <Polyline Points="{Binding ScopeChannel1Points}"
+                                                      Stroke="{ThemeResource ScopeChannel1Brush}" StrokeThickness="1.4"
+                                                      Visibility="{x:Bind ViewModel.ScopeChannel1TraceVisibility, Mode=OneWay}" />
+                                            <Polyline Points="{Binding ScopeChannel2Points}"
+                                                      Stroke="{ThemeResource ScopeChannel2Brush}" StrokeThickness="1.4"
+                                                      Visibility="{x:Bind ViewModel.ScopeChannel2TraceVisibility, Mode=OneWay}" />
+                                            <Polyline Points="{Binding ScopeChannel3Points}"
+                                                      Stroke="{ThemeResource ScopeChannel3Brush}" StrokeThickness="1.4"
+                                                      Visibility="{x:Bind ViewModel.ScopeChannel3TraceVisibility, Mode=OneWay}" />
+                                            <Polyline Points="{Binding ScopeChannel4Points}"
+                                                      Stroke="{ThemeResource ScopeChannel4Brush}" StrokeThickness="1.4"
+                                                      Visibility="{x:Bind ViewModel.ScopeChannel4TraceVisibility, Mode=OneWay}" />
+
+                                            <!-- Rulers A and B (shown while the Rulers panel is open) -->
+                                            <Line X1="{x:Bind ViewModel.ScopeCursorAX, Mode=OneWay}" Y1="0"
+                                                  X2="{x:Bind ViewModel.ScopeCursorAX, Mode=OneWay}" Y2="600"
+                                                  Stroke="{ThemeResource ScopeCursorABrush}" StrokeThickness="1.5"
+                                                  Visibility="{x:Bind ViewModel.ScopeRulerLinesVisibility, Mode=OneWay}" />
+                                            <Line X1="{x:Bind ViewModel.ScopeCursorBX, Mode=OneWay}" Y1="0"
+                                                  X2="{x:Bind ViewModel.ScopeCursorBX, Mode=OneWay}" Y2="600"
+                                                  Stroke="{ThemeResource ScopeCursorBBrush}" StrokeThickness="1.5"
+                                                  Visibility="{x:Bind ViewModel.ScopeRulerLinesVisibility, Mode=OneWay}" />
+                                        </Canvas>
+                                    </Viewbox>
+
+                                    <!-- Empty-state hint over the plot -->
+                                    <TextBlock Grid.Row="1" Grid.Column="1"
+                                               Text="Press Run to capture. Pick a guided test first to load its probe setup and safety warnings."
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               TextWrapping="Wrap" TextAlignment="Center" MaxWidth="420"
+                                               Foreground="{ThemeResource ScopeAxisTextBrush}"
+                                               Visibility="{x:Bind ViewModel.NoScopeCaptureVisibility, Mode=OneWay}" />
+
+                                    <!-- CH B scale (right) -->
+                                    <ItemsControl Grid.Row="1" Grid.Column="2" Margin="6,0,0,0"
+                                                  ItemsSource="{x:Bind ViewModel.ScopeRightAxisLabels, Mode=OneWay}"
+                                                  Visibility="{x:Bind ViewModel.ScopeRightAxisVisibility, Mode=OneWay}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <controls:EvenSpacedPanel Orientation="Vertical" CrossAlignment="Left" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <TextBlock Text="{x:Bind}" FontSize="{StaticResource FontSizeBadge}"
+                                                           FontFamily="{StaticResource MonoFontFamily}"
+                                                           Foreground="{ThemeResource ScopeChannel2Brush}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- Time scale (bottom) -->
+                                    <ItemsControl Grid.Row="2" Grid.Column="1" Margin="0,4,0,0"
+                                                  ItemsSource="{x:Bind ViewModel.ScopeTimeAxisLabels, Mode=OneWay}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <controls:EvenSpacedPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <TextBlock Text="{x:Bind}" FontSize="{StaticResource FontSizeBadge}"
+                                                           FontFamily="{StaticResource MonoFontFamily}"
+                                                           Foreground="{ThemeResource ScopeAxisTextBrush}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Grid.Row="2" Grid.Column="2" Margin="6,4,0,0"
+                                               Text="{x:Bind ViewModel.ScopeTimeAxisUnit, Mode=OneWay}"
+                                               FontSize="{StaticResource FontSizeBadge}"
+                                               Foreground="{ThemeResource ScopeAxisTextBrush}" />
                                 </Grid>
+                            </Border>
 
-                                <!-- Rulers / Cursor Delta Readout Banner -->
-                                <Border Background="{ThemeResource AppRowAltBrush}"
-                                        BorderBrush="{ThemeResource AppFocusBorderBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="{StaticResource AppCornerRadius}"
-                                        Padding="12,6">
-                                    <Grid ColumnSpacing="16">
+                            <!-- Bottom panel: Measurements / Rulers / Guided tests / Waveform library -->
+                            <Border Grid.Row="1"
+                                    MaxHeight="260"
+                                    Background="{ThemeResource ScopeToolbarBrush}"
+                                    BorderBrush="{ThemeResource ScopeTileBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Visibility="{x:Bind ViewModel.ScopeBottomPanelVisibility, Mode=OneWay}">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <Grid Padding="12,0,0,0" BorderBrush="{ThemeResource ScopeTileBorderBrush}" BorderThickness="0,0,0,1">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0"
-                                                   Text="{x:Bind ViewModel.ScopeCursorDeltaLabel, Mode=OneWay}"
-                                                   FontFamily="{StaticResource MonoFontFamily}"
-                                                   FontSize="{StaticResource FontSizeSmall}"
-                                                   FontWeight="Bold" />
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{x:Bind ViewModel.ScopeReferenceOverlayStatusText, Mode=OneWay}"
-                                                   FontSize="{StaticResource FontSizeSmall}"
-                                                   Foreground="{ThemeResource ScopeReferenceOverlayBrush}" />
-                                    </Grid>
-                                </Border>
-
-                                <!-- Scope Graticule Canvas (10 horizontal × 8 vertical divisions: 760 × 260) -->
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="130" />
-                                        <ColumnDefinition Width="760" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- Vertical Scale Labels -->
-                                    <Grid Grid.Column="0" Height="260" Padding="0,6,10,6">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="*" />
-                                            <RowDefinition Height="*" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <TextBlock Grid.Row="0"
-                                                   Text="{x:Bind ViewModel.ScopeScaleTopLabel, Mode=OneWay}"
-                                                   HorizontalAlignment="Right"
-                                                   VerticalAlignment="Top"
-                                                   FontFamily="{StaticResource MonoFontFamily}"
-                                                   FontSize="{StaticResource FontSizeSmall}"
-                                                   FontWeight="Bold" />
-                                        <TextBlock Grid.Row="1"
-                                                   Text="{x:Bind ViewModel.ScopeScaleMidLabel, Mode=OneWay}"
-                                                   HorizontalAlignment="Right"
-                                                   VerticalAlignment="Center"
-                                                   FontFamily="{StaticResource MonoFontFamily}"
-                                                   FontSize="{StaticResource FontSizeSmall}"
-                                                   Foreground="{ThemeResource AppTextSecondaryBrush}" />
-                                        <TextBlock Grid.Row="2"
-                                                   Text="{x:Bind ViewModel.ScopeScaleBottomLabel, Mode=OneWay}"
-                                                   HorizontalAlignment="Right"
-                                                   VerticalAlignment="Bottom"
-                                                   FontFamily="{StaticResource MonoFontFamily}"
-                                                   FontSize="{StaticResource FontSizeSmall}"
-                                                   FontWeight="Bold" />
+                                        <TextBlock Text="{x:Bind ViewModel.ScopeBottomPanel, Mode=OneWay}"
+                                                   FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <Button Grid.Column="1" Width="44" Height="44" Background="Transparent" BorderThickness="0"
+                                                Command="{x:Bind ViewModel.ToggleScopePanelCommand}" CommandParameter="None"
+                                                AutomationProperties.Name="Close panel" ToolTipService.ToolTip="Close panel">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE711;" FontSize="14" />
+                                        </Button>
                                     </Grid>
 
-                                    <!-- Graticule Plot Surface -->
-                                    <Border Grid.Column="1"
-                                            Width="760"
-                                            Height="260"
-                                            Background="{ThemeResource ScopeGridBackgroundBrush}"
-                                            BorderBrush="{ThemeResource AppSubtleBorderBrush}"
-                                            BorderThickness="1.5"
-                                            CornerRadius="{StaticResource BadgeCornerRadius}">
-                                        <Canvas Width="760" Height="260">
-                                            <!-- Horizontal Graticule Lines -->
-                                            <Line X1="0" Y1="65" X2="760" Y2="65" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" />
-                                            <Line X1="0" Y1="130" X2="760" Y2="130" Stroke="{ThemeResource ScopeGridZeroLineBrush}" StrokeThickness="1.5" />
-                                            <Line X1="0" Y1="195" X2="760" Y2="195" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" />
-
-                                            <!-- Vertical 10-Division Graticule Lines (76 px per division) -->
-                                            <Line X1="76" Y1="0" X2="76" Y2="260" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" />
-                                            <Line X1="152" Y1="0" X2="152" Y2="260" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" />
-                                            <Line X1="228" Y1="0" X2="228" Y2="260" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" />
-                                            <Line X1="304" Y1="0" X2="304" Y2="260" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" />
-                                            <Line X1="380" Y1="0" X2="380" Y2="260" Stroke="{ThemeResource ScopeGridZeroLineBrush}" StrokeThickness="1.5" />
-                                            <Line X1="456" Y1="0" X2="456" Y2="260" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" />
-                                            <Line X1="532" Y1="0" X2="532" Y2="260" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" />
-                                            <Line X1="608" Y1="0" X2="608" Y2="260" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" />
-                                            <Line X1="684" Y1="0" X2="684" Y2="260" Stroke="{ThemeResource ScopeGridLineBrush}" StrokeThickness="1" />
-
-                                            <!-- Reference Waveform Overlay (Dashed, Distinct Color) -->
-                                            <Polyline Points="{Binding ScopeReferenceOverlayPoints}"
-                                                      Stroke="{ThemeResource ScopeReferenceOverlayBrush}"
-                                                      StrokeThickness="2"
-                                                      StrokeDashArray="4,2"
-                                                      Visibility="{x:Bind ViewModel.ScopeReferenceOverlayVisibility, Mode=OneWay}" />
-
-                                            <!-- CH1–CH4 Decimated Polylines -->
-                                            <Polyline Points="{Binding ScopeChannel1Points}"
-                                                      Stroke="{ThemeResource ScopeChannel1Brush}"
-                                                      StrokeThickness="2.2"
-                                                      Visibility="{x:Bind ViewModel.ScopeChannel1TraceVisibility, Mode=OneWay}" />
-
-                                            <Polyline Points="{Binding ScopeChannel2Points}"
-                                                      Stroke="{ThemeResource ScopeChannel2Brush}"
-                                                      StrokeThickness="2.2"
-                                                      Visibility="{x:Bind ViewModel.ScopeChannel2TraceVisibility, Mode=OneWay}" />
-
-                                            <Polyline Points="{Binding ScopeChannel3Points}"
-                                                      Stroke="{ThemeResource ScopeChannel3Brush}"
-                                                      StrokeThickness="2.2"
-                                                      Visibility="{x:Bind ViewModel.ScopeChannel3TraceVisibility, Mode=OneWay}" />
-
-                                            <Polyline Points="{Binding ScopeChannel4Points}"
-                                                      Stroke="{ThemeResource ScopeChannel4Brush}"
-                                                      StrokeThickness="2.2"
-                                                      Visibility="{x:Bind ViewModel.ScopeChannel4TraceVisibility, Mode=OneWay}" />
-
-                                            <!-- Vertical Rulers / Cursors A & B -->
-                                            <Line X1="{x:Bind ViewModel.ScopeCursorAX, Mode=OneWay}" Y1="0"
-                                                  X2="{x:Bind ViewModel.ScopeCursorAX, Mode=OneWay}" Y2="260"
-                                                  Stroke="{ThemeResource ScopeCursorABrush}"
-                                                  StrokeThickness="2" />
-
-                                            <Line X1="{x:Bind ViewModel.ScopeCursorBX, Mode=OneWay}" Y1="0"
-                                                  X2="{x:Bind ViewModel.ScopeCursorBX, Mode=OneWay}" Y2="260"
-                                                  Stroke="{ThemeResource ScopeCursorBBrush}"
-                                                  StrokeThickness="2" />
-                                        </Canvas>
-                                    </Border>
-                                </Grid>
-
-                                <!-- Draggable Sliders for Cursor A, Cursor B & Horizontal Pan -->
-                                <Grid ColumnSpacing="18">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0" Spacing="4">
-                                        <TextBlock Text="{x:Bind ViewModel.ScopeCursorALabel, Mode=OneWay}"
-                                                   FontFamily="{StaticResource MonoFontFamily}"
-                                                   FontSize="{StaticResource FontSizeSmall}"
-                                                   FontWeight="Bold"
-                                                   Foreground="{ThemeResource ScopeCursorABrush}" />
-                                        <Slider Minimum="0"
-                                                Maximum="100"
-                                                Value="{x:Bind ViewModel.ScopeCursorAPercent, Mode=TwoWay}"
-                                                Header="Vertical Ruler / Cursor A (%)" />
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="1" Spacing="4">
-                                        <TextBlock Text="{x:Bind ViewModel.ScopeCursorBLabel, Mode=OneWay}"
-                                                   FontFamily="{StaticResource MonoFontFamily}"
-                                                   FontSize="{StaticResource FontSizeSmall}"
-                                                   FontWeight="Bold"
-                                                   Foreground="{ThemeResource ScopeCursorBBrush}" />
-                                        <Slider Minimum="0"
-                                                Maximum="100"
-                                                Value="{x:Bind ViewModel.ScopeCursorBPercent, Mode=TwoWay}"
-                                                Header="Vertical Ruler / Cursor B (%)" />
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="2" Spacing="4">
-                                        <TextBlock Text="{x:Bind ViewModel.ScopeZoomLabel, Mode=OneWay}"
-                                                   FontFamily="{StaticResource MonoFontFamily}"
-                                                   FontSize="{StaticResource FontSizeSmall}"
-                                                   FontWeight="Bold"
-                                                   Foreground="{ThemeResource AppTextPrimaryBrush}" />
-                                        <Slider Minimum="0"
-                                                Maximum="100"
-                                                Value="{x:Bind ViewModel.ScopePanPercent, Mode=TwoWay}"
-                                                Header="Horizontal Pan Window (%)" />
-                                    </StackPanel>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- 5. Measurements & Reference Comparison Panel (WaveformMath + WaveformComparer — ADR-011 §4/§5) -->
-                        <Border Background="{ThemeResource AppSurfaceBrush}"
-                                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="{StaticResource CardCornerRadius}">
-                            <StackPanel>
-                                <Grid Background="{ThemeResource AppToolbarBrush}"
-                                      Padding="14,10"
-                                      BorderBrush="{ThemeResource AppSubtleBorderBrush}"
-                                      BorderThickness="0,0,0,1"
-                                      ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
-                                        <TextBlock Text="Deterministic Waveform Measurements &amp; Reference Verdicts"
-                                                   FontSize="{StaticResource FontSizeBody}"
-                                                   FontWeight="Bold"
-                                                   VerticalAlignment="Center" />
-                                        <Border Background="{ThemeResource SimBadgeBackgroundBrush}"
-                                                BorderBrush="{ThemeResource SimBadgeBorderBrush}"
-                                                BorderThickness="1"
-                                                CornerRadius="{StaticResource BadgeCornerRadius}"
-                                                Padding="6,2"
-                                                VerticalAlignment="Center"
-                                                Visibility="{x:Bind ViewModel.ScopeSimulatedBadgeVisibility, Mode=OneWay}">
-                                            <TextBlock Text="SIMULATED"
-                                                       FontSize="{StaticResource FontSizeBadge}"
-                                                       FontWeight="Bold"
-                                                       Foreground="{ThemeResource SimBadgeTextBrush}" />
-                                        </Border>
-                                    </StackPanel>
-
-                                    <TextBlock Grid.Column="1"
-                                               Text="{x:Bind ViewModel.ScopeOverallVerdictDisplay, Mode=OneWay}"
-                                               FontFamily="{StaticResource MonoFontFamily}"
-                                               FontSize="{StaticResource FontSizeBody}"
-                                               FontWeight="Bold"
-                                               Foreground="{x:Bind ViewModel.ScopeOverallVerdictBrush, Mode=OneWay}"
-                                               VerticalAlignment="Center" />
-                                </Grid>
-
-                                <!-- Table Column Headers -->
-                                <Grid Background="{ThemeResource AppRowAltBrush}"
-                                      Padding="14,8"
-                                      BorderBrush="{ThemeResource AppSubtleBorderBrush}"
-                                      BorderThickness="0,0,0,1">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="70" />
-                                        <ColumnDefinition Width="170" />
-                                        <ColumnDefinition Width="170" />
-                                        <ColumnDefinition Width="150" />
-                                        <ColumnDefinition Width="110" />
-                                        <ColumnDefinition Width="90" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="CH" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
-                                    <TextBlock Grid.Column="1" Text="Measurement" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
-                                    <TextBlock Grid.Column="2" Text="Value / Unit" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
-                                    <TextBlock Grid.Column="3" Text="Status" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
-                                    <TextBlock Grid.Column="4" Text="Provenance" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
-                                    <TextBlock Grid.Column="5" Text="Verdict" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
-                                    <TextBlock Grid.Column="6" Text="Reference Tolerance / Citation Note" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
-                                </Grid>
-
-                                <TextBlock Text="No waveform measurements computed yet. Tap 'Capture' or 'Run Guided Test &amp; Compare' above."
-                                           Padding="14,16"
-                                           FontSize="{StaticResource FontSizeBody}"
-                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
-                                           Visibility="{x:Bind ViewModel.NoScopeMeasurementsVisibility, Mode=OneWay}" />
-
-                                <ItemsControl ItemsSource="{x:Bind ViewModel.ScopeMeasurements, Mode=OneWay}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:ScopeMeasurementRowViewModel">
-                                            <Grid Padding="14,8"
-                                                  MinHeight="{StaticResource MinTouchSize}"
-                                                  BorderBrush="{ThemeResource AppSubtleBorderBrush}"
-                                                  BorderThickness="0,0,0,1">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="70" />
-                                                    <ColumnDefinition Width="170" />
-                                                    <ColumnDefinition Width="170" />
-                                                    <ColumnDefinition Width="150" />
-                                                    <ColumnDefinition Width="110" />
-                                                    <ColumnDefinition Width="90" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-
-                                                <TextBlock Grid.Column="0"
-                                                           Text="{x:Bind ChannelBadge}"
-                                                           FontFamily="{StaticResource MonoFontFamily}"
-                                                           FontSize="{StaticResource FontSizeBody}"
-                                                           FontWeight="Bold"
-                                                           VerticalAlignment="Center" />
-
-                                                <TextBlock Grid.Column="1"
-                                                           Text="{x:Bind KindDisplay}"
-                                                           FontSize="{StaticResource FontSizeBody}"
-                                                           FontWeight="SemiBold"
-                                                           VerticalAlignment="Center" />
-
-                                                <TextBlock Grid.Column="2"
-                                                           Text="{x:Bind ValueAndUnitDisplay}"
-                                                           FontFamily="{StaticResource MonoFontFamily}"
-                                                           FontSize="{StaticResource FontSizeBody}"
-                                                           FontWeight="Bold"
-                                                           VerticalAlignment="Center" />
-
-                                                <TextBlock Grid.Column="3"
-                                                           Text="{x:Bind StatusCode}"
-                                                           FontFamily="{StaticResource MonoFontFamily}"
-                                                           FontSize="{StaticResource FontSizeSmall}"
-                                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
-                                                           VerticalAlignment="Center" />
-
-                                                <Border Grid.Column="4"
-                                                        Background="{ThemeResource SimBadgeBackgroundBrush}"
-                                                        BorderBrush="{ThemeResource SimBadgeBorderBrush}"
+                                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                        <Grid>
+                                            <!-- Measurements -->
+                                            <Grid Visibility="{x:Bind ViewModel.ScopeMeasurementsPanelVisibility, Mode=OneWay}">
+                                                <!-- 5. Measurements & Reference Comparison Panel (WaveformMath + WaveformComparer — ADR-011 §4/§5) -->
+                                                <Border Background="{ThemeResource AppSurfaceBrush}"
+                                                        BorderBrush="{ThemeResource AppSubtleBorderBrush}"
                                                         BorderThickness="1"
-                                                        CornerRadius="{StaticResource BadgeCornerRadius}"
-                                                        Padding="6,2"
-                                                        HorizontalAlignment="Left"
-                                                        VerticalAlignment="Center"
-                                                        Visibility="{x:Bind SimulatedBadgeVisibility}">
-                                                    <TextBlock Text="SIMULATED"
-                                                               FontSize="{StaticResource FontSizeBadge}"
-                                                               FontWeight="Bold"
-                                                               Foreground="{ThemeResource SimBadgeTextBrush}" />
+                                                        CornerRadius="{StaticResource CardCornerRadius}">
+                                                    <StackPanel>
+                                                        <Grid Background="{ThemeResource AppToolbarBrush}"
+                                                              Padding="14,10"
+                                                              BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                                              BorderThickness="0,0,0,1"
+                                                              ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                                                                <TextBlock Text="Deterministic Waveform Measurements &amp; Reference Verdicts"
+                                                                           FontSize="{StaticResource FontSizeBody}"
+                                                                           FontWeight="Bold"
+                                                                           VerticalAlignment="Center" />
+                                                                <Border Background="{ThemeResource SimBadgeBackgroundBrush}"
+                                                                        BorderBrush="{ThemeResource SimBadgeBorderBrush}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="{StaticResource BadgeCornerRadius}"
+                                                                        Padding="6,2"
+                                                                        VerticalAlignment="Center"
+                                                                        Visibility="{x:Bind ViewModel.ScopeSimulatedBadgeVisibility, Mode=OneWay}">
+                                                                    <TextBlock Text="SIMULATED"
+                                                                               FontSize="{StaticResource FontSizeBadge}"
+                                                                               FontWeight="Bold"
+                                                                               Foreground="{ThemeResource SimBadgeTextBrush}" />
+                                                                </Border>
+                                                            </StackPanel>
+
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="{x:Bind ViewModel.ScopeOverallVerdictDisplay, Mode=OneWay}"
+                                                                       FontFamily="{StaticResource MonoFontFamily}"
+                                                                       FontSize="{StaticResource FontSizeBody}"
+                                                                       FontWeight="Bold"
+                                                                       Foreground="{x:Bind ViewModel.ScopeOverallVerdictBrush, Mode=OneWay}"
+                                                                       VerticalAlignment="Center" />
+                                                        </Grid>
+
+                                                        <!-- Table Column Headers -->
+                                                        <Grid Background="{ThemeResource AppRowAltBrush}"
+                                                              Padding="14,8"
+                                                              BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                                              BorderThickness="0,0,0,1">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="70" />
+                                                                <ColumnDefinition Width="170" />
+                                                                <ColumnDefinition Width="170" />
+                                                                <ColumnDefinition Width="150" />
+                                                                <ColumnDefinition Width="110" />
+                                                                <ColumnDefinition Width="90" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="CH" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
+                                                            <TextBlock Grid.Column="1" Text="Measurement" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
+                                                            <TextBlock Grid.Column="2" Text="Value / Unit" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
+                                                            <TextBlock Grid.Column="3" Text="Status" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
+                                                            <TextBlock Grid.Column="4" Text="Provenance" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
+                                                            <TextBlock Grid.Column="5" Text="Verdict" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
+                                                            <TextBlock Grid.Column="6" Text="Reference Tolerance / Citation Note" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
+                                                        </Grid>
+
+                                                        <TextBlock Text="No waveform measurements computed yet. Tap 'Capture' or 'Run Guided Test &amp; Compare' above."
+                                                                   Padding="14,16"
+                                                                   FontSize="{StaticResource FontSizeBody}"
+                                                                   Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                                   Visibility="{x:Bind ViewModel.NoScopeMeasurementsVisibility, Mode=OneWay}" />
+
+                                                        <ItemsControl ItemsSource="{x:Bind ViewModel.ScopeMeasurements, Mode=OneWay}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:ScopeMeasurementRowViewModel">
+                                                                    <Grid Padding="14,8"
+                                                                          MinHeight="{StaticResource MinTouchSize}"
+                                                                          BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                                                          BorderThickness="0,0,0,1">
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="70" />
+                                                                            <ColumnDefinition Width="170" />
+                                                                            <ColumnDefinition Width="170" />
+                                                                            <ColumnDefinition Width="150" />
+                                                                            <ColumnDefinition Width="110" />
+                                                                            <ColumnDefinition Width="90" />
+                                                                            <ColumnDefinition Width="*" />
+                                                                        </Grid.ColumnDefinitions>
+
+                                                                        <TextBlock Grid.Column="0"
+                                                                                   Text="{x:Bind ChannelBadge}"
+                                                                                   FontFamily="{StaticResource MonoFontFamily}"
+                                                                                   FontSize="{StaticResource FontSizeBody}"
+                                                                                   FontWeight="Bold"
+                                                                                   VerticalAlignment="Center" />
+
+                                                                        <TextBlock Grid.Column="1"
+                                                                                   Text="{x:Bind KindDisplay}"
+                                                                                   FontSize="{StaticResource FontSizeBody}"
+                                                                                   FontWeight="SemiBold"
+                                                                                   VerticalAlignment="Center" />
+
+                                                                        <TextBlock Grid.Column="2"
+                                                                                   Text="{x:Bind ValueAndUnitDisplay}"
+                                                                                   FontFamily="{StaticResource MonoFontFamily}"
+                                                                                   FontSize="{StaticResource FontSizeBody}"
+                                                                                   FontWeight="Bold"
+                                                                                   VerticalAlignment="Center" />
+
+                                                                        <TextBlock Grid.Column="3"
+                                                                                   Text="{x:Bind StatusCode}"
+                                                                                   FontFamily="{StaticResource MonoFontFamily}"
+                                                                                   FontSize="{StaticResource FontSizeSmall}"
+                                                                                   Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                                                   VerticalAlignment="Center" />
+
+                                                                        <Border Grid.Column="4"
+                                                                                Background="{ThemeResource SimBadgeBackgroundBrush}"
+                                                                                BorderBrush="{ThemeResource SimBadgeBorderBrush}"
+                                                                                BorderThickness="1"
+                                                                                CornerRadius="{StaticResource BadgeCornerRadius}"
+                                                                                Padding="6,2"
+                                                                                HorizontalAlignment="Left"
+                                                                                VerticalAlignment="Center"
+                                                                                Visibility="{x:Bind SimulatedBadgeVisibility}">
+                                                                            <TextBlock Text="SIMULATED"
+                                                                                       FontSize="{StaticResource FontSizeBadge}"
+                                                                                       FontWeight="Bold"
+                                                                                       Foreground="{ThemeResource SimBadgeTextBrush}" />
+                                                                        </Border>
+
+                                                                        <TextBlock Grid.Column="5"
+                                                                                   Text="{x:Bind VerdictBadgeText}"
+                                                                                   FontFamily="{StaticResource MonoFontFamily}"
+                                                                                   FontSize="{StaticResource FontSizeBody}"
+                                                                                   FontWeight="Bold"
+                                                                                   Foreground="{x:Bind VerdictBrush}"
+                                                                                   VerticalAlignment="Center" />
+
+                                                                        <TextBlock Grid.Column="6"
+                                                                                   Text="{x:Bind ToleranceOrReasonDisplay}"
+                                                                                   FontSize="{StaticResource FontSizeSmall}"
+                                                                                   Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                                                   VerticalAlignment="Center"
+                                                                                   TextWrapping="Wrap" />
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
                                                 </Border>
-
-                                                <TextBlock Grid.Column="5"
-                                                           Text="{x:Bind VerdictBadgeText}"
-                                                           FontFamily="{StaticResource MonoFontFamily}"
-                                                           FontSize="{StaticResource FontSizeBody}"
-                                                           FontWeight="Bold"
-                                                           Foreground="{x:Bind VerdictBrush}"
-                                                           VerticalAlignment="Center" />
-
-                                                <TextBlock Grid.Column="6"
-                                                           Text="{x:Bind ToleranceOrReasonDisplay}"
-                                                           FontSize="{StaticResource FontSizeSmall}"
-                                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
-                                                           VerticalAlignment="Center"
-                                                           TextWrapping="Wrap" />
                                             </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </Border>
 
-                        <!-- 6. Saved Waveform Library for Open Work Order (.wfm — ADR-011 §6) -->
-                        <Border Background="{ThemeResource AppSurfaceBrush}"
-                                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="{StaticResource CardCornerRadius}">
-                            <StackPanel>
-                                <Grid Background="{ThemeResource AppToolbarBrush}"
-                                      Padding="14,10"
-                                      BorderBrush="{ThemeResource AppSubtleBorderBrush}"
-                                      BorderThickness="0,0,0,1">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0" Spacing="2">
-                                        <TextBlock Text="Saved Waveform Library (Active Work Order — .wfm Binary Samples)"
-                                                   FontSize="{StaticResource FontSizeBody}"
-                                                   FontWeight="Bold" />
-                                        <TextBlock Text="Selecting or tapping 'Load .wfm' reloads the binary waveform samples and persisted measurements."
-                                                   FontSize="{StaticResource FontSizeSmall}"
-                                                   Foreground="{ThemeResource AppTextSecondaryBrush}" />
-                                    </StackPanel>
-
-                                    <Button Grid.Column="1"
-                                            Style="{StaticResource ActionTouchButtonStyle}"
-                                            Command="{x:Bind ViewModel.ReloadWorkOrderWaveformsCommand}"
-                                            Content="Refresh Waveforms" />
-                                </Grid>
-
-                                <TextBlock Text="No waveforms saved to the active work order yet. Capture a waveform and tap 'Save .wfm to WO'."
-                                           Padding="14,16"
-                                           FontSize="{StaticResource FontSizeBody}"
-                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
-                                           Visibility="{x:Bind ViewModel.NoWorkOrderWaveformsVisibility, Mode=OneWay}" />
-
-                                <ItemsControl ItemsSource="{x:Bind ViewModel.WorkOrderWaveforms, Mode=OneWay}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:SavedWaveformRowViewModel">
-                                            <Grid Padding="14,8"
-                                                  MinHeight="{StaticResource MinTouchSize}"
-                                                  BorderBrush="{ThemeResource AppSubtleBorderBrush}"
-                                                  BorderThickness="0,0,0,1"
-                                                  ColumnSpacing="12">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="220" />
-                                                    <ColumnDefinition Width="180" />
-                                                    <ColumnDefinition Width="140" />
-                                                    <ColumnDefinition Width="110" />
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-
-                                                <TextBlock Grid.Column="0"
-                                                           Text="{x:Bind GuidedTestName}"
-                                                           FontSize="{StaticResource FontSizeBody}"
-                                                           FontWeight="Bold"
-                                                           VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" />
-
-                                                <TextBlock Grid.Column="1"
-                                                           Text="{x:Bind ChannelSummary}"
+                                            <!-- Rulers -->
+                                            <StackPanel Padding="12,10" Spacing="10"
+                                                        Visibility="{x:Bind ViewModel.ScopeRulersPanelVisibility, Mode=OneWay}">
+                                                <TextBlock Text="{x:Bind ViewModel.ScopeCursorDeltaLabel, Mode=OneWay}"
                                                            FontFamily="{StaticResource MonoFontFamily}"
-                                                           FontSize="{StaticResource FontSizeSmall}"
-                                                           VerticalAlignment="Center" />
+                                                           FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
+                                                <Grid ColumnSpacing="18">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" Spacing="4">
+                                                        <TextBlock Text="{x:Bind ViewModel.ScopeCursorALabel, Mode=OneWay}"
+                                                                   FontFamily="{StaticResource MonoFontFamily}"
+                                                                   FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold"
+                                                                   Foreground="{ThemeResource ScopeCursorABrush}" TextWrapping="Wrap" />
+                                                        <Slider Minimum="0" Maximum="100" Header="Ruler A (%)"
+                                                                Value="{x:Bind ViewModel.ScopeCursorAPercent, Mode=TwoWay}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" Spacing="4">
+                                                        <TextBlock Text="{x:Bind ViewModel.ScopeCursorBLabel, Mode=OneWay}"
+                                                                   FontFamily="{StaticResource MonoFontFamily}"
+                                                                   FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold"
+                                                                   Foreground="{ThemeResource ScopeCursorBBrush}" TextWrapping="Wrap" />
+                                                        <Slider Minimum="0" Maximum="100" Header="Ruler B (%)"
+                                                                Value="{x:Bind ViewModel.ScopeCursorBPercent, Mode=TwoWay}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2" Spacing="4">
+                                                        <TextBlock Text="{x:Bind ViewModel.ScopeZoomLabel, Mode=OneWay}"
+                                                                   FontFamily="{StaticResource MonoFontFamily}"
+                                                                   FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
+                                                        <Slider Minimum="0" Maximum="100" Header="Pan (%)"
+                                                                Value="{x:Bind ViewModel.ScopePanPercent, Mode=TwoWay}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </StackPanel>
 
-                                                <TextBlock Grid.Column="2"
-                                                           Text="{x:Bind SampleCountDisplay}"
-                                                           FontFamily="{StaticResource MonoFontFamily}"
-                                                           FontSize="{StaticResource FontSizeSmall}"
-                                                           VerticalAlignment="Center" />
-
-                                                <Border Grid.Column="3"
-                                                        Background="{ThemeResource SimBadgeBackgroundBrush}"
-                                                        BorderBrush="{ThemeResource SimBadgeBorderBrush}"
+                                            <!-- Guided tests -->
+                                            <StackPanel Padding="12,10" Spacing="10"
+                                                        Visibility="{x:Bind ViewModel.ScopeGuidedPanelVisibility, Mode=OneWay}">
+                                                <Grid ColumnSpacing="10">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <ComboBox HorizontalAlignment="Stretch"
+                                                              MinHeight="{StaticResource MinTouchSize}"
+                                                              Header="Guided scope test"
+                                                              PlaceholderText="Select a guided scope test…"
+                                                              ItemsSource="{x:Bind ViewModel.GuidedScopeTests, Mode=OneWay}"
+                                                              SelectedItem="{x:Bind ViewModel.SelectedGuidedTestItem, Mode=TwoWay}" />
+                                                    <Button Grid.Column="1"
+                                                            Style="{StaticResource ActionTouchButtonStyle}"
+                                                            VerticalAlignment="Bottom"
+                                                            Command="{x:Bind ViewModel.RunGuidedScopeTestCommand}"
+                                                            Content="Run guided test &amp; compare" />
+                                                </Grid>
+                                                <!-- Guided Test Recipe & Reference Citation Card -->
+                                                <Border Background="{ThemeResource AppSurfaceBrush}"
+                                                        BorderBrush="{ThemeResource AppSubtleBorderBrush}"
                                                         BorderThickness="1"
-                                                        CornerRadius="{StaticResource BadgeCornerRadius}"
-                                                        Padding="6,2"
-                                                        HorizontalAlignment="Left"
-                                                        VerticalAlignment="Center"
-                                                        Visibility="{x:Bind SimulatedBadgeVisibility}">
-                                                    <TextBlock Text="{x:Bind ScopeDeviceCode}"
-                                                               FontSize="{StaticResource FontSizeBadge}"
-                                                               FontWeight="Bold"
-                                                               Foreground="{ThemeResource SimBadgeTextBrush}" />
+                                                        CornerRadius="{StaticResource CardCornerRadius}"
+                                                        Padding="14,10"
+                                                        Visibility="{x:Bind ViewModel.SelectedGuidedTestVisibility, Mode=OneWay}">
+                                                    <StackPanel Spacing="6">
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0"
+                                                                       Text="{x:Bind ViewModel.SelectedGuidedTestNameDisplay, Mode=OneWay}"
+                                                                       FontSize="{StaticResource FontSizeSubtitle}"
+                                                                       FontWeight="Bold" />
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="{x:Bind ViewModel.ActiveReferenceCitationDisplay, Mode=OneWay}"
+                                                                       FontFamily="{StaticResource MonoFontFamily}"
+                                                                       FontSize="{StaticResource FontSizeSmall}"
+                                                                       FontWeight="Bold"
+                                                                       Foreground="{ThemeResource AppAccentBrush}"
+                                                                       VerticalAlignment="Center" />
+                                                        </Grid>
+                                                        <TextBlock Text="{x:Bind ViewModel.SelectedGuidedTestDescriptionDisplay, Mode=OneWay}"
+                                                                   FontSize="{StaticResource FontSizeBody}"
+                                                                   FontWeight="SemiBold"
+                                                                   TextWrapping="Wrap" />
+                                                        <TextBlock Text="{x:Bind ViewModel.SelectedGuidedTestProcedureDisplay, Mode=OneWay}"
+                                                                   FontSize="{StaticResource FontSizeSmall}"
+                                                                   Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                                   TextWrapping="Wrap" />
+                                                    </StackPanel>
                                                 </Border>
+                                            </StackPanel>
 
-                                                <TextBlock Grid.Column="4"
-                                                           Text="{x:Bind DataPath}"
-                                                           FontFamily="{StaticResource MonoFontFamily}"
-                                                           FontSize="{StaticResource FontSizeSmall}"
-                                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
-                                                           VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" />
+                                            <!-- Waveform library -->
+                                            <Grid Visibility="{x:Bind ViewModel.ScopeLibraryPanelVisibility, Mode=OneWay}">
+                                                <!-- 6. Saved Waveform Library for Open Work Order (.wfm — ADR-011 §6) -->
+                                                <Border Background="{ThemeResource AppSurfaceBrush}"
+                                                        BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="{StaticResource CardCornerRadius}">
+                                                    <StackPanel>
+                                                        <Grid Background="{ThemeResource AppToolbarBrush}"
+                                                              Padding="14,10"
+                                                              BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                                              BorderThickness="0,0,0,1">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
 
-                                                <Button Grid.Column="5"
-                                                        Style="{StaticResource ActionTouchButtonStyle}"
-                                                        Tag="{x:Bind}"
-                                                        Click="OnLoadSavedWaveformButtonClick"
-                                                        Content="Load .wfm" />
+                                                            <StackPanel Grid.Column="0" Spacing="2">
+                                                                <TextBlock Text="Saved Waveform Library (Active Work Order — .wfm Binary Samples)"
+                                                                           FontSize="{StaticResource FontSizeBody}"
+                                                                           FontWeight="Bold" />
+                                                                <TextBlock Text="Selecting or tapping 'Load .wfm' reloads the binary waveform samples and persisted measurements."
+                                                                           FontSize="{StaticResource FontSizeSmall}"
+                                                                           Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                            </StackPanel>
+
+                                                            <Button Grid.Column="1"
+                                                                    Style="{StaticResource ActionTouchButtonStyle}"
+                                                                    Command="{x:Bind ViewModel.ReloadWorkOrderWaveformsCommand}"
+                                                                    Content="Refresh Waveforms" />
+                                                        </Grid>
+
+                                                        <TextBlock Text="No waveforms saved to the active work order yet. Capture a waveform and tap 'Save .wfm to WO'."
+                                                                   Padding="14,16"
+                                                                   FontSize="{StaticResource FontSizeBody}"
+                                                                   Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                                   Visibility="{x:Bind ViewModel.NoWorkOrderWaveformsVisibility, Mode=OneWay}" />
+
+                                                        <ItemsControl ItemsSource="{x:Bind ViewModel.WorkOrderWaveforms, Mode=OneWay}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:SavedWaveformRowViewModel">
+                                                                    <Grid Padding="14,8"
+                                                                          MinHeight="{StaticResource MinTouchSize}"
+                                                                          BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                                                          BorderThickness="0,0,0,1"
+                                                                          ColumnSpacing="12">
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="220" />
+                                                                            <ColumnDefinition Width="180" />
+                                                                            <ColumnDefinition Width="140" />
+                                                                            <ColumnDefinition Width="110" />
+                                                                            <ColumnDefinition Width="*" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                        </Grid.ColumnDefinitions>
+
+                                                                        <TextBlock Grid.Column="0"
+                                                                                   Text="{x:Bind GuidedTestName}"
+                                                                                   FontSize="{StaticResource FontSizeBody}"
+                                                                                   FontWeight="Bold"
+                                                                                   VerticalAlignment="Center"
+                                                                                   TextTrimming="CharacterEllipsis" />
+
+                                                                        <TextBlock Grid.Column="1"
+                                                                                   Text="{x:Bind ChannelSummary}"
+                                                                                   FontFamily="{StaticResource MonoFontFamily}"
+                                                                                   FontSize="{StaticResource FontSizeSmall}"
+                                                                                   VerticalAlignment="Center" />
+
+                                                                        <TextBlock Grid.Column="2"
+                                                                                   Text="{x:Bind SampleCountDisplay}"
+                                                                                   FontFamily="{StaticResource MonoFontFamily}"
+                                                                                   FontSize="{StaticResource FontSizeSmall}"
+                                                                                   VerticalAlignment="Center" />
+
+                                                                        <Border Grid.Column="3"
+                                                                                Background="{ThemeResource SimBadgeBackgroundBrush}"
+                                                                                BorderBrush="{ThemeResource SimBadgeBorderBrush}"
+                                                                                BorderThickness="1"
+                                                                                CornerRadius="{StaticResource BadgeCornerRadius}"
+                                                                                Padding="6,2"
+                                                                                HorizontalAlignment="Left"
+                                                                                VerticalAlignment="Center"
+                                                                                Visibility="{x:Bind SimulatedBadgeVisibility}">
+                                                                            <TextBlock Text="{x:Bind ScopeDeviceCode}"
+                                                                                       FontSize="{StaticResource FontSizeBadge}"
+                                                                                       FontWeight="Bold"
+                                                                                       Foreground="{ThemeResource SimBadgeTextBrush}" />
+                                                                        </Border>
+
+                                                                        <TextBlock Grid.Column="4"
+                                                                                   Text="{x:Bind DataPath}"
+                                                                                   FontFamily="{StaticResource MonoFontFamily}"
+                                                                                   FontSize="{StaticResource FontSizeSmall}"
+                                                                                   Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                                                   VerticalAlignment="Center"
+                                                                                   TextTrimming="CharacterEllipsis" />
+
+                                                                        <Button Grid.Column="5"
+                                                                                Style="{StaticResource ActionTouchButtonStyle}"
+                                                                                Tag="{x:Bind}"
+                                                                                Click="OnLoadSavedWaveformButtonClick"
+                                                                                Content="Load .wfm" />
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </Border>
                                             </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </Border>
+                                        </Grid>
+                                    </ScrollViewer>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Grid>
 
-                    </StackPanel>
-                </ScrollViewer>
+                    <!-- Row 3: scope status line -->
+                    <Grid Grid.Row="3"
+                          Background="{ThemeResource ScopeToolbarBrush}"
+                          BorderBrush="{ThemeResource ScopeTileBorderBrush}"
+                          BorderThickness="0,1,0,0"
+                          Padding="12,6"
+                          ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{x:Bind ViewModel.ScopeStatusMessage, Mode=OneWay}"
+                                   FontSize="{StaticResource FontSizeSmall}"
+                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.ActiveWorkOrderSummaryText, Mode=OneWay}"
+                                   FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold"
+                                   Foreground="{ThemeResource AppAccentBrush}"
+                                   MaxWidth="520" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    </Grid>
+                </Grid>
 
                 <!-- 3G. TOOL PLACEHOLDER VIEW (Camera) -->
                 <Grid Grid.Row="2"

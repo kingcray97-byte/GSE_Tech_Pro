@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using GseTechPro.Core.Contracts;
 using GseTechPro.Core.Enums;
 using GseTechPro.Core.Models;
@@ -116,26 +117,93 @@ public sealed partial class ScopeChannelSetupViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SummaryText))]
     [NotifyPropertyChangedFor(nameof(EnabledOpacity))]
+    [NotifyPropertyChangedFor(nameof(RangeDisplay))]
     private bool _isEnabled;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SummaryText))]
+    [NotifyPropertyChangedFor(nameof(RangeDisplay))]
     private double _voltageRangeVolts = 5.0;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SummaryText))]
+    [NotifyPropertyChangedFor(nameof(DetailDisplay))]
     private ScopeCoupling _coupling = ScopeCoupling.Dc;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SummaryText))]
+    [NotifyPropertyChangedFor(nameof(DetailDisplay))]
     private double _probeMultiplier = 1.0;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SummaryText))]
     [NotifyPropertyChangedFor(nameof(HasCurrentClamp))]
+    [NotifyPropertyChangedFor(nameof(RangeDisplay))]
+    [NotifyPropertyChangedFor(nameof(DetailDisplay))]
     private double _currentScaleAmpsPerVolt;
 
     public double EnabledOpacity => IsEnabled ? 1.0 : 0.65;
+
+    /// <summary>Compact range readout for the scope channel tile ("±5 V", "±20 A", or "Off").</summary>
+    public string RangeDisplay
+    {
+        get
+        {
+            if (!IsEnabled)
+                return "Off";
+            return CurrentScaleAmpsPerVolt > 0.0
+                ? string.Create(CultureInfo.InvariantCulture, $"±{VoltageRangeVolts * CurrentScaleAmpsPerVolt:G4} A")
+                : string.Create(CultureInfo.InvariantCulture, $"±{VoltageRangeVolts:G4} V");
+        }
+    }
+
+    /// <summary>Coupling and probe line for the scope channel tile ("DC x1", "AC 20 A/V").</summary>
+    public string DetailDisplay
+    {
+        get
+        {
+            var couplingText = Coupling == ScopeCoupling.Ac ? "AC" : "DC";
+            return CurrentScaleAmpsPerVolt > 0.0
+                ? string.Create(CultureInfo.InvariantCulture, $"{couplingText} {CurrentScaleAmpsPerVolt:G4} A/V")
+                : string.Create(CultureInfo.InvariantCulture, $"{couplingText} x{ProbeMultiplier:G4}");
+        }
+    }
+
+    /// <summary>Single-letter channel name used on the tile and axis headers (A–D).</summary>
+    public string ChannelLetter => ((char)('A' + Channel - 1)).ToString();
+
+    /// <summary>Steps the vertical range up one standard step; turns the channel on if it was off.</summary>
+    [RelayCommand]
+    public void RangeUp()
+    {
+        if (!IsEnabled)
+        {
+            IsEnabled = true;
+            return;
+        }
+
+        var next = StandardVoltageRanges.FirstOrDefault(r => r > VoltageRangeVolts + 1e-9);
+        if (next > 0.0)
+            VoltageRangeVolts = next;
+    }
+
+    /// <summary>Steps the vertical range down one standard step; below the smallest range turns the channel off.</summary>
+    [RelayCommand]
+    public void RangeDown()
+    {
+        if (!IsEnabled)
+            return;
+
+        var lower = StandardVoltageRanges.LastOrDefault(r => r < VoltageRangeVolts - 1e-9);
+        if (lower > 0.0)
+            VoltageRangeVolts = lower;
+        else
+            IsEnabled = false;
+    }
+
+    [RelayCommand]
+    public void ToggleCoupling() =>
+        Coupling = Coupling == ScopeCoupling.Ac ? ScopeCoupling.Dc : ScopeCoupling.Ac;
 
     public bool HasCurrentClamp => CurrentScaleAmpsPerVolt > 0.0;
 
@@ -587,8 +655,9 @@ public sealed class SavedWaveformRowViewModel
 /// </summary>
 public static class WaveformRenderEngine
 {
-    public const double DefaultCanvasWidth = 760.0;
-    public const double DefaultCanvasHeight = 260.0;
+    // 10 × 10 divisions of 100 × 60 px; the XAML Viewbox stretches this to fill the scope view.
+    public const double DefaultCanvasWidth = 1000.0;
+    public const double DefaultCanvasHeight = 600.0;
 
     /// <summary>
     /// Decimates a channel's voltage samples to screen width, preserving min/max envelope peaks
