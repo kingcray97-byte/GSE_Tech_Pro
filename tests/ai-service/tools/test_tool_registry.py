@@ -13,7 +13,7 @@ from tools.manuals import SEARCH_MANUALS
 EXPECTED_TOOLS = {
     "search_manuals", "get_asset", "get_repair_history", "get_part_history", "get_spec_range",
     "record_reading", "add_note", "start_guided_test", "lookup_dtc", "find_similar_repairs",
-    "get_safety_warnings",
+    "get_safety_warnings", "ocr_dataplate",
 }
 
 
@@ -29,6 +29,8 @@ AVAILABLE = {
     "search_manuals", "get_spec_range", "record_reading", "start_guided_test", "lookup_dtc", "get_safety_warnings",
     # Phase 5 (repair history, read-only)
     "find_similar_repairs", "get_asset", "get_repair_history", "get_part_history",
+    # Phase 7.3 (technician-confirmed data plate, read-only)
+    "ocr_dataplate",
 }
 
 

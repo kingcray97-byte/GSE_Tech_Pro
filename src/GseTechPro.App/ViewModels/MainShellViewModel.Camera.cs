@@ -63,6 +63,9 @@ public sealed partial class MainShellViewModel
     [NotifyCanExecuteChangedFor(nameof(TakePhotoCommand))]
     [NotifyCanExecuteChangedFor(nameof(ImportPhotoCommand))]
     [NotifyCanExecuteChangedFor(nameof(SavePhotoToWorkOrderCommand))]
+    [NotifyCanExecuteChangedFor(nameof(StartDataPlateReadingCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ReadDataPlateTextCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveDataPlateCommand))]
     private bool _isCameraBusy;
 
     [ObservableProperty]
@@ -76,6 +79,7 @@ public sealed partial class MainShellViewModel
     [NotifyPropertyChangedFor(nameof(PendingPhotoVisibility))]
     [NotifyPropertyChangedFor(nameof(PendingPhotoSimulatedVisibility))]
     [NotifyPropertyChangedFor(nameof(AnnotateButtonVisibility))]
+    [NotifyPropertyChangedFor(nameof(DataPlateButtonVisibility))]
     [NotifyCanExecuteChangedFor(nameof(SavePhotoToWorkOrderCommand))]
     private CapturedPhoto? _pendingPhoto;
 
@@ -112,6 +116,7 @@ public sealed partial class MainShellViewModel
     partial void OnSelectedWorkOrderPhotoChanged(WorkOrderPhotoRowViewModel? value)
     {
         LoadAnnotationsFor(value); // 7.2: the photo's saved marks (or none)
+        EndDataPlateReading(discarded: true); // 7.3: a reading belongs to one photo
         if (value is null)
             return;
         CameraPreviewPath = value.FileExists ? value.FullPath : null;

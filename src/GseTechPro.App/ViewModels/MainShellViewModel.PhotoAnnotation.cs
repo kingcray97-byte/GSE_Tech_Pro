@@ -67,13 +67,14 @@ public sealed partial class MainShellViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AnnotationToolbarVisibility))]
     [NotifyPropertyChangedFor(nameof(AnnotateButtonVisibility))]
+    [NotifyPropertyChangedFor(nameof(DataPlateButtonVisibility))]
     private bool _isAnnotating;
 
     public Visibility AnnotationToolbarVisibility => IsAnnotating ? Visibility.Visible : Visibility.Collapsed;
 
     /// <summary>"Annotate" shows for a saved photo that is on screen, while not already annotating.</summary>
     public Visibility AnnotateButtonVisibility =>
-        !IsAnnotating && PendingPhoto is null && SelectedWorkOrderPhoto is { FileExists: true }
+        !IsAnnotating && !IsReadingDataPlate && PendingPhoto is null && SelectedWorkOrderPhoto is { FileExists: true }
             ? Visibility.Visible : Visibility.Collapsed;
 
     private readonly List<PhotoAnnotationShape> _annotationShapes = new();
@@ -139,6 +140,11 @@ public sealed partial class MainShellViewModel
         if (SelectedWorkOrderPhoto is not { FileExists: true })
         {
             CameraStatusText = "Pick a saved photo to annotate.";
+            return;
+        }
+        if (IsReadingDataPlate)
+        {
+            CameraStatusText = "Finish or cancel the data-plate reading first.";
             return;
         }
         IsAnnotating = true;

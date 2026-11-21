@@ -29,6 +29,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     private readonly IDiagnosticAdapterFactory _adapterFactory;
     private readonly IScopeDeviceFactory _scopeDeviceFactory;
     private readonly ICameraSourceFactory _cameraSourceFactory;
+    private readonly ITextRecognizer _textRecognizer;
     private readonly IAiClient _aiClient;
     private readonly AiServiceLauncher _aiLauncher;
     private readonly DispatcherQueue? _dispatcherQueue;
@@ -79,12 +80,14 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         AiServiceLauncher? aiLauncher = null,
         AiServiceStateService? aiStateService = null,
         IScopeDeviceFactory? scopeDeviceFactory = null,
-        ICameraSourceFactory? cameraSourceFactory = null)
+        ICameraSourceFactory? cameraSourceFactory = null,
+        ITextRecognizer? textRecognizer = null)
     {
         _dataServices = dataServices;
         _adapterFactory = adapterFactory;
         _scopeDeviceFactory = scopeDeviceFactory ?? new Scope.ScopeDeviceFactory();
         _cameraSourceFactory = cameraSourceFactory ?? new Services.WindowsCameraSourceFactory();
+        _textRecognizer = textRecognizer ?? new Services.WindowsTextRecognizer();
         _dispatcherQueue = dispatcherQueue;
         _aiLauncher = aiLauncher ?? new AiServiceLauncher();
         _aiClient = aiClient ?? new AiServiceClient(

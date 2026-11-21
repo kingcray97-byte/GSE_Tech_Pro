@@ -5678,6 +5678,7 @@
                         <Border Background="{ThemeResource AppSurfaceBrush}" BorderBrush="{ThemeResource AppSubtleBorderBrush}"
                                 BorderThickness="1" CornerRadius="{StaticResource CardCornerRadius}">
                             <Grid>
+                            <Grid Visibility="{x:Bind ViewModel.PhotoListVisibility, Mode=OneWay}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
@@ -5708,6 +5709,63 @@
                                     </ListView.ItemTemplate>
                                 </ListView>
                             </Grid>
+                            <!-- Data-plate OCR (7.3): suggestions only; the technician confirms every value -->
+                            <ScrollViewer Visibility="{x:Bind ViewModel.DataPlatePanelVisibility, Mode=OneWay}" Padding="12,10">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Read data plate" FontWeight="Bold" />
+                                    <TextBlock Text="{x:Bind ViewModel.DataPlateAssetText, Mode=OneWay}" TextWrapping="Wrap"
+                                               FontSize="{StaticResource FontSizeSmall}" />
+                                    <TextBlock Text="{x:Bind ViewModel.DataPlateExistingText, Mode=OneWay}" TextWrapping="Wrap"
+                                               FontSize="{StaticResource FontSizeSmall}" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                    <TextBlock Text="{x:Bind ViewModel.DataPlateRegionText, Mode=OneWay}" TextWrapping="Wrap"
+                                               FontSize="{StaticResource FontSizeSmall}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button Style="{StaticResource ActionTouchButtonStyle}" Content="Read text"
+                                                AutomationProperties.Name="Read text with offline OCR"
+                                                Command="{x:Bind ViewModel.ReadDataPlateTextCommand}" />
+                                        <Button MinHeight="{StaticResource MinTouchSize}" Content="Whole photo"
+                                                AutomationProperties.Name="Clear the box and read the whole photo"
+                                                Command="{x:Bind ViewModel.ClearDataPlateRegionCommand}" />
+                                    </StackPanel>
+                                    <TextBlock Text="{x:Bind ViewModel.DataPlateEngineText, Mode=OneWay}" TextWrapping="Wrap"
+                                               FontSize="{StaticResource FontSizeSmall}" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                    <TextBox Header="Text read from the plate (as read, not corrected)" IsReadOnly="True"
+                                             TextWrapping="Wrap" AcceptsReturn="True" MinHeight="88" FontFamily="Consolas"
+                                             Text="{x:Bind ViewModel.DataPlateRawText, Mode=OneWay}" />
+                                    <TextBox Header="Manufacturer" MinHeight="{StaticResource MinTouchSize}" MaxLength="64"
+                                             Text="{x:Bind ViewModel.DataPlateManufacturer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Text="{x:Bind ViewModel.DataPlateManufacturerHint, Mode=OneWay}" TextWrapping="Wrap"
+                                               FontSize="{StaticResource FontSizeSmall}" Foreground="{ThemeResource AppAccentBrush}" />
+                                    <TextBox Header="Model" MinHeight="{StaticResource MinTouchSize}" MaxLength="64"
+                                             Text="{x:Bind ViewModel.DataPlateModel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Text="{x:Bind ViewModel.DataPlateModelHint, Mode=OneWay}" TextWrapping="Wrap"
+                                               FontSize="{StaticResource FontSizeSmall}" Foreground="{ThemeResource AppAccentBrush}" />
+                                    <TextBox Header="Serial number" MinHeight="{StaticResource MinTouchSize}" MaxLength="64" FontFamily="Consolas"
+                                             Text="{x:Bind ViewModel.DataPlateSerial, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Text="{x:Bind ViewModel.DataPlateSerialHint, Mode=OneWay}" TextWrapping="Wrap"
+                                               FontSize="{StaticResource FontSizeSmall}" Foreground="{ThemeResource AppAccentBrush}" />
+                                    <TextBlock Text="{x:Bind ViewModel.DataPlateSerialWarning, Mode=OneWay}" TextWrapping="Wrap"
+                                               FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold" />
+                                    <TextBox Header="Part numbers (one per line)" MinHeight="88" AcceptsReturn="True" TextWrapping="Wrap"
+                                             FontFamily="Consolas"
+                                             Text="{x:Bind ViewModel.DataPlatePartNumbers, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Text="{x:Bind ViewModel.DataPlatePartNumbersHint, Mode=OneWay}" TextWrapping="Wrap"
+                                               FontSize="{StaticResource FontSizeSmall}" Foreground="{ThemeResource AppAccentBrush}" />
+                                    <TextBox Header="Build date (as on the plate)" MinHeight="{StaticResource MinTouchSize}" MaxLength="64"
+                                             Text="{x:Bind ViewModel.DataPlateDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <CheckBox MinHeight="{StaticResource MinTouchSize}"
+                                              Content="I checked every value against the plate"
+                                              IsChecked="{x:Bind ViewModel.DataPlateConfirmed, Mode=TwoWay}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button Style="{StaticResource ActionTouchButtonStyle}" Content="Save to asset"
+                                                AutomationProperties.Name="Save the confirmed data plate to the asset"
+                                                Command="{x:Bind ViewModel.SaveDataPlateCommand}" />
+                                        <Button MinHeight="{StaticResource MinTouchSize}" Content="Cancel"
+                                                Command="{x:Bind ViewModel.CancelDataPlateReadingCommand}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </ScrollViewer>
+                            </Grid>
                         </Border>
                         <Border Grid.Column="1" Background="{ThemeResource ScopeGridBackgroundBrush}" BorderBrush="{ThemeResource AppSubtleBorderBrush}"
                                 BorderThickness="1" CornerRadius="{StaticResource CardCornerRadius}">
@@ -5721,6 +5779,7 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="{x:Bind ViewModel.CameraPreviewTitle, Mode=OneWay}" FontWeight="SemiBold" VerticalAlignment="Center"
                                                Foreground="{ThemeResource ScopeAxisTextBrush}" TextTrimming="CharacterEllipsis" />
@@ -5730,6 +5789,14 @@
                                         <StackPanel Orientation="Horizontal" Spacing="8">
                                             <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xEDC6;" FontSize="16" />
                                             <TextBlock Text="Annotate" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Column="2" MinHeight="{StaticResource MinTouchSize}" AutomationProperties.Name="Read the data plate in this photo"
+                                            Visibility="{x:Bind ViewModel.DataPlateButtonVisibility, Mode=OneWay}"
+                                            Command="{x:Bind ViewModel.StartDataPlateReadingCommand}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8D2;" FontSize="16" />
+                                            <TextBlock Text="Read data plate" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
                                 </Grid>
@@ -5773,6 +5840,8 @@
                                                 PointerReleased="OnAnnotationPointerReleased"
                                                 PointerCanceled="OnAnnotationPointerReleased"
                                                 PointerCaptureLost="OnAnnotationPointerReleased" />
+                                        <!-- Data-plate OCR box (7.3): drawn only; the annotation canvas takes the pointer -->
+                                        <Canvas x:Name="CameraRegionCanvas" IsHitTestVisible="False" />
                                     </Grid>
                                 </Viewbox>
                             </Grid>

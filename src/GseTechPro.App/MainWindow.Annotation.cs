@@ -25,6 +25,7 @@ public sealed partial class MainWindow
             return;
         _annotationHooked = true;
         ViewModel.AnnotationShapesChanged += (_, lastOnly) => RedrawAnnotations(lastOnly);
+        ViewModel.DataPlateRegionChanged += (_, _) => RedrawDataPlateRegion(); // 7.3
     }
 
     private (double X, double Y) ToFraction(PointerRoutedEventArgs e)
@@ -36,6 +37,8 @@ public sealed partial class MainWindow
 
     private void OnAnnotationPointerPressed(object sender, PointerRoutedEventArgs e)
     {
+        if (OnDataPlateRegionPointerPressed(e))
+            return;
         if (!ViewModel.IsAnnotating)
             return;
         CameraAnnotationCanvas.CapturePointer(e.Pointer);
@@ -46,6 +49,8 @@ public sealed partial class MainWindow
 
     private void OnAnnotationPointerMoved(object sender, PointerRoutedEventArgs e)
     {
+        if (OnDataPlateRegionPointerMoved(e))
+            return;
         if (!ViewModel.IsAnnotating || !e.Pointer.IsInContact)
             return;
         var (x, y) = ToFraction(e);
@@ -55,6 +60,8 @@ public sealed partial class MainWindow
 
     private void OnAnnotationPointerReleased(object sender, PointerRoutedEventArgs e)
     {
+        if (OnDataPlateRegionPointerReleased(e))
+            return;
         if (!ViewModel.IsAnnotating)
             return;
         ViewModel.EndAnnotationStroke();
