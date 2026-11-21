@@ -32,6 +32,9 @@ public sealed partial class MainShellViewModel
     {
         if (IsScopeAutoSetupRunning)
             return;
+        // Auto setup takes its own probe capture, so the same safety rule applies.
+        if (IsScopeCaptureBlockedBySafety())
+            return;
         if (IsScopeCapturing)
             await StopScopeCaptureAsync();
 

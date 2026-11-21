@@ -1,0 +1,85 @@
+[
+  {
+    "id": "topic-charging-starting",
+    "name": "Charging & starting",
+    "subtopics": [
+      {
+        "id": "sub-charging",
+        "name": "Alternator / charging",
+        "test_ids": ["gt-alternator-ripple"]
+      },
+      {
+        "id": "sub-starting",
+        "name": "Starter / cranking",
+        "test_ids": ["gt-starter-current"]
+      }
+    ]
+  },
+  {
+    "id": "topic-sensors",
+    "name": "Sensors",
+    "subtopics": [
+      {
+        "id": "sub-position-sensors",
+        "name": "Crank & cam position",
+        "test_ids": ["gt-crank-sensor"]
+      }
+    ]
+  },
+  {
+    "id": "topic-actuators",
+    "name": "Actuators",
+    "subtopics": [
+      {
+        "id": "sub-injectors",
+        "name": "Fuel injectors",
+        "test_ids": ["gt-injector-current"]
+      },
+      {
+        "id": "sub-solenoids",
+        "name": "Solenoids & valves",
+        "test_ids": ["gt-solenoid-current"]
+      }
+    ]
+  },
+  {
+    "id": "topic-hydraulics-pressure",
+    "name": "Hydraulics & pressure",
+    "subtopics": [
+      {
+        "id": "sub-hydraulic-valves",
+        "name": "Hydraulic valve solenoids",
+        "test_ids": ["gt-solenoid-current"]
+      },
+      {
+        "id": "sub-pressure-transducers",
+        "name": "Pressure transducers",
+        "test_ids": [],
+        "note": "No test yet. Pressure-transducer scaling is planned (PLAN 10D.4) and needs the transducer's published spec, entered by the technician."
+      }
+    ]
+  },
+  {
+    "id": "topic-can-j1939",
+    "name": "CAN / J1939 communications",
+    "subtopics": [
+      {
+        "id": "sub-can-physical",
+        "name": "CAN physical layer",
+        "test_ids": ["gt-can-signal-quality"]
+      }
+    ]
+  },
+  {
+    "id": "topic-gse-heavy-duty",
+    "name": "GSE / Heavy-duty",
+    "subtopics": [
+      {
+        "id": "sub-tug-belt-loaders",
+        "name": "TUG belt loaders (660-28, 600i)",
+        "test_ids": [],
+        "note": "No model-specific scope test yet. Use the general topics above; model-specific tests need values from the TUG manuals (cite manual + page)."
+      }
+    ]
+  }
+]

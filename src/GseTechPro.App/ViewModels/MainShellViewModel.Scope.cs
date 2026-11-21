@@ -432,6 +432,10 @@ public sealed partial class MainShellViewModel
     partial void OnSelectedGuidedTestItemChanged(SelectableGuidedTestItem? value)
     {
         _scopeAutoSetupPinnedPreset = null;
+        // Keep the library browser's highlight in step with the picked test.
+        SelectedScopeGuidedBrowserTest = value is null
+            ? null
+            : ScopeGuidedBrowserTests.FirstOrDefault(t => t.Id == value.Id);
         if (_suppressGuidedTestSelectionSync)
             return;
 
@@ -741,6 +745,8 @@ public sealed partial class MainShellViewModel
             {
                 _suppressGuidedTestSelectionSync = false;
             }
+
+            await RebuildScopeGuidedLibraryAsync();
         }
         catch (Exception ex)
         {
@@ -807,6 +813,7 @@ public sealed partial class MainShellViewModel
             ScopeSafetyWarnings.Clear();
             ScopeSafetyWarningTexts.Clear();
             HasScopeSafetyWarnings = false;
+            ResetScopeSafetyAcknowledgement();
             ReferenceScopeCapture = null;
             ScopeReferenceOverlayStatusText = "Reference overlay: no guided test selected.";
             return;
@@ -848,6 +855,7 @@ public sealed partial class MainShellViewModel
             ScopeSafetyWarningTexts.Add(item.Text);
         }
 
+        ResetScopeSafetyAcknowledgement();
         HasScopeSafetyWarnings = ScopeSafetyWarnings.Count > 0;
 
         // 2. Resolve linked ReferenceWaveform & expectations
@@ -1043,6 +1051,8 @@ public sealed partial class MainShellViewModel
     public async Task StartScopeCaptureAsync()
     {
         if (IsScopeCapturing)
+            return;
+        if (IsScopeCaptureBlockedBySafety())
             return;
 
         // Ensure a scope device is open and connected before arming the capture token

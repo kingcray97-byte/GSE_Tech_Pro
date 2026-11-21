@@ -55,6 +55,8 @@ public sealed partial class MainShellViewModel
     {
         if (IsScopeCapturing || IsScopeRepeatRunning)
             return;
+        if (IsScopeCaptureBlockedBySafety())
+            return;
 
         _scopeActionSavesThisRun = 0;
         if (!IsScopeRepeatEnabled)

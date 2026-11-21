@@ -3623,17 +3623,55 @@
                                 Padding="16,12"
                                 Visibility="{x:Bind ViewModel.ScopeSafetyWarningsVisibility, Mode=OneWay}">
                             <StackPanel Spacing="8">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                <!-- Header: full list until the technician confirms they have read it (button at the top so it is always reachable) -->
+                                <Grid ColumnSpacing="12" Visibility="{x:Bind ViewModel.ScopeSafetyWarningsFullVisibility, Mode=OneWay}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}"
+                                                  Glyph="&#xE7BA;"
+                                                  FontSize="{StaticResource FontSizeSubtitle}"
+                                                  Foreground="{ThemeResource SafetyWarningBannerTextBrush}" />
+                                        <TextBlock Text="MANDATORY SAFETY WARNINGS — READ &amp; FOLLOW BEFORE PROBING OR CAPTURING"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   FontWeight="Bold" TextWrapping="Wrap"
+                                                   Foreground="{ThemeResource SafetyWarningBannerTextBrush}" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Style="{StaticResource ActionTouchButtonStyle}"
+                                            Command="{x:Bind ViewModel.AcknowledgeScopeSafetyWarningsCommand}"
+                                            AutomationProperties.Name="I have read these safety warnings">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE73E;" FontSize="16" />
+                                            <TextBlock Text="I have read these warnings" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+
+                                <!-- Summary after acknowledging: stays on screen, one tap to read them again -->
+                                <Grid ColumnSpacing="12" Visibility="{x:Bind ViewModel.ScopeSafetyWarningsSummaryVisibility, Mode=OneWay}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
                                     <FontIcon FontFamily="{StaticResource IconFontFamily}"
                                               Glyph="&#xE7BA;"
                                               FontSize="{StaticResource FontSizeSubtitle}"
+                                              VerticalAlignment="Center"
                                               Foreground="{ThemeResource SafetyWarningBannerTextBrush}" />
-                                    <TextBlock Text="MANDATORY SAFETY WARNINGS — READ &amp; FOLLOW BEFORE PROBING OR CAPTURING"
-                                               FontSize="{StaticResource FontSizeBody}"
-                                               FontWeight="Bold"
+                                    <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.ScopeSafetyAcknowledgedText, Mode=OneWay}"
+                                               FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
+                                               TextWrapping="Wrap" VerticalAlignment="Center"
                                                Foreground="{ThemeResource SafetyWarningBannerTextBrush}" />
-                                </StackPanel>
+                                    <Button Grid.Column="2" Style="{StaticResource ActionTouchButtonStyle}"
+                                            Command="{x:Bind ViewModel.ShowScopeSafetyWarningsCommand}"
+                                            Content="Show warnings" />
+                                </Grid>
 
+                                <ScrollViewer MaxHeight="520" VerticalScrollBarVisibility="Auto"
+                                              Visibility="{x:Bind ViewModel.ScopeSafetyWarningsFullVisibility, Mode=OneWay}">
                                 <ItemsControl ItemsSource="{x:Bind ViewModel.ScopeSafetyWarnings, Mode=OneWay}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:SafetyWarningItemViewModel">
@@ -3670,6 +3708,7 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+                                </ScrollViewer>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -4938,23 +4977,92 @@
                                             <!-- Guided tests -->
                                             <StackPanel Padding="12,10" Spacing="10"
                                                         Visibility="{x:Bind ViewModel.ScopeGuidedPanelVisibility, Mode=OneWay}">
-                                                <Grid ColumnSpacing="10">
+                                                <!-- Guided test library (10D.2): topic > subtopic > test, or search every test -->
+                                                <Grid ColumnSpacing="10" RowSpacing="6">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="1.4*" />
                                                         <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
-                                                    <ComboBox HorizontalAlignment="Stretch"
-                                                              MinHeight="{StaticResource MinTouchSize}"
-                                                              Header="Guided scope test"
-                                                              PlaceholderText="Select a guided scope test…"
-                                                              ItemsSource="{x:Bind ViewModel.GuidedScopeTests, Mode=OneWay}"
-                                                              SelectedItem="{x:Bind ViewModel.SelectedGuidedTestItem, Mode=TwoWay}" />
-                                                    <Button Grid.Column="1"
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+                                                    <TextBox Grid.Row="0" Grid.ColumnSpan="2" MinHeight="{StaticResource MinTouchSize}"
+                                                             PlaceholderText="Search all guided tests (e.g. injector, CAN, ripple)"
+                                                             AutomationProperties.Name="Search guided tests"
+                                                             Text="{x:Bind ViewModel.ScopeGuidedSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                    <TextBlock Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" VerticalAlignment="Center"
+                                                               TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                                               Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                               Text="1 Pick a test  ›  2 Read the safety warnings  ›  3 Connect as the procedure says  ›  4 Run guided test &amp; compare" />
+                                                    <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4">
+                                                        <TextBlock Text="Topic" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <ListView Height="176" SelectionMode="Single"
+                                                                  BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="1"
+                                                                  CornerRadius="4"
+                                                                  AutomationProperties.Name="Guided test topics"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeGuidedTopics, Mode=OneWay}"
+                                                                  SelectedItem="{x:Bind ViewModel.SelectedScopeGuidedTopic, Mode=TwoWay}">
+                                                            <ListView.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:GuidedTopicItem">
+                                                                    <TextBlock Text="{x:Bind DisplayLabel}" TextWrapping="Wrap"
+                                                                               VerticalAlignment="Center" MinHeight="{StaticResource MinTouchSize}"
+                                                                               Padding="0,12,0,0" />
+                                                                </DataTemplate>
+                                                            </ListView.ItemTemplate>
+                                                        </ListView>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
+                                                        <TextBlock Text="Subtopic" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <ListView Height="176" SelectionMode="Single"
+                                                                  BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="1"
+                                                                  CornerRadius="4"
+                                                                  AutomationProperties.Name="Guided test subtopics"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeGuidedSubtopics, Mode=OneWay}"
+                                                                  SelectedItem="{x:Bind ViewModel.SelectedScopeGuidedSubtopic, Mode=TwoWay}">
+                                                            <ListView.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:GuidedSubtopicItem">
+                                                                    <TextBlock Text="{x:Bind DisplayLabel}" TextWrapping="Wrap"
+                                                                               VerticalAlignment="Center" MinHeight="{StaticResource MinTouchSize}"
+                                                                               Padding="0,12,0,0" />
+                                                                </DataTemplate>
+                                                            </ListView.ItemTemplate>
+                                                        </ListView>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Row="1" Grid.Column="2" Spacing="4">
+                                                        <TextBlock Text="{x:Bind ViewModel.ScopeGuidedTestsHeader, Mode=OneWay}" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <ListView Height="176" SelectionMode="Single"
+                                                                  BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="1"
+                                                                  CornerRadius="4"
+                                                                  AutomationProperties.Name="Guided tests"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeGuidedBrowserTests, Mode=OneWay}"
+                                                                  SelectedItem="{x:Bind ViewModel.SelectedScopeGuidedBrowserTest, Mode=TwoWay}">
+                                                            <ListView.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:SelectableGuidedTestItem">
+                                                                    <TextBlock Text="{x:Bind DisplayLabel}" TextWrapping="Wrap"
+                                                                               VerticalAlignment="Center" MinHeight="{StaticResource MinTouchSize}"
+                                                                               Padding="0,12,0,0" />
+                                                                </DataTemplate>
+                                                            </ListView.ItemTemplate>
+                                                        </ListView>
+                                                    </StackPanel>
+                                                    <Button Grid.Row="1" Grid.Column="3"
                                                             Style="{StaticResource ActionTouchButtonStyle}"
                                                             VerticalAlignment="Bottom"
                                                             Command="{x:Bind ViewModel.RunGuidedScopeTestCommand}"
                                                             Content="Run guided test &amp; compare" />
+                                                    <TextBlock Grid.Row="2" Grid.ColumnSpan="4" TextWrapping="Wrap"
+                                                               FontSize="{StaticResource FontSizeSmall}" FontStyle="Italic"
+                                                               Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                               Text="{x:Bind ViewModel.ScopeGuidedSubtopicNote, Mode=OneWay}"
+                                                               Visibility="{x:Bind ViewModel.ScopeGuidedSubtopicNoteVisibility, Mode=OneWay}" />
                                                 </Grid>
+                                                <TextBlock TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                           Text="{x:Bind ViewModel.ScopeGuidedLibraryStatusText, Mode=OneWay}" />
                                                 <!-- Guided Test Recipe & Reference Citation Card -->
                                                 <Border Background="{ThemeResource AppSurfaceBrush}"
                                                         BorderBrush="{ThemeResource AppSubtleBorderBrush}"

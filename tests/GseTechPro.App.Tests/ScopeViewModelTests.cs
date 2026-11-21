@@ -133,7 +133,10 @@ public sealed class ScopeViewModelTests
 
             foreach (var testId in testIds)
             {
-                await vm.RunGuidedScopeTestAsync(testId);
+                // Safety warnings must be read before the guided capture (rule 6).
+                await vm.SelectGuidedScopeTestAsync(testId);
+                vm.AcknowledgeScopeSafetyWarnings();
+                await vm.RunGuidedScopeTestAsync();
 
                 Assert.NotNull(vm.LastScopeCapture);
                 Assert.True(vm.LastScopeCapture!.IsSimulated);
@@ -198,7 +201,9 @@ public sealed class ScopeViewModelTests
             Assert.NotNull(vm.ActiveWorkOrder);
 
             // Run Crank Sensor guided test on the simulator
-            await vm.RunGuidedScopeTestAsync("gt-crank-sensor");
+            await vm.SelectGuidedScopeTestAsync("gt-crank-sensor");
+            vm.AcknowledgeScopeSafetyWarnings();
+            await vm.RunGuidedScopeTestAsync();
             Assert.NotNull(vm.LastScopeCapture);
 
             // (c) Save capture to work order -> produces Waveform with scope_device code "simulator"
@@ -340,7 +345,9 @@ public sealed class ScopeViewModelTests
             await dataServices.GuidedTests.AddAsync(customTest);
 
             await vm.ReloadScopeCatalogAsync();
-            await vm.RunGuidedScopeTestAsync("gt-custom-crank");
+            await vm.SelectGuidedScopeTestAsync("gt-custom-crank");
+            vm.AcknowledgeScopeSafetyWarnings();
+            await vm.RunGuidedScopeTestAsync();
 
             // Reference .wfm overlay loaded and decimated
             Assert.True(vm.HasReferenceScopeCapture);
