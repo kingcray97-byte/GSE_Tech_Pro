@@ -11,6 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="GseTechPro.Scope.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\GseTechPro.Core\GseTechPro.Core.csproj" />
   </ItemGroup>
 

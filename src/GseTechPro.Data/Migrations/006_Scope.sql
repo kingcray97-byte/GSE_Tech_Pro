@@ -61,8 +61,12 @@ CREATE INDEX idx_guided_tests_model ON guided_tests(equipment_model_id, system);
 INSERT INTO guided_tests (
   id, name, equipment_model_id, system, description, procedure, safety_warning_ids,
   reference_waveform_id, scope_setup_json, created_at, updated_at)
+-- Versions 1-5 had no FK on guided_tests.reference_waveform_id. Foreign keys are ON in this transaction
+-- (SqliteConnectionFactory), so a link to a missing reference is cleared instead of aborting the upgrade.
+-- (Pre-release fix, Phase 6 review: an already-applied version 6 is unaffected.)
 SELECT id, name, equipment_model_id, system, description, procedure, safety_warning_ids,
-       reference_waveform_id, NULL, created_at, updated_at
+       CASE WHEN reference_waveform_id IN (SELECT id FROM reference_waveforms) THEN reference_waveform_id END,
+       NULL, created_at, updated_at
 FROM scope_v6_guided_tests_backup;
 
 CREATE TABLE waveforms (

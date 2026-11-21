@@ -561,7 +561,7 @@ CREATE TABLE reference_waveforms (        -- known-good, from real captures/manu
   equipment_model_id TEXT REFERENCES equipment_models(id),
   system TEXT, test_name TEXT,
   expected_json TEXT,                     -- ReferenceExpectations: named measurements, nominal±tolerance or min/max, unit, is_todo (ADR-011 §5)
-  data_path TEXT NOT NULL,                -- optional known-good .wfm sample to overlay ('' = none)
+  data_path TEXT,                         -- optional known-good .wfm sample to overlay; NULL = none yet (migration 006, ADR-011)
   source TEXT NOT NULL,                   -- 'manual'|'real_capture' (never synthesized)
   citation TEXT,
   created_at TEXT NOT NULL, updated_at TEXT NOT NULL

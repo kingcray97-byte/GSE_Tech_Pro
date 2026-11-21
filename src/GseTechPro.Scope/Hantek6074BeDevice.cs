@@ -356,11 +356,13 @@ public sealed class Hantek6074BeDevice : IScopeDevice
                 }
             }
 
+            // Same zero level the samples are converted with (calibrated per channel and V/div), so the trigger
+            // threshold lands where the displayed voltage says it does.
             ushort trigPos = ComputeTriggerLevelCounts(
                 request.TriggerLevelVolts,
                 channelVoltDivs[trigChannelZeroBased],
                 channelProbeScales[trigChannelZeroBased],
-                DefaultLeverPos);
+                GetCalibratedLeverPos(trigChannelZeroBased, relay.nCHVoltDIV[trigChannelZeroBased]));
 
             var control = new HantekControlData
             {
@@ -381,6 +383,9 @@ public sealed class Hantek6074BeDevice : IScopeDevice
             };
 
             _ = NativeMethods.dsoHTSetSampleRate(_deviceIndex, YtNormal, ref relay, ref control);
+            // The hardware rate follows the time/div step, not the requested rate (SDK_HTHardDLL-EN, Table 1).
+            // Stamp the capture with what the device reports so frequency/timing measurements are right.
+            int actualSampleRateHz = ResolveSampleRateHz(TryGetDeviceSampleRate(_deviceIndex), request.SampleRateHz);
             _ = NativeMethods.dsoHTSetCHAndTrigger(_deviceIndex, ref relay, timeDivIndex);
             _ = NativeMethods.dsoHTSetRamAndTrigerControl(_deviceIndex, timeDivIndex, control.nCHSet, trigChannelZeroBased, 0);
             _ = NativeMethods.dsoHTSetHTriggerLength(_deviceIndex, ref control, MaxChannelCount);
@@ -407,7 +412,7 @@ public sealed class Hantek6074BeDevice : IScopeDevice
             // Poll dsoHTGetState until bit 1 (0x02 = collection finished) is set or timeout
             bool triggered = false;
             bool finished = false;
-            var deadline = DateTime.UtcNow.AddSeconds(2.0);
+            var deadline = DateTime.UtcNow + CaptureTimeout(request.TimebaseSecondsPerDivision);
 
             while (DateTime.UtcNow < deadline && !_stopRequested)
             {
@@ -475,7 +480,7 @@ public sealed class Hantek6074BeDevice : IScopeDevice
             var capture = new ScopeCapture
             {
                 SampleCount = requestedSampleCount,
-                SampleRateHz = request.SampleRateHz,
+                SampleRateHz = actualSampleRateHz,
                 TimebaseSecondsPerDivision = request.TimebaseSecondsPerDivision,
                 CapturedAt = Clock.UtcNow,
                 IsSimulated = false,
@@ -615,6 +620,41 @@ public sealed class Hantek6074BeDevice : IScopeDevice
         return 1.0;
     }
 
+    /// <summary>
+    /// Sample rate to stamp on a capture: the rate the device reports after <c>dsoHTSetSampleRate</c>, or the
+    /// requested rate when the SDK gives nothing usable (old DLL without the export, zero, NaN).
+    /// </summary>
+    internal static int ResolveSampleRateHz(double? deviceReportedHz, int requestedHz)
+    {
+        if (deviceReportedHz is double hz && double.IsFinite(hz) && hz >= 1.0 && hz <= int.MaxValue)
+            return (int)Math.Round(hz, MidpointRounding.AwayFromZero);
+        return requestedHz;
+    }
+
+    /// <summary>
+    /// How long to wait for a block capture: one 10-division sweep, twice over, plus 1 s of USB/trigger margin,
+    /// never less than the old 2 s and capped at 60 s. A fixed 2 s cut off slow timebases (1 s/div = 10 s sweep).
+    /// </summary>
+    internal static TimeSpan CaptureTimeout(double timebaseSecondsPerDivision)
+    {
+        double sweep = double.IsFinite(timebaseSecondsPerDivision) && timebaseSecondsPerDivision > 0
+            ? timebaseSecondsPerDivision * 10.0
+            : 0.0;
+        return TimeSpan.FromSeconds(Math.Clamp(sweep * 2.0 + 1.0, 2.0, 60.0));
+    }
+
+    private static double? TryGetDeviceSampleRate(ushort deviceIndex)
+    {
+        try
+        {
+            return NativeMethods.dsoGetSampleRate(deviceIndex);
+        }
+        catch (Exception ex) when (ex is EntryPointNotFoundException or DllNotFoundException or SEHException)
+        {
+            return null;
+        }
+    }
+
     private static ushort SelectVoltDivIndex(double bncFullScaleRangeVolts)
     {
         // Full scale across 8 vertical divisions = 8 * VoltDiv
@@ -715,6 +755,10 @@ public sealed class Hantek6074BeDevice : IScopeDevice
 
         [DllImport(HardDllName, CallingConvention = CallingConvention.Winapi, ExactSpelling = true)]
         public static extern ushort dsoGetFPGAVersion(ushort nDeviceIndex);
+
+        // HTHardDll.h: DLL_API FLOAT WINAPI dsoGetSampleRate(WORD DeviceIndex);
+        [DllImport(HardDllName, CallingConvention = CallingConvention.Winapi, ExactSpelling = true)]
+        public static extern float dsoGetSampleRate(ushort deviceIndex);
 
         [DllImport(HardDllName, CallingConvention = CallingConvention.Winapi, ExactSpelling = true)]
         public static extern ushort dsoHTADCCHModGain(ushort nDeviceIndex, ushort nCHMod);
