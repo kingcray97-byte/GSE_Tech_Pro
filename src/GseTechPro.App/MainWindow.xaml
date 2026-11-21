@@ -4058,6 +4058,116 @@
                                             </Flyout>
                                         </Button.Flyout>
                                     </Button>
+                                    <!-- DeepMeasure (10D.1): every cycle measured on its own, with statistics -->
+                                    <Button Grid.Row="5" Grid.Column="1" Style="{StaticResource ScopeToolTileButtonStyle}"
+                                            AutomationProperties.Name="DeepMeasure">
+                                        <StackPanel Spacing="3">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE9D2;" FontSize="20" />
+                                            <TextBlock Text="DeepMeasure" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Button.Flyout>
+                                            <Flyout Placement="RightEdgeAlignedBottom">
+                                                <StackPanel Width="640" Spacing="8">
+                                                    <TextBlock Text="DeepMeasure: every cycle" FontWeight="Bold" />
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <ToggleSwitch Header="On" MinHeight="{StaticResource MinTouchSize}" MinWidth="0"
+                                                                      IsOn="{x:Bind ViewModel.IsScopeDeepMeasureEnabled, Mode=TwoWay}" />
+                                                        <ComboBox MinWidth="120" MinHeight="{StaticResource MinTouchSize}"
+                                                                  Header="Channel (1 = A … 4 = D)"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeDeepMeasureChannels}"
+                                                                  SelectedItem="{x:Bind ViewModel.ScopeDeepMeasureChannel, Mode=TwoWay}" />
+                                                        <ComboBox MinWidth="160" MinHeight="{StaticResource MinTouchSize}"
+                                                                  Header="Sort by"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeDeepMeasureSortOptions}"
+                                                                  SelectedItem="{x:Bind ViewModel.SelectedScopeDeepMeasureSort, Mode=TwoWay}" />
+                                                        <CheckBox MinHeight="{StaticResource MinTouchSize}" VerticalAlignment="Bottom"
+                                                                  Content="Highest first"
+                                                                  IsChecked="{x:Bind ViewModel.IsScopeDeepMeasureSortDescending, Mode=TwoWay}" />
+                                                    </StackPanel>
+                                                    <TextBlock Text="{x:Bind ViewModel.ScopeDeepMeasureStatusText, Mode=OneWay}"
+                                                               TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                                               Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                    <!-- Statistics -->
+                                                    <Grid ColumnSpacing="8" Padding="4,0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="100" /><ColumnDefinition Width="80" /><ColumnDefinition Width="80" />
+                                                            <ColumnDefinition Width="80" /><ColumnDefinition Width="80" /><ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="Measurement" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="1" Text="Min" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="2" Text="Max" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="3" Text="Mean" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="4" Text="σ" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="5" Text="Cycles" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                    </Grid>
+                                                    <ItemsControl ItemsSource="{x:Bind ViewModel.ScopeDeepMeasureStatRows, Mode=OneWay}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:DeepMeasureStatRowViewModel">
+                                                                <Grid ColumnSpacing="8" Padding="4,1">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="100" /><ColumnDefinition Width="80" /><ColumnDefinition Width="80" />
+                                                                        <ColumnDefinition Width="80" /><ColumnDefinition Width="80" /><ColumnDefinition Width="*" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <TextBlock Grid.Column="0" Text="{x:Bind Name}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                    <TextBlock Grid.Column="1" Text="{x:Bind Minimum}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                    <TextBlock Grid.Column="2" Text="{x:Bind Maximum}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                    <TextBlock Grid.Column="3" Text="{x:Bind Mean}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                    <TextBlock Grid.Column="4" Text="{x:Bind StandardDeviation}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                    <TextBlock Grid.Column="5" Text="{x:Bind Extremes}" FontSize="{StaticResource FontSizeSmall}"
+                                                                               Foreground="{ThemeResource AppTextSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                    <!-- Per-cycle table (virtualized) -->
+                                                    <Grid ColumnSpacing="6" Padding="12,4,12,0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="40" /><ColumnDefinition Width="64" /><ColumnDefinition Width="64" />
+                                                            <ColumnDefinition Width="64" /><ColumnDefinition Width="52" /><ColumnDefinition Width="60" />
+                                                            <ColumnDefinition Width="60" /><ColumnDefinition Width="60" /><ColumnDefinition Width="60" />
+                                                            <ColumnDefinition Width="60" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="#" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="1" Text="Start" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="2" Text="Period" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="3" Text="Freq" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="4" Text="Duty" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="5" Text="Max" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="6" Text="Min" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="7" Text="Pk-pk" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="8" Text="Rise" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="9" Text="Fall" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                    </Grid>
+                                                    <ListView MaxHeight="320" SelectionMode="None"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeDeepMeasureRows, Mode=OneWay}">
+                                                        <ListView.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:DeepMeasureRowViewModel">
+                                                                <Grid ColumnSpacing="6">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="40" /><ColumnDefinition Width="64" /><ColumnDefinition Width="64" />
+                                                                        <ColumnDefinition Width="64" /><ColumnDefinition Width="52" /><ColumnDefinition Width="60" />
+                                                                        <ColumnDefinition Width="60" /><ColumnDefinition Width="60" /><ColumnDefinition Width="60" />
+                                                                        <ColumnDefinition Width="60" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <TextBlock Grid.Column="0" Text="{x:Bind Number}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                    <TextBlock Grid.Column="1" Text="{x:Bind Start}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                    <TextBlock Grid.Column="2" Text="{x:Bind Period}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                    <TextBlock Grid.Column="3" Text="{x:Bind Frequency}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                    <TextBlock Grid.Column="4" Text="{x:Bind Duty}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                    <TextBlock Grid.Column="5" Text="{x:Bind Maximum}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                    <TextBlock Grid.Column="6" Text="{x:Bind Minimum}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                    <TextBlock Grid.Column="7" Text="{x:Bind PeakToPeak}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                    <TextBlock Grid.Column="8" Text="{x:Bind Rise}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                    <TextBlock Grid.Column="9" Text="{x:Bind Fall}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ListView.ItemTemplate>
+                                                    </ListView>
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
                                     <!-- Mask (10D.1): pass/fail against a known-good capture -->
                                     <Button Grid.Row="4" Grid.Column="1" Style="{StaticResource ScopeToolTileButtonStyle}"
                                             AutomationProperties.Name="Mask">
