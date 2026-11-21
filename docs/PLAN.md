@@ -28,9 +28,9 @@
 | 7 | Vision & voice, ECOM/CANCapture | ⬜ |
 | 8 | Full installer (signing, silent multi-tablet, upgrades, updates) | ✅ Done |
 | 9 | Optional shop-server sync | ⬜ |
-| 10 | Owner change request 2026-11-19: llama.cpp + cloud route, Shop Foreman Pro look, GSE components, PicoScope-style scope | ✅ 10A done except real-tablet acceptance; 10B.1–10B.3 done (owner screenshot sign-off open); 10C done (10C.1–10C.5); 10D next |
+| 10 | Owner change request 2026-11-19: llama.cpp + cloud route, Shop Foreman Pro look, GSE components, PicoScope-style scope | 🟡 Built: 10A done except real-tablet acceptance; 10B.1–10B.3 done (owner screenshot sign-off open); 10C done (10C.1–10C.5); 10D done (10D.1–10D.4) except in-app checks of 10D.1c–i, 10D.3a–c and 10D.4, and real hardware |
 
-## Phase 10 — Owner change request (2026-11-19) ⬜ Next
+## Phase 10 — Owner change request (2026-11-19) 🟡 Built (checks open)
 
 Four workstreams. 10A and 10B can run in parallel (different owners and folders). 10C and 10D build on the 10B shell. Each task is one small change that builds and passes tests (rule 9).
 
