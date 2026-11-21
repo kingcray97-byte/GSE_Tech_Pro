@@ -330,7 +330,9 @@ public sealed class SimulatedScopeDevice : IScopeDevice
         {
             double t = i * dt;
             double noise = (rng.NextDouble() - 0.5) * 2.0; // [-1, 1]
-            double baseVolts = SamplePresetAtTime(preset, t, noise);
+            double baseVolts = preset == SimulatedSignalPreset.CanBusFrames
+                ? SampleCanFrames(t, config.Channel, noise)
+                : SamplePresetAtTime(preset, t, noise);
             samples[i] = baseVolts * probeScale;
         }
 
@@ -512,6 +514,46 @@ public sealed class SimulatedScopeDevice : IScopeDevice
 
         return Math.Clamp(v + unitNoise * 0.0005, vDominant, vRecessive);
     }
+
+    /// <summary>
+    /// Simulated J1939 bus traffic (values are made up for the simulator, not real ECU data): EEC1 from SA 0x00, CCVS
+    /// and ET1, each followed by 24 recessive bit times, repeating. Bits come from <see cref="CanSerialDecoder.EncodeFrame"/>
+    /// so the stuffing and CRC are real. CAN-H (CH1) and CAN-L (CH2) at ISO 11898-2 nominal levels with short edges;
+    /// other channels idle at 2.5 V.
+    /// </summary>
+    private static double SampleCanFrames(double t, int channel, double unitNoise)
+    {
+        const double bitTime = 4e-6; // 250 kbit/s
+        var bits = SimulatedCanBits.Value;
+        double pos = t / bitTime;
+        int k = (int)pos % bits.Length;
+        double frac = pos - Math.Floor(pos);
+        bool dominant = !bits[k];
+        bool prevDominant = !bits[(k + bits.Length - 1) % bits.Length];
+        // 5 % of a bit for the edge (0.2 µs).
+        double d = dominant == prevDominant ? (dominant ? 1 : 0)
+            : frac < 0.05 ? (dominant ? frac / 0.05 : 1 - frac / 0.05) : (dominant ? 1 : 0);
+        double v = channel switch
+        {
+            1 => 2.5 + 1.0 * d,
+            2 => 2.5 - 1.0 * d,
+            _ => 2.5,
+        };
+        return v + unitNoise * 0.01;
+    }
+
+    private static readonly Lazy<bool[]> SimulatedCanBits = new(() =>
+    {
+        var all = new List<bool>();
+        void Idle(int n) { for (int i = 0; i < n; i++) all.Add(true); }
+        Idle(24);
+        all.AddRange(CanSerialDecoder.EncodeFrame(0x0CF00400, true, new byte[] { 0xF0, 0x7D, 0x7D, 0xE0, 0x2E, 0x00, 0xF0, 0x7D }));
+        Idle(24);
+        all.AddRange(CanSerialDecoder.EncodeFrame(0x18FEF100, true, new byte[] { 0xF7, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF }));
+        Idle(24);
+        all.AddRange(CanSerialDecoder.EncodeFrame(0x18FEEE00, true, new byte[] { 0x7D, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }));
+        return all.ToArray();
+    });
 
     /// <summary>
     /// Solenoid current: solenoid current ramp + hold repeating at 40 Hz (25 ms period),

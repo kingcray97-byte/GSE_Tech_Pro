@@ -3926,6 +3926,7 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
                                     <Button Grid.Row="0" Grid.Column="0" Style="{StaticResource ScopeToolTileButtonStyle}" Command="{x:Bind ViewModel.ScopeZoomInCommand}"
                                             AutomationProperties.Name="Zoom in">
@@ -4161,6 +4162,91 @@
                                                                     <TextBlock Grid.Column="8" Text="{x:Bind Rise}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
                                                                     <TextBlock Grid.Column="9" Text="{x:Bind Fall}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
                                                                 </Grid>
+                                                            </DataTemplate>
+                                                        </ListView.ItemTemplate>
+                                                    </ListView>
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                    <!-- Serial decoding (10D.1): CAN frames from the trace, labelled with J1939 -->
+                                    <Button Grid.Row="6" Grid.Column="0" Style="{StaticResource ScopeToolTileButtonStyle}"
+                                            AutomationProperties.Name="Serial decoding">
+                                        <StackPanel Spacing="3">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8F1;" FontSize="20" />
+                                            <TextBlock Text="Serial" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Button.Flyout>
+                                            <Flyout Placement="RightEdgeAlignedBottom">
+                                                <StackPanel Width="720" Spacing="8">
+                                                    <TextBlock Text="Serial decoding: CAN (J1939)" FontWeight="Bold" />
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <ToggleSwitch Header="On" MinHeight="{StaticResource MinTouchSize}" MinWidth="0"
+                                                                      IsOn="{x:Bind ViewModel.IsScopeSerialEnabled, Mode=TwoWay}" />
+                                                        <ComboBox MinWidth="220" MinHeight="{StaticResource MinTouchSize}" Header="Signal"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeSerialSources}"
+                                                                  SelectedItem="{x:Bind ViewModel.SelectedScopeSerialSource, Mode=TwoWay}" />
+                                                        <ComboBox MinWidth="200" MinHeight="{StaticResource MinTouchSize}" Header="Bit rate"
+                                                                  PlaceholderText="Choose from the network docs"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeSerialBitRates}"
+                                                                  SelectedItem="{x:Bind ViewModel.SelectedScopeSerialBitRate, Mode=TwoWay}" />
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <ComboBox MinWidth="200" MinHeight="{StaticResource MinTouchSize}"
+                                                                  Header="{x:Bind ViewModel.ScopeSerialChannelHeader, Mode=OneWay}"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeSerialChannels}"
+                                                                  SelectedItem="{x:Bind ViewModel.ScopeSerialChannel, Mode=TwoWay}" />
+                                                        <ComboBox MinWidth="160" MinHeight="{StaticResource MinTouchSize}" Header="CAN-L channel"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeSerialChannels}"
+                                                                  SelectedItem="{x:Bind ViewModel.ScopeSerialSecondChannel, Mode=TwoWay}"
+                                                                  Visibility="{x:Bind ViewModel.ScopeSerialSecondChannelVisibility, Mode=OneWay}" />
+                                                        <Button Style="{StaticResource ActionTouchButtonStyle}" VerticalAlignment="Bottom"
+                                                                Command="{x:Bind ViewModel.SetUpScopeForCanCommand}" Content="Set up scope for CAN" />
+                                                        <CheckBox MinHeight="{StaticResource MinTouchSize}" VerticalAlignment="Bottom" Content="Problems only"
+                                                                  IsChecked="{x:Bind ViewModel.ScopeSerialErrorsOnly, Mode=TwoWay}" />
+                                                    </StackPanel>
+                                                    <TextBlock Text="{x:Bind ViewModel.ScopeSerialStatusText, Mode=OneWay}"
+                                                               TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                                               Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                    <Grid ColumnSpacing="6" Padding="12,4,12,0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="36" /><ColumnDefinition Width="72" /><ColumnDefinition Width="80" />
+                                                            <ColumnDefinition Width="200" /><ColumnDefinition Width="28" /><ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="110" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="#" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="1" Text="Time" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="2" Text="ID" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="3" Text="J1939" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="4" Text="DLC" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="5" Text="Data" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                        <TextBlock Grid.Column="6" Text="Status" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                    </Grid>
+                                                    <ListView MaxHeight="340" SelectionMode="None"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeSerialRows, Mode=OneWay}">
+                                                        <ListView.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:ScopeSerialFrameRowViewModel">
+                                                                <StackPanel Padding="0,2">
+                                                                    <Grid ColumnSpacing="6">
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="36" /><ColumnDefinition Width="72" /><ColumnDefinition Width="80" />
+                                                                            <ColumnDefinition Width="200" /><ColumnDefinition Width="28" /><ColumnDefinition Width="*" />
+                                                                            <ColumnDefinition Width="110" />
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <TextBlock Grid.Column="0" Text="{x:Bind Number}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                        <TextBlock Grid.Column="1" Text="{x:Bind Time}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                        <TextBlock Grid.Column="2" Text="{x:Bind Identifier}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                        <TextBlock Grid.Column="3" Text="{x:Bind J1939}" FontSize="{StaticResource FontSizeSmall}" TextTrimming="CharacterEllipsis" />
+                                                                        <TextBlock Grid.Column="4" Text="{x:Bind Dlc}" FontSize="{StaticResource FontSizeSmall}" />
+                                                                        <TextBlock Grid.Column="5" Text="{x:Bind Data}" FontFamily="{StaticResource MonoFontFamily}" FontSize="{StaticResource FontSizeSmall}" TextTrimming="CharacterEllipsis" />
+                                                                        <TextBlock Grid.Column="6" Text="{x:Bind Status}" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap"
+                                                                                   FontWeight="{x:Bind StatusWeight}" />
+                                                                    </Grid>
+                                                                    <TextBlock Text="{x:Bind Decoded}" Margin="42,0,0,0" FontSize="{StaticResource FontSizeSmall}"
+                                                                               Foreground="{ThemeResource AppTextSecondaryBrush}" TextWrapping="Wrap"
+                                                                               Visibility="{x:Bind DecodedVisibility}" />
+                                                                </StackPanel>
                                                             </DataTemplate>
                                                         </ListView.ItemTemplate>
                                                     </ListView>

@@ -24,6 +24,9 @@ public enum SimulatedSignalPreset
     CanSignalQuality,
     /// <summary>Solenoid current: solenoid current ramp + hold, peak ~1.5 V (~15 A @ 10 A/V) on CH2.</summary>
     SolenoidCurrent,
+    /// <summary>CAN frames: simulated J1939 traffic at 250 kbit/s, CAN-H on CH1 and CAN-L on CH2 (ISO 11898-2 nominal
+    /// 2.5 V recessive, 3.5 V / 1.5 V dominant), for serial decoding.</summary>
+    CanBusFrames,
 }
 
 /// <summary>
@@ -41,6 +44,7 @@ public static class SimulatedScopePresets
         SimulatedSignalPreset.StarterCurrent,
         SimulatedSignalPreset.CanSignalQuality,
         SimulatedSignalPreset.SolenoidCurrent,
+        SimulatedSignalPreset.CanBusFrames,
     ];
 
     /// <summary>Human-readable label for UI preset pickers.</summary>
@@ -54,6 +58,7 @@ public static class SimulatedScopePresets
         SimulatedSignalPreset.StarterCurrent => "Starter current",
         SimulatedSignalPreset.CanSignalQuality => "CAN signal quality",
         SimulatedSignalPreset.SolenoidCurrent => "Solenoid current",
+        SimulatedSignalPreset.CanBusFrames => "CAN frames (J1939, 250 kbit/s)",
         _ => preset.ToString(),
     };
 
@@ -160,6 +165,20 @@ public static class SimulatedScopePresets
             TriggerMode = ScopeTriggerMode.Rising,
             TriggerChannel = 1,
             TriggerLevelVolts = 2.5,
+        },
+
+        SimulatedSignalPreset.CanBusFrames => new ScopeCaptureRequest
+        {
+            Channels =
+            [
+                new ScopeChannelConfig { Channel = 1, Coupling = ScopeCoupling.Dc, ProbeMultiplier = 1.0, VoltageRangeVolts = 5.0 },
+                new ScopeChannelConfig { Channel = 2, Coupling = ScopeCoupling.Dc, ProbeMultiplier = 1.0, VoltageRangeVolts = 5.0 },
+            ],
+            TimebaseSecondsPerDivision = 0.0005, // 500 µs/div: several frames
+            SampleRateHz = 5_000_000,            // 5 MS/s = 20 samples per bit at 250 kbit/s
+            TriggerMode = ScopeTriggerMode.None,
+            TriggerChannel = 1,
+            TriggerLevelVolts = 3.0,
         },
 
         SimulatedSignalPreset.SolenoidCurrent => new ScopeCaptureRequest
@@ -295,6 +314,10 @@ public static class SimulatedScopePresets
             return null;
 
         var primary = request.Channels[0];
+
+        // Serial decoding setup (500 µs/div at 5 MS/s): bus traffic rather than one CAN bit pattern.
+        if (Math.Abs(request.TimebaseSecondsPerDivision - 0.0005) < 1e-7 && request.SampleRateHz == 5_000_000)
+            return SimulatedSignalPreset.CanBusFrames;
 
         if (request.SampleRateHz >= 10_000_000 || Math.Abs(request.TimebaseSecondsPerDivision - 0.00005) < 1e-7)
             return SimulatedSignalPreset.CanSignalQuality;
