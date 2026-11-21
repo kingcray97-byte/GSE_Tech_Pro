@@ -165,6 +165,21 @@ def categories_for_topic(topic: str) -> tuple[str, ...]:
     return tuple(sorted(found, key=lambda c: _SEVERITY.get(c, len(_SEVERITY))))
 
 
+def _breadth_first(rows: list) -> list:
+    """One warning per category first (in severity order), then the rest. The result is cut to a character budget,
+    so without this a category with several warnings (two hydraulic-pressure warnings since 10C.4) could push a
+    whole category such as lockout/tagout out of the answer."""
+    rounds: dict[str, list] = {}
+    for r in rows:
+        rounds.setdefault(r["category"], []).append(r)
+    out: list = []
+    depth = 0
+    while len(out) < len(rows):
+        out.extend(group[depth] for group in rounds.values() if depth < len(group))
+        depth += 1
+    return out
+
+
 def _get_safety_warnings(ctx: ToolContext, args: BaseModel) -> ToolResult:
     assert isinstance(args, GetSafetyWarningsArgs)
     conn = _open(ctx)
@@ -182,7 +197,7 @@ def _get_safety_warnings(ctx: ToolContext, args: BaseModel) -> ToolResult:
         conn.close()
     if not rows:
         return ToolResult(True, f"No safety warnings are stored for '{args.topic}'. Advise caution and the manual.")
-    rows = sorted(rows, key=lambda r: (_SEVERITY.get(r["category"], len(_SEVERITY)), r["id"]))
+    rows = _breadth_first(sorted(rows, key=lambda r: (_SEVERITY.get(r["category"], len(_SEVERITY)), r["id"])))
     lines = [f"[{i}] ({r['category']}) {r['text']} Source: {r['source_citation'] or 'TODO: needs spec from manual'}"
              for i, r in enumerate(rows, start=1)]
     budget = MAX_TOOL_RESULT_CHARS - _HEADER_BUDGET

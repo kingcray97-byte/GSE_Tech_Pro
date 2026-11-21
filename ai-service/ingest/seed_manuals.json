@@ -1,0 +1,223 @@
+{
+  "description": "Phase 10C.5 seed list: GSE component manuals from the owner's library (paths are relative to the library root, on the dev machine 'Reference/GSE diagnostic apps'). Each manual has a self-authored acceptance question set: a hit = a top-k result from THIS manual whose page_start is an expected page, searched across the whole seeded library (BM25-only when no embedding model). Questions were written from the same PDF text layer the pages were read from, so this is an in-sample regression check, not a retrieval-quality benchmark. 'slow' manuals take minutes to read and only run when GSE_RAG_SLOW=1.",
+  "top_k": 5,
+  "min_hit_rate": 0.8,
+  "manuals": [
+    {
+      "id": "pcs-tech",
+      "path": "PCS/PCS manual/PCS 4LHD - 4LHDX Technician's Guide v2.0.pdf",
+      "title": "PCS 4LHD/4LHDX Transmission Technician's Guide v2.0",
+      "manufacturer": "PCS",
+      "model_family": "4LHD/4LHDX",
+      "questions": [
+        {"question": "How often should the transmission fluid and filter be changed in industrial use?", "expected_pages": [7]},
+        {"question": "How do I find a transmission fluid leak with dye and a black light?", "expected_pages": [12, 13]},
+        {"question": "Transmission has no reverse or slips in reverse", "expected_pages": [20]},
+        {"question": "Stuck in first gear range only, no upshift", "expected_pages": [25]},
+        {"question": "Line pressure check commanding the PC solenoid amperage in one-tenth steps", "expected_pages": [17, 18]},
+        {"question": "What does code 72 intermittent output shaft speed mean?", "expected_pages": [56]},
+        {"question": "How do I depin the bulkhead connector terminals?", "expected_pages": [42, 43]}
+      ]
+    },
+    {
+      "id": "pcs-app",
+      "path": "PCS/PCS manual/PCS 4LHD - 4LHDX Application Guide v2.0.pdf",
+      "title": "PCS 4LHD/4LHDX Application Guide v2.0",
+      "manufacturer": "PCS",
+      "model_family": "4LHD/4LHDX",
+      "questions": [
+        {"question": "How do I measure torque converter pull out before bolting up the bellhousing?", "expected_pages": [27, 31, 51, 52]},
+        {"question": "Transmission fluid level hot check procedure", "expected_pages": [51, 52, 53]},
+        {"question": "Shift inhibit input brake pressure switch on the bulkhead connector", "expected_pages": [71]},
+        {"question": "Neutral safety starter relay wiring from the TCM", "expected_pages": [71]},
+        {"question": "Disc parking brake caliper mounting orientation and cable exit", "expected_pages": [42]}
+      ]
+    },
+    {
+      "id": "pcs-parts",
+      "path": "PCS/PCS manual/PCS 4LHD - 4LHDX Parts and Accessories v3.0.pdf",
+      "title": "PCS 4LHD/4LHDX Parts and Accessories v3.0",
+      "manufacturer": "PCS",
+      "model_family": "4LHD/4LHDX",
+      "questions": [
+        {"question": "Part number for the transmission filter and pan gasket kit TRN7090", "expected_pages": [29, 30, 31]}
+      ]
+    },
+    {
+      "id": "pcs-qrg",
+      "path": "PCS/qiuck guide and stick/PCS 4-Speed Transmission Quick Reference Guide.pdf",
+      "title": "PCS 4-Speed Transmission Quick Reference Guide v1.3",
+      "manufacturer": "PCS",
+      "model_family": "4LHD/4LHDX",
+      "questions": [
+        {"question": "Torque converter gap between the flexplate and converter pads", "expected_pages": [2]},
+        {"question": "Line pressure tap test procedure and pressures in neutral at 1200 RPM", "expected_pages": [2]},
+        {"question": "Resistance between CAN high and CAN low at the bulkhead", "expected_pages": [2]},
+        {"question": "Forward clutch solenoid test with the TDD", "expected_pages": [4]},
+        {"question": "Transmission fluid is dark and smells burnt", "expected_pages": [3]}
+      ]
+    },
+    {
+      "id": "pcs-tdd",
+      "path": "PCS/qiuck guide and stick/stick/PCS Transmission Diagnostic Device User Guide v3.1.pdf",
+      "title": "PCS Transmission Diagnostic Device User Guide v3.1",
+      "manufacturer": "PCS",
+      "model_family": "4LHD/4LHDX",
+      "questions": [
+        {"question": "Connect the diagnostic device to the battery, toggle switches off, power LED", "expected_pages": [2]},
+        {"question": "Line pressure solenoid test with the diagnostic device", "expected_pages": [4]}
+      ]
+    },
+    {
+      "id": "pcs-abuse",
+      "path": "PCS/PCS manual/PCS Abuse Protection Solenoid Replacement.pdf",
+      "title": "PCS Abuse Protection Solenoid Replacement",
+      "manufacturer": "PCS",
+      "model_family": "4LHD/4LHDX",
+      "questions": [
+        {"question": "Remove and install the abuse protection solenoids and solenoid clamp", "expected_pages": [6, 7]},
+        {"question": "Oil pan bolt torque after replacing the abuse protection solenoid", "expected_pages": [8]}
+      ]
+    },
+    {
+      "id": "pcs-c6",
+      "path": "PCS/PCS manual/PCS C6 Replacement Guide.pdf",
+      "title": "PCS C6 Replacement Guide",
+      "manufacturer": "PCS",
+      "model_family": "4LHD/4LHDX",
+      "questions": [
+        {"question": "Bill of materials for the C6 replacement kit with torque values", "expected_pages": [4, 5]},
+        {"question": "Removing the old C6 transmission, let the vehicle cool", "expected_pages": [6]}
+      ]
+    },
+    {
+      "id": "ies2000",
+      "path": "PCS/Electronic Shifter/IES2000_SERIES_INDUSTRIALSHIFTER_CUSTOMERCOPY_REVJ.pdf",
+      "title": "IES2000 Series Industrial Electronic Shifter (Rev J)",
+      "manufacturer": "PCS",
+      "model_family": "IES2000",
+      "questions": [
+        {"question": "IES2000 industrial shifter neutral position drawing", "expected_pages": [1]}
+      ]
+    },
+    {
+      "id": "mico-burnish",
+      "path": "PCS/PCS Park Brake/81950016Burnishing Procedures.pdf",
+      "title": "MICO 81-950-016 Brake Service and Burnishing Procedures",
+      "manufacturer": "MICO",
+      "model_family": "Caliper disc brakes",
+      "questions": [
+        {"question": "Burnishing procedure for a new parking brake", "expected_pages": [2]},
+        {"question": "Respirator and dust precautions for non-asbestos brake linings", "expected_pages": [1]}
+      ]
+    },
+    {
+      "id": "mico-caliper",
+      "path": "PCS/PCS Park Brake/81515009Caliper Disc Brakes_0.pdf",
+      "title": "MICO 81-515-009 Mechanical Caliper Disc Brakes",
+      "manufacturer": "MICO",
+      "model_family": "Caliper disc brakes",
+      "questions": [
+        {"question": "Mechanical caliper disc brake adjustment procedure", "expected_pages": [2]},
+        {"question": "What is included in the lining kit and the repair kit?", "expected_pages": [3]}
+      ]
+    },
+    {
+      "id": "pcs-brk2050",
+      "path": "PCS/PCS Park Brake/4LHD_BRK2050_DISCPARKINGBRAKEFINISHKIT_REV3.PDF",
+      "title": "PCS 4LHD BRK2050 Disc Parking Brake Finish Kit (Rev 3)",
+      "manufacturer": "PCS",
+      "model_family": "4LHD/4LHDX",
+      "questions": [
+        {"question": "4LHD disc parking brake finish kit BRK2050 parts list", "expected_pages": [1]}
+      ]
+    },
+    {
+      "id": "ps-intro",
+      "path": "ECOM/Power STow/1236-1299 Delta Airlines/1236-1299 Delta Gas/1  1236-1299 Introduction TUG 660-28 (US).pdf",
+      "title": "Power Stow Rollertrack 450E / 600i, S/N 1236-1299: Introduction",
+      "manufacturer": "Power Stow",
+      "model_family": "600i",
+      "questions": [
+        {"question": "Power Stow Rollertrack 450E series 1236 to 1299 introduction", "expected_pages": [1]}
+      ]
+    },
+    {
+      "id": "ps-600i",
+      "path": "ECOM/Power STow/1236-1299 Delta Airlines/1236-1299 Delta Gas/2  1236-1299 General description 600i (US).pdf",
+      "title": "Power Stow Rollertrack 450E / 600i, S/N 1236-1299: General Description",
+      "manufacturer": "Power Stow",
+      "model_family": "600i",
+      "questions": [
+        {"question": "Rollertrack conveyor chain speed in and out", "expected_pages": [3]},
+        {"question": "Noise level of the Rollertrack in dB(A)", "expected_pages": [6]}
+      ]
+    },
+    {
+      "id": "ps-user",
+      "path": "ECOM/Power STow/1236-1299 Delta Airlines/1236-1299 Delta Gas/3  1236-1299 User manual.pdf",
+      "title": "Power Stow 600i, S/N 1236-1299: User Manual",
+      "manufacturer": "Power Stow",
+      "model_family": "600i",
+      "questions": [
+        {"question": "Use the emergency hydraulic pump if the engine fails", "expected_pages": [6, 8]},
+        {"question": "Procedure for approaching an airplane", "expected_pages": [7]},
+        {"question": "Emergency retraction of the Rollertrack from the cargo hold", "expected_pages": [15]},
+        {"question": "Display says voltage in the PS 24V system is below the accepted limit", "expected_pages": [16]}
+      ]
+    },
+    {
+      "id": "ps-maint",
+      "path": "ECOM/Power STow/1236-1299 Delta Airlines/1236-1299 Delta Gas/4  1236-1299 Maintenance Manual.pdf",
+      "title": "Power Stow Rollertrack, S/N 1236-1299: Maintenance Manual",
+      "manufacturer": "Power Stow",
+      "model_family": "600i",
+      "questions": [
+        {"question": "How do I enter service mode?", "expected_pages": [6]},
+        {"question": "Change the hydraulic pressure filter", "expected_pages": [27]},
+        {"question": "Test all emergency stops", "expected_pages": [26]},
+        {"question": "Tighten the chain drive, gap between edge and drive block", "expected_pages": [28]},
+        {"question": "Lubrication of the flexramp axle", "expected_pages": [10]}
+      ]
+    },
+    {
+      "id": "ps-tugmod",
+      "path": "ECOM/Power STow/1236-1299 Delta Airlines/1236-1299 Delta Gas/5  1236-1299 TUG mod.pdf",
+      "title": "Power Stow 600i, S/N 1236-1299: TUG Modification Schematic",
+      "manufacturer": "Power Stow",
+      "model_family": "600i",
+      "questions": [
+        {"question": "Wiring from the PS batteries, PS-GND", "expected_pages": [1]}
+      ]
+    },
+    {
+      "id": "tug-66028-maint",
+      "path": "ECOM/Power STow/TUG GAS/TUG Manual and Parts/660-28_Maintenance&Parts_052019C.pdf",
+      "title": "TUG Model 660-28 Maintenance and Parts Manual CD397-28Maint (May 2019 Rev C)",
+      "manufacturer": "TUG",
+      "model_family": "660-28",
+      "slow": true,
+      "questions": [
+        {"question": "Steering relief pressure check with the steering wheel held at full turn", "expected_pages": [159, 160]},
+        {"question": "Daily checks: battery charge, fuel level, engine oil, hydraulic system leaks", "expected_pages": [139, 140]},
+        {"question": "Park brake noise at the wheels, squeaks or chatters when applied", "expected_pages": [171]},
+        {"question": "Mechanic safety responsibilities, always use the safety props under the conveyor", "expected_pages": [47]},
+        {"question": "Fluid level checks as part of the periodic lubrication schedule", "expected_pages": [150]}
+      ]
+    },
+    {
+      "id": "ford-gcp",
+      "path": "ECOM/Power STow/TUG GAS/Ford 2.5/Ford 2_5L Diagnostic Codes.pdf",
+      "title": "Ford/EDI GCP Diagnostic Support Manual and DTC Definitions (MSG425 2.5 L)",
+      "manufacturer": "Ford",
+      "model_family": "MSG425",
+      "slow": true,
+      "questions": [
+        {"question": "How do I flash out engine fault codes with the MIL?", "expected_pages": [2]},
+        {"question": "Which fault code list do I use for my EDI calibration number?", "expected_pages": [3]},
+        {"question": "Translate a J1939 SPN and FMI to a Ford DTC", "expected_pages": [16, 17, 18, 19, 20, 21, 22]},
+        {"question": "How do I clear engine faults and view snapshot data?", "expected_pages": [2]}
+      ]
+    }
+  ]
+}

@@ -17,6 +17,7 @@ dependencies = [
     "pydantic>=2.6",
     "sqlite-vec>=0.1.6",
     "pypdf>=4.0",
+    "cryptography>=42",  # pypdf needs it to open AES-encrypted manuals (owner-protected, empty user password)
     "pyyaml>=6.0",
     "numpy>=1.26",
 ]

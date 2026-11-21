@@ -1,7 +1,12 @@
 """Per-page text extraction with pypdf (BSD-3, ADR-005). Never modifies the source file.
 
 A page with almost no text layer is `scanned` when it contains images (needs OCR, not implemented yet)
-and `blank` otherwise (no error recorded).
+and `blank` otherwise (no error recorded). A page whose text cannot be extracted at all (for example a drawing
+whose content stream exceeds pypdf's parsing limits) keeps `extract_error` and no lines, so one bad page never
+fails the whole manual.
+
+Encrypted PDFs that open with the empty user password (common "no copy/print" owner protection) are read;
+AES-encrypted ones need the `cryptography` package (declared in pyproject.toml).
 """
 
 from __future__ import annotations
@@ -26,6 +31,7 @@ class PageText:
     has_images: bool
     scanned: bool
     blank: bool
+    extract_error: str | None = None  # text extraction failed on this page (reason), lines are empty
 
 
 @dataclass
@@ -85,7 +91,20 @@ def read_pdf(path: str | Path) -> PdfDocument:
 
     pages: list[PageText] = []
     for number, page in enumerate(reader.pages, start=1):
-        text = page.extract_text() or ""
+        try:
+            text = page.extract_text() or ""
+        except Exception as exc:  # noqa: BLE001 - pypdf raises many types on malformed/oversized pages
+            pages.append(
+                PageText(
+                    number=number,
+                    lines=[],
+                    has_images=False,
+                    scanned=False,
+                    blank=False,
+                    extract_error=f"{type(exc).__name__}: {exc}"[:200],
+                )
+            )
+            continue
         short = len(text.strip()) < MIN_TEXT_CHARS
         has_images = _has_images(page)
         pages.append(

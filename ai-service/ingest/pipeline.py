@@ -26,6 +26,7 @@ from rag.db import connect, delete_embeddings, is_vec0_available, to_vec_blob
 from rag.embedding import Embedder, make_document_embedder
 
 OCR_PENDING_MESSAGE = "scanned page needs OCR (not yet implemented)"
+TEXT_EXTRACT_FAILED_MESSAGE = "page text could not be extracted; page skipped"
 OFFICE_SUFFIXES = frozenset({".doc", ".docx", ".ppt", ".pptx"})
 MANUALS_SUBDIR = "manuals"
 EMBED_BATCH = 16
@@ -353,6 +354,8 @@ def _ingest_one(
     for page in pages:
         if page.scanned:
             job.add_error(path.name, OCR_PENDING_MESSAGE, page=page.number)
+        elif page.extract_error:
+            job.add_error(path.name, f"{TEXT_EXTRACT_FAILED_MESSAGE} ({page.extract_error})", page=page.number)
     chunks = chunk_pages(pages)
     meta = build_meta(doc, path, overrides)
     data_dir = _data_dir(conn)
