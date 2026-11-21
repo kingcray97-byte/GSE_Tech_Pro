@@ -25,7 +25,7 @@
 | 4 | GSE troubleshooting (readings entry, decision trees, safety warnings — TUG 660-28 first) | ✅ Done |
 | 5 | Repair history learning (recommendation engine, outcomes, comebacks) | ✅ Done |
 | 6 | Oscilloscope (PicoSDK, then Hantek, shared interface) | ✅ Done (Simulator + Hantek wrapper reviewed; real hardware unverified) |
-| 7 | Vision & voice, ECOM/CANCapture | ⬜ |
+| 7 | Vision & voice (ECOM / CAN capture moved to 10C and done there) | ⬜ |
 | 8 | Full installer (signing, silent multi-tablet, upgrades, updates) | ✅ Done |
 | 9 | Optional shop-server sync | ⬜ |
 | 10 | Owner change request 2026-11-19: llama.cpp + cloud route, Shop Foreman Pro look, GSE components, PicoScope-style scope | 🟡 Built: 10A done except real-tablet acceptance; 10B.1–10B.3 done (owner screenshot sign-off open); 10C done (10C.1–10C.5); 10D done (10D.1–10D.4) except in-app checks of 10D.1c–i, 10D.3a–c and 10D.4, and real hardware |
