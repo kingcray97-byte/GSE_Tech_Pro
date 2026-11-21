@@ -1335,6 +1335,7 @@ public sealed partial class MainShellViewModel
         RebuildScopeAxisLabels();
         UpdateScopeCursorReadouts();
         await RefreshScopeMathAsync();
+        await RefreshScopeMaskAsync();
     }
 
     private void ApplyPointCollectionsOnUiThread()

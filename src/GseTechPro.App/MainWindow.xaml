@@ -4029,6 +4029,48 @@
                                             </Flyout>
                                         </Button.Flyout>
                                     </Button>
+                                    <!-- Mask (10D.1): pass/fail against a known-good capture -->
+                                    <Button Grid.Row="4" Grid.Column="1" Style="{StaticResource ScopeToolTileButtonStyle}"
+                                            AutomationProperties.Name="Mask">
+                                        <StackPanel Spacing="3">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE73E;" FontSize="20"
+                                                      Foreground="{ThemeResource ScopeMaskBrush}" />
+                                            <TextBlock Text="Mask" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Button.Flyout>
+                                            <Flyout Placement="RightEdgeAlignedBottom">
+                                                <StackPanel Width="320" Spacing="8">
+                                                    <TextBlock Text="Pass/fail mask" FontWeight="Bold" />
+                                                    <TextBlock TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                                               Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                               Text="Capture a known-good waveform (use a trigger), enter the tolerance from the test procedure, then Create mask. Later captures at the same timebase and sample rate are checked against it." />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}"
+                                                              Header="Channel (1 = A … 4 = D)"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeMaskChannels}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeMaskChannel, Mode=TwoWay}" />
+                                                    <NumberBox MinHeight="{StaticResource MinTouchSize}"
+                                                               Header="Voltage tolerance (± V)"
+                                                               SpinButtonPlacementMode="Inline" Minimum="0"
+                                                               Value="{x:Bind ViewModel.ScopeMaskVoltageTolerance, Mode=TwoWay}" />
+                                                    <NumberBox MinHeight="{StaticResource MinTouchSize}"
+                                                               Header="Time tolerance (± divisions)"
+                                                               SpinButtonPlacementMode="Inline" Minimum="0" SmallChange="0.1"
+                                                               Value="{x:Bind ViewModel.ScopeMaskTimeToleranceDivisions, Mode=TwoWay}" />
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                                                Command="{x:Bind ViewModel.CreateScopeMaskCommand}" Content="Create mask" />
+                                                        <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                                                Command="{x:Bind ViewModel.ClearScopeMaskCommand}" Content="Clear" />
+                                                    </StackPanel>
+                                                    <TextBlock Text="{x:Bind ViewModel.ScopeMaskCountText, Mode=OneWay}" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{x:Bind ViewModel.ScopeMaskStatusText, Mode=OneWay}"
+                                                               TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                                               Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
                                 </Grid>
                             </StackPanel>
                         </ScrollViewer>
@@ -4173,6 +4215,13 @@
                                             <Polyline Points="{Binding ScopeMathPoints}"
                                                       Stroke="{ThemeResource ScopeMathBrush}" StrokeThickness="1.6"
                                                       Visibility="{x:Bind ViewModel.ScopeMathTraceVisibility, Mode=OneWay}" />
+                                            <!-- Mask envelope (upper and lower, on the mask channel's scale) -->
+                                            <Polyline Points="{Binding ScopeMaskUpperPoints}"
+                                                      Stroke="{ThemeResource ScopeMaskBrush}" StrokeThickness="1" StrokeDashArray="4,2"
+                                                      Visibility="{x:Bind ViewModel.ScopeMaskTraceVisibility, Mode=OneWay}" />
+                                            <Polyline Points="{Binding ScopeMaskLowerPoints}"
+                                                      Stroke="{ThemeResource ScopeMaskBrush}" StrokeThickness="1" StrokeDashArray="4,2"
+                                                      Visibility="{x:Bind ViewModel.ScopeMaskTraceVisibility, Mode=OneWay}" />
 
                                             <!-- Rulers A and B (shown while the Rulers panel is open) -->
                                             <Line X1="{x:Bind ViewModel.ScopeCursorAX, Mode=OneWay}" Y1="0"
