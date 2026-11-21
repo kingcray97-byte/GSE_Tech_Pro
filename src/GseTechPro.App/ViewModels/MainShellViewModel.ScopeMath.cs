@@ -137,13 +137,15 @@ public sealed partial class MainShellViewModel
         {
             try
             {
-                ScopeMathPoints = ToPointCollection(ScopeMathRawPoints);
+                ScopeMathPoints = ToPointCollection(ToScopeLanePoints(ScopeMathRawPoints, ScopeViewLanes.MathLane));
             }
             catch
             {
                 // Headless test runner: raw points are still set.
             }
             OnPropertyChanged(nameof(ScopeMathTraceVisibility));
+            if (IsScopeStacked)
+                OnScopeLanesChanged();
         }
 
         if (_dispatcherQueue is not null && !_dispatcherQueue.HasThreadAccess)

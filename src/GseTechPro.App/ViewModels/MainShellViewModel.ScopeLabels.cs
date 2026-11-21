@@ -42,5 +42,14 @@ public sealed partial class MainShellViewModel
             OnPropertyChanged(nameof(ScopeChannelLabelLegend));
             OnPropertyChanged(nameof(ScopeChannelLabelLegendVisibility));
         }
+
+        // Stacked views: lanes follow enabled channels; headings show label and range.
+        if (IsScopeStacked && e.PropertyName is nameof(ScopeChannelSetupViewModel.Label)
+                or nameof(ScopeChannelSetupViewModel.IsEnabled)
+                or nameof(ScopeChannelSetupViewModel.VoltageRangeVolts)
+                or nameof(ScopeChannelSetupViewModel.CurrentScaleAmpsPerVolt))
+        {
+            OnScopeLanesChanged();
+        }
     }
 }

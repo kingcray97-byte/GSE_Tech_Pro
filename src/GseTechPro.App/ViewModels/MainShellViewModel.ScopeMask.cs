@@ -182,8 +182,8 @@ public sealed partial class MainShellViewModel
         {
             try
             {
-                ScopeMaskUpperPoints = ToPointCollection(ScopeMaskUpperRawPoints);
-                ScopeMaskLowerPoints = ToPointCollection(ScopeMaskLowerRawPoints);
+                ScopeMaskUpperPoints = ToPointCollection(ToScopeLanePoints(ScopeMaskUpperRawPoints, ScopeMask?.Channel));
+                ScopeMaskLowerPoints = ToPointCollection(ToScopeLanePoints(ScopeMaskLowerRawPoints, ScopeMask?.Channel));
             }
             catch
             {

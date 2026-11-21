@@ -4374,6 +4374,32 @@
                                             </Flyout>
                                         </Button.Flyout>
                                     </Button>
+                                    <!-- Views (10D.1k): one view, or one stacked view per channel -->
+                                    <Button Grid.Row="7" Grid.Column="1" Style="{StaticResource ScopeToolTileButtonStyle}"
+                                            AutomationProperties.Name="Views">
+                                        <StackPanel Spacing="3">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF0E2;" FontSize="20" />
+                                            <TextBlock Text="Views" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Button.Flyout>
+                                            <Flyout Placement="RightEdgeAlignedBottom">
+                                                <StackPanel Width="320" Spacing="8">
+                                                    <TextBlock Text="Views" FontWeight="Bold" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}"
+                                                              Header="Layout"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeViewLayouts}"
+                                                              SelectedItem="{x:Bind ViewModel.SelectedScopeViewLayout, Mode=TwoWay}" />
+                                                    <TextBlock Text="{x:Bind ViewModel.ScopeViewsStatusText, Mode=OneWay}"
+                                                               TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                                               Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                    <TextBlock TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                                               Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                               Text="Stacked keeps each trace on its own range, so a 5 V sensor and a 100 A clamp do not sit on top of each other. Display only: measurements, rulers and masks are unchanged." />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
                                     <!-- Mask (10D.1): pass/fail against a known-good capture -->
                                     <Button Grid.Row="4" Grid.Column="1" Style="{StaticResource ScopeToolTileButtonStyle}"
                                             AutomationProperties.Name="Mask">
@@ -4584,6 +4610,58 @@
                                                   Visibility="{x:Bind ViewModel.ScopeRulerLinesVisibility, Mode=OneWay}" />
                                         </Canvas>
                                     </Viewbox>
+
+                                    <!-- Stacked views (10D.1k): one lane per trace with its own heading and range -->
+                                    <Grid Grid.Row="1" Grid.Column="1" IsHitTestVisible="False"
+                                          Visibility="{x:Bind ViewModel.ScopeLaneOverlayVisibility, Mode=OneWay}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="{x:Bind ViewModel.ScopeLane1Height, Mode=OneWay}" />
+                                            <RowDefinition Height="{x:Bind ViewModel.ScopeLane2Height, Mode=OneWay}" />
+                                            <RowDefinition Height="{x:Bind ViewModel.ScopeLane3Height, Mode=OneWay}" />
+                                            <RowDefinition Height="{x:Bind ViewModel.ScopeLane4Height, Mode=OneWay}" />
+                                            <RowDefinition Height="{x:Bind ViewModel.ScopeLaneMathHeight, Mode=OneWay}" />
+                                        </Grid.RowDefinitions>
+                                        <Border Grid.Row="0" BorderBrush="{ThemeResource ScopeGridZeroLineBrush}" BorderThickness="0,0,0,1">
+                                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,2,0,0" Padding="4,1"
+                                                    CornerRadius="3" Background="{ThemeResource ScopeToolbarBrush}">
+                                                <TextBlock Text="{x:Bind ViewModel.ScopeLane1Header, Mode=OneWay}"
+                                                           FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold"
+                                                           Foreground="{ThemeResource ScopeChannel1Brush}" />
+                                            </Border>
+                                        </Border>
+                                        <Border Grid.Row="1" BorderBrush="{ThemeResource ScopeGridZeroLineBrush}" BorderThickness="0,0,0,1">
+                                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,2,0,0" Padding="4,1"
+                                                    CornerRadius="3" Background="{ThemeResource ScopeToolbarBrush}">
+                                                <TextBlock Text="{x:Bind ViewModel.ScopeLane2Header, Mode=OneWay}"
+                                                           FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold"
+                                                           Foreground="{ThemeResource ScopeChannel2Brush}" />
+                                            </Border>
+                                        </Border>
+                                        <Border Grid.Row="2" BorderBrush="{ThemeResource ScopeGridZeroLineBrush}" BorderThickness="0,0,0,1">
+                                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,2,0,0" Padding="4,1"
+                                                    CornerRadius="3" Background="{ThemeResource ScopeToolbarBrush}">
+                                                <TextBlock Text="{x:Bind ViewModel.ScopeLane3Header, Mode=OneWay}"
+                                                           FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold"
+                                                           Foreground="{ThemeResource ScopeChannel3Brush}" />
+                                            </Border>
+                                        </Border>
+                                        <Border Grid.Row="3" BorderBrush="{ThemeResource ScopeGridZeroLineBrush}" BorderThickness="0,0,0,1">
+                                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,2,0,0" Padding="4,1"
+                                                    CornerRadius="3" Background="{ThemeResource ScopeToolbarBrush}">
+                                                <TextBlock Text="{x:Bind ViewModel.ScopeLane4Header, Mode=OneWay}"
+                                                           FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold"
+                                                           Foreground="{ThemeResource ScopeChannel4Brush}" />
+                                            </Border>
+                                        </Border>
+                                        <Border Grid.Row="4" BorderBrush="{ThemeResource ScopeGridZeroLineBrush}" BorderThickness="0,0,0,1">
+                                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,2,0,0" Padding="4,1"
+                                                    CornerRadius="3" Background="{ThemeResource ScopeToolbarBrush}">
+                                                <TextBlock Text="{x:Bind ViewModel.ScopeLaneMathHeader, Mode=OneWay}"
+                                                           FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold"
+                                                           Foreground="{ThemeResource ScopeMathBrush}" />
+                                            </Border>
+                                        </Border>
+                                    </Grid>
 
                                     <!-- Empty-state hint over the plot -->
                                     <TextBlock Grid.Row="1" Grid.Column="1"

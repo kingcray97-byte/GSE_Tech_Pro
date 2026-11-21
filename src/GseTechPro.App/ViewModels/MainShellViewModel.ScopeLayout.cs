@@ -152,10 +152,10 @@ public sealed partial class MainShellViewModel
     private string _scopeTimeAxisUnit = "ms";
 
     public Visibility ScopeLeftAxisVisibility =>
-        ScopeChannels.Count > 0 && ScopeChannels[0].IsEnabled ? Visibility.Visible : Visibility.Collapsed;
+        !IsScopeStacked && ScopeChannels.Count > 0 && ScopeChannels[0].IsEnabled ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility ScopeRightAxisVisibility =>
-        ScopeChannels.Count > 1 && ScopeChannels[1].IsEnabled ? Visibility.Visible : Visibility.Collapsed;
+        !IsScopeStacked && ScopeChannels.Count > 1 && ScopeChannels[1].IsEnabled ? Visibility.Visible : Visibility.Collapsed;
 
     /// <summary>Rebuilds the axis labels from CH A / CH B ranges and the visible time window.</summary>
     public void RebuildScopeAxisLabels()

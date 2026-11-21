@@ -1332,6 +1332,9 @@ public sealed partial class MainShellViewModel
         ScopeChannel3RawPoints = pts3;
         ScopeChannel4RawPoints = pts4;
         ScopeReferenceOverlayRawPoints = refPts;
+        _scopeReferenceOverlayChannel = refCapture is not null && refCapture.Channels.Count > 0
+            ? refCapture.Channels.Keys.Min()
+            : null;
 
         ApplyPointCollectionsOnUiThread();
         RebuildScopeAxisLabels();
@@ -1348,11 +1351,12 @@ public sealed partial class MainShellViewModel
         {
             try
             {
-                ScopeChannel1Points = ToPointCollection(ScopeChannel1RawPoints);
-                ScopeChannel2Points = ToPointCollection(ScopeChannel2RawPoints);
-                ScopeChannel3Points = ToPointCollection(ScopeChannel3RawPoints);
-                ScopeChannel4Points = ToPointCollection(ScopeChannel4RawPoints);
-                ScopeReferenceOverlayPoints = ToPointCollection(ScopeReferenceOverlayRawPoints);
+                ScopeChannel1Points = ToPointCollection(ToScopeLanePoints(ScopeChannel1RawPoints, 1));
+                ScopeChannel2Points = ToPointCollection(ToScopeLanePoints(ScopeChannel2RawPoints, 2));
+                ScopeChannel3Points = ToPointCollection(ToScopeLanePoints(ScopeChannel3RawPoints, 3));
+                ScopeChannel4Points = ToPointCollection(ToScopeLanePoints(ScopeChannel4RawPoints, 4));
+                ScopeReferenceOverlayPoints = ToPointCollection(
+                    ToScopeLanePoints(ScopeReferenceOverlayRawPoints, _scopeReferenceOverlayChannel));
             }
             catch
             {
