@@ -3271,6 +3271,15 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
             if (CurrentGuidedStep is null || !CurrentGuidedStep.Available)
                 return "Spec Range: N/A";
 
+            // Inspection / question steps take no measurement; showing the TODO marker there would
+            // wrongly suggest a missing spec.
+            if (CurrentGuidedStep.ReadingType is null && CurrentGuidedStep.TestPointId is null &&
+                CurrentGuidedStep.SpecMin is null && CurrentGuidedStep.SpecMax is null &&
+                string.IsNullOrWhiteSpace(CurrentGuidedStep.SpecSource))
+                return string.IsNullOrWhiteSpace(CurrentGuidedStep.TerminalResult)
+                    ? "No measurement for this step: answer PASS / FAIL."
+                    : "No measurement for this step.";
+
             return TroubleshootingUnitHelper.FormatCanonicalSpecSummary(
                 CurrentGuidedStep.ReadingType,
                 CurrentGuidedStep.SpecMin,

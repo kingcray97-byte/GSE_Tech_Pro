@@ -194,5 +194,47 @@
     "spec_source": "TODO: needs spec from manual",
     "procedure_ref": "A qualified technician must install the bidirectional-correct flow/pressure test set after isolation, then apply only the manual-specified loading and pump-drive conditions. Never close a load valve as a substitute for knowing the relief setting and test limit. Flow range, pressure/load condition, and operating temperature: TODO: needs spec from manual.",
     "safety_warning_ids": ["sw-hydraulic-stored-pressure", "sw-lockout-tagout", "sw-high-voltage", "sw-hot-surface", "sw-moving-machinery", "sw-wheel-chocks", "sw-aircraft-proximity"]
+  },
+  {
+    "id": "tp-tug66028-tcm-ignition-feed",
+    "equipment_model_id": "eqm-tug-660-28",
+    "name": "PCS TCM switched-ignition feed (key on)",
+    "system": "Drivetrain / Transmission controls",
+    "location": "PCS TCM connector pin 19 (switched ignition) to pin 42 or pin 9 (ground). Battery feed is pin 20. Both feeds are on 10 A fuses. Pin numbers: PCS 4-Speed Transmission Quick Reference Guide v1.3, p.3 (TCM connector). Back-probe; do not push probes into the terminals.",
+    "reading_type": "voltage",
+    "expected_unit": "V",
+    "spec_min": null,
+    "spec_max": null,
+    "spec_source": "TODO: needs spec from manual",
+    "procedure_ref": "Key on, engine off. Measure pin 19 to pin 42/9, then pin 20 to pin 42/9, with a DVOM. Compare with battery voltage measured at the battery posts at the same time. Acceptable feed voltage/drop: TODO: needs spec from manual.",
+    "safety_warning_ids": ["sw-high-voltage", "sw-wheel-chocks"]
+  },
+  {
+    "id": "tp-tug66028-trans-line-pressure-4lhd",
+    "equipment_model_id": "eqm-tug-660-28",
+    "name": "PCS 4LHD line pressure, 0 A commanded (Neutral, 1200 RPM)",
+    "system": "Drivetrain / Transmission hydraulics",
+    "location": "Transmission line pressure tap (1/8\" NPT) on the transmission case; see the feature-location drawing in PCS 4-Speed Transmission Quick Reference Guide v1.3, p.1.",
+    "reading_type": "hydraulic_pressure",
+    "expected_unit": "psi",
+    "spec_min": 170,
+    "spec_max": 193,
+    "spec_source": "PCS 4-Speed Transmission Quick Reference Guide v1.3, p.2, Line Pressure Tap table, 4LHD at 0 A",
+    "procedure_ref": "Remove the pressure plug and fit a gauge rated for transmission line pressure. Command 0 A to the line pressure solenoid with the PCS software. Start the engine. Test in Neutral at 1200 RPM with fluid between 100 and 200 °F (38-93 °C). Source: PCS 4-Speed Transmission Quick Reference Guide v1.3, p.2.",
+    "safety_warning_ids": ["sw-trans-line-pressure", "sw-hot-surface", "sw-wheel-chocks", "sw-moving-machinery"]
+  },
+  {
+    "id": "tp-tug66028-trans-line-pressure-4lhdx",
+    "equipment_model_id": "eqm-tug-660-28",
+    "name": "PCS 4LHDX line pressure, 0 A commanded (Neutral, 1200 RPM)",
+    "system": "Drivetrain / Transmission hydraulics",
+    "location": "Transmission line pressure tap (1/8\" NPT) on the transmission case; see the feature-location drawing in PCS 4-Speed Transmission Quick Reference Guide v1.3, p.1.",
+    "reading_type": "hydraulic_pressure",
+    "expected_unit": "psi",
+    "spec_min": 198,
+    "spec_max": 227,
+    "spec_source": "PCS 4-Speed Transmission Quick Reference Guide v1.3, p.2, Line Pressure Tap table, 4LHDX at 0 A",
+    "procedure_ref": "Same set-up as the 4LHD test: gauge on the 1/8\" NPT tap, 0 A commanded with the PCS software, Neutral, 1200 RPM, fluid 100-200 °F (38-93 °C). Source: PCS 4-Speed Transmission Quick Reference Guide v1.3, p.2.",
+    "safety_warning_ids": ["sw-trans-line-pressure", "sw-hot-surface", "sw-wheel-chocks", "sw-moving-machinery"]
   }
 ]

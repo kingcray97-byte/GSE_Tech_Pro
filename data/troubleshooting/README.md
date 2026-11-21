@@ -2,7 +2,7 @@
 
 Phase 4 content for equipment without a readable ECU. The package separates the TUG 660-28 and Power Stow/TUG 600i configurations; they must never be collapsed into one model row or share a specification merely because the Delta 740-774 set contains both.
 
-**Initial inventory: 2 equipment models, 8 reusable safety warnings, 16 symptoms, 14 test points, and 2 draft trees containing 36 steps.** All five data files are flat JSON arrays. `trees.json` embeds each tree's ordered steps; all other cross-references use stable slugs.
+**Inventory: 2 equipment models, 11 reusable safety warnings, 19 symptoms, 17 test points, and 5 draft trees containing 83 steps** (Phase 4: 8 / 16 / 14 / 2 trees, 36 steps; Phase 10C.4 adds 3 / 3 / 3 / 3 trees, 47 steps — see §8). All five data files are flat JSON arrays. `trees.json` embeds each tree's ordered steps; all other cross-references use stable slugs.
 
 | File | Rows | Scope |
 |---|---:|---|
@@ -389,3 +389,26 @@ Get-ChildItem data/troubleshooting/*.json | ForEach-Object {
 ```
 
 A loader/integration test should additionally import twice into a clean Phase 4 SQLite schema and assert idempotent stable IDs, valid foreign keys, and identical JSON warning arrays. Domain review against the cited PDF pages remains mandatory even after both checks pass.
+
+## 8. Phase 10C.4 — PCS transmission, PCS disc parking brake, Ford MSG-425 (TUG 660-28)
+
+All three trees are `draft` and belong to `eqm-tug-660-28` (Ford MSG-425 2.5 L, GM 4L70 / PCS 4LHD transmission, per the existing model row). Sources are the owner-supplied PDFs in `Reference/GSE diagnostic apps/` (read only, never bundled):
+
+| Tree | Symptom | Steps | Sources |
+|---|---|---:|---|
+| `tree-tug66028-trans-no-engage` — will not shift out of Neutral (codes, TCM power/comms, lever, TPS, RPM, shift-inhibit input, fluid, line pressure, forward clutch solenoid) | `sym-trans-no-engage` (drivetrain) | 27 | *PCS 4-Speed Transmission Quick Reference Guide v1.3* pp.1–4; *PCS 4LHD/4LHDX Application Guide v2.0* §2.5.7–2.5.8 pp.64–65; *PCS 4LHD/4LHDX Technician's Guide v2.0* §4 |
+| `tree-tug66028-park-brake-burnish` — parking brake does not hold (inspect, burnish, adjust) | `sym-park-brake-weak` (brakes) | 11 | *MICO Form 81-950-016* pp.1–2 (burnishing per SAE J360 §7.3; fibre-dust precautions); PCS kit drawing *4LHD_BRK2050* |
+| `tree-tug66028-ford-mil` — engine MIL on (read and look up codes) | `sym-engine-mil-on` (engine) | 9 | *Ford/EDI GCP Diagnostic Support Manual and DTC Definitions* (EDI 1080031) pp.2–3, Section 3 pp.16–22 |
+
+New safety warnings: `sw-trans-direct-control` (TDD direct control, QRG p.4), `sw-trans-line-pressure` (>300 psi, QRG p.2), `sw-brake-dust` (MICO p.1).
+
+New test points: `tp-tug66028-trans-line-pressure-4lhd` **170–193 psi** and `-4lhdx` **198–227 psi** (QRG p.2 table, 0 A commanded, Neutral, 1200 RPM, fluid 100–200 °F); `tp-tug66028-tcm-ignition-feed` (TCM pins 19/20 to 42/9, range TODO).
+
+**10C.4 TODO register / limits**
+
+- No resistance reading type exists (`ReadingType` has no ohms), so the cited resistance checks (CAN 60 Ω between CAN H/L, QRG p.2; valve-body generation by solenoid resistance, QRG p.1) are written as inspection text, not recorded readings. Adding a resistance reading type is a Core/units change for `architect`.
+- TCM feed voltage acceptance, the parking-brake hold-test method, and MICO adjustment values: `TODO: needs spec from manual`.
+- The shift-inhibit pin (5, grey/white) is from PCS's **example** bulkhead (Application Guide p.64); the TUG harness pin must be confirmed on the vehicle's harness drawing (TODO in the terminal text).
+- The Ford manual's Section 4 diagnostic procedures are scanned images with no text layer, so the Ford tree stops at "look up the DTC and follow its Section 4 page". The Ford Section 3 SPN/FMI → DTC table (pp.16–22) could later be added to the DTC library (fuel type matters).
+- The MICO burnish figures are SAE guidelines; the tree tells the technician to stop and get an approved procedure if the unit cannot do them safely (airside speed limits, aircraft proximity).
+

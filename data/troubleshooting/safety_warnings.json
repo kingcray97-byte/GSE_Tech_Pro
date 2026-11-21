@@ -46,5 +46,23 @@
     "category": "general",
     "text": "Gasoline and LPG create fire, explosion, and inhalation hazards. Work in a ventilated area, eliminate ignition sources, and stop immediately for a fuel smell, visible leak, or damaged fuel line. Do not crank an engine to investigate a fuel leak. LPG work requires the manufacturer isolation, bleed-down, and emergency procedures; do not improvise a fuel-system test.",
     "source_citation": "TUG Model 660-28 Operation Manual CD397-Oper, LP and CNG Safety Information, PDF page 37; Emergency Procedures, PDF pages 38-43"
+  },
+  {
+    "id": "sw-trans-direct-control",
+    "category": "general",
+    "text": "Direct transmission control (PCS TDD or software outputs) runs the transmission without the vehicle's safety devices or normal controls. The vehicle can move suddenly and without notice, and a Gen 3 valve body moves the vehicle whatever the shift lever position. Only a trained technician may do this test, with an operator on the seat, the service brakes working and fully pressed until movement is wanted, the area clear of people and aircraft, and the wheels free to move only where that is safe.",
+    "source_citation": "PCS 4-Speed Transmission Quick Reference Guide v1.3, p.4, TDD warning"
+  },
+  {
+    "id": "sw-trans-line-pressure",
+    "category": "hydraulic_pressure",
+    "text": "Transmission line pressure can exceed 300 psi. Use a gauge rated for transmission line pressure, run the test only in Neutral with the brakes applied and the engine below 1500 RPM, and keep hands and face away from the tap. Higher engine speed or another range can produce pressure that damages the transmission or gauge and causes serious injury. Hot fluid: let the tap area cool before removing or refitting the plug.",
+    "source_citation": "PCS 4-Speed Transmission Quick Reference Guide v1.3, p.2, Line Pressure Tap and warning"
+  },
+  {
+    "id": "sw-brake-dust",
+    "category": "general",
+    "text": "Brake linings contain fibres that can harm the lungs. Wear a NIOSH/MSHA-approved respirator from wheel or caliper removal through assembly. Never use compressed air or dry brushing on brake parts or the work area; use a HEPA vacuum and rags wetted and wrung nearly dry, and dispose of them without raising dust. Wash hands before eating, drinking or smoking.",
+    "source_citation": "MICO Form 81-950-016 (Rev. 1998-10-14), Burnishing Procedures for MICO Caliper Disc Brakes, p.1, Recommended Brake Service Procedures to Reduce Exposure to Non-Asbestos Fiber"
   }
 ]

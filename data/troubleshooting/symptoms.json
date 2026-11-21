@@ -126,5 +126,29 @@
     "category": "electrical",
     "system": "Electrical / Starting",
     "description": "Starter turns the engine slower than normal, drags, or labors with a sluggish sound. Operators may say 'barely turns over.' Battery charge, battery condition, positive and ground voltage drop, and mechanical drag must be separated."
+  },
+  {
+    "id": "sym-trans-no-engage",
+    "code": "TRANS_NO_ENGAGE",
+    "name": "Transmission will not shift out of Neutral",
+    "category": "drivetrain",
+    "system": "Drivetrain / Transmission",
+    "description": "Operator says: 'it won't go into gear,' 'stays in neutral,' or 'no forward or reverse.' The engine runs and the lever moves, but the vehicle does not drive. Note whether the brake was pressed and the engine was at idle when the lever was moved, and whether a check-transmission light was on."
+  },
+  {
+    "id": "sym-park-brake-weak",
+    "code": "BRK_PARK_WEAK",
+    "name": "Parking brake does not hold",
+    "category": "brakes",
+    "system": "Brakes / Parking brake",
+    "description": "The parking brake is applied but the vehicle creeps or can be driven against it. Note whether the brake, pads or disc were recently installed or replaced, and any oil on the disc."
+  },
+  {
+    "id": "sym-engine-mil-on",
+    "code": "ENG_MIL_ON",
+    "name": "Engine check light (MIL) on",
+    "category": "engine",
+    "system": "Engine / Engine controls",
+    "description": "The engine malfunction indicator lamp stays on with the engine running, with or without a driveability complaint. Record what the engine was doing when it came on and the fuel in use (gasoline or LPG)."
   }
 ]
