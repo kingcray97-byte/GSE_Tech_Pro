@@ -2011,7 +2011,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     public Visibility WorkOrdersCommandBarVisibility =>
         CurrentSidebarSectionKey == "WorkOrders" ? Visibility.Visible : Visibility.Collapsed;
 
-    public Visibility TabStripVisibility => OpenTabs.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility TabStripVisibility => OpenTabs.Count > 0 && !IsScopeFullScreen ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility ConnectButtonVisibility => IsConnected ? Visibility.Collapsed : Visibility.Visible;
 
@@ -2057,7 +2057,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
 
     public string ModuleNavGlyph => CurrentSection?.Glyph ?? string.Empty;
 
-    public Visibility ModuleNavVisibility => CurrentModuleNavItems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility ModuleNavVisibility => CurrentModuleNavItems.Count > 0 && !IsScopeFullScreen ? Visibility.Visible : Visibility.Collapsed;
 
     /// <summary>The highlighted page in the module menu. Setting it from the UI opens that page.</summary>
     [ObservableProperty]
@@ -2515,6 +2515,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         OnPropertyChanged(nameof(CanMonitorViewVisibility));
         OnPropertyChanged(nameof(DeviceCommandBarVisibility));
         SyncScopePanelToSection();
+        SyncScopeFullScreenToSection();
         OnPropertyChanged(nameof(ToolPlaceholderVisibility));
         OnPropertyChanged(nameof(IsSettingsViewVisible));
         OnPropertyChanged(nameof(SettingsViewVisibility));

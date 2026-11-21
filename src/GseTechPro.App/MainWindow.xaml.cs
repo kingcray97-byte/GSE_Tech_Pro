@@ -4,6 +4,7 @@ using GseTechPro.Core.Abstractions;
 using GseTechPro.Core.Enums;
 using GseTechPro.Data;
 using GseTechPro.Devices.Abstractions;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -47,7 +48,41 @@ public sealed partial class MainWindow : Window
         RootGrid.ActualThemeChanged += (_, _) => SyncThemeStateToViewModel();
         SyncThemeStateToViewModel();
 
+        // Scope full screen (10D.1j): the view model hides the chrome; the window presenter follows it.
+        ViewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainShellViewModel.IsScopeFullScreen))
+                ApplyScopeFullScreenPresenter(ViewModel.IsScopeFullScreen);
+        };
+        RootGrid.AddHandler(UIElement.KeyDownEvent, new KeyEventHandler(OnRootKeyDown), handledEventsToo: false);
+
         Closed += OnMainWindowClosed;
+    }
+
+    private void ApplyScopeFullScreenPresenter(bool fullScreen)
+    {
+        try
+        {
+            AppWindow.SetPresenter(fullScreen ? AppWindowPresenterKind.FullScreen : AppWindowPresenterKind.Default);
+        }
+        catch
+        {
+            // If the presenter cannot change, the chrome is still hidden; the toolbar button still exits.
+        }
+    }
+
+    /// <summary>F11 toggles scope full screen; Esc leaves it (keys a text box or flyout handles first are ignored).</summary>
+    private void OnRootKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == VirtualKey.F11)
+        {
+            ViewModel.ToggleScopeFullScreen();
+            e.Handled = ViewModel.IsScopeViewVisible || ViewModel.IsScopeFullScreen;
+        }
+        else if (e.Key == VirtualKey.Escape && ViewModel.ExitScopeFullScreen())
+        {
+            e.Handled = true;
+        }
     }
 
     public MainShellViewModel ViewModel { get; }

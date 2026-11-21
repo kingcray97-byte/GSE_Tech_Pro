@@ -33,7 +33,8 @@
         <!-- ROW 0: MENU BAR (Shop Foreman Pro: File Edit View Tools Data Setup  -->
         <!-- Help). Items reuse the toolbar/page routing (Tag = page key).        -->
         <!-- =================================================================== -->
-        <Grid Grid.Row="0" Background="{ThemeResource AppSurfaceBrush}" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
+        <Grid Grid.Row="0" Background="{ThemeResource AppSurfaceBrush}" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1"
+              Visibility="{x:Bind ViewModel.AppChromeVisibility, Mode=OneWay}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -145,7 +146,8 @@
                 Background="{ThemeResource AppToolbarBrush}"
                 BorderBrush="{ThemeResource AppSubtleBorderBrush}"
                 BorderThickness="0,0,0,1"
-                Padding="6,4">
+                Padding="6,4"
+                Visibility="{x:Bind ViewModel.AppChromeVisibility, Mode=OneWay}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -552,7 +554,7 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0">
+                <StackPanel Grid.Row="0" Visibility="{x:Bind ViewModel.AppChromeVisibility, Mode=OneWay}">
                     <!-- HEADER: where you are · status · data source badge · technician -->
                     <Border Background="{ThemeResource AppToolbarBrush}"
                             BorderBrush="{ThemeResource AppSubtleBorderBrush}"
@@ -3305,6 +3307,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <ScrollViewer Grid.Column="0"
                                       HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto"
@@ -3570,8 +3573,19 @@
                             </StackPanel>
                         </ScrollViewer>
 
+                        <!-- Full screen (10D.1j): own column so it never scrolls away in a small window; Esc or F11 also leaves it -->
+                        <Button Grid.Column="1" Style="{StaticResource ScopeToolTileButtonStyle}" MinWidth="72" Command="{x:Bind ViewModel.ToggleScopeFullScreenCommand}"
+                                AutomationProperties.Name="{x:Bind ViewModel.ScopeFullScreenButtonText, Mode=OneWay}"
+                                ToolTipService.ToolTip="Full screen trace (F11; Esc to leave)">
+                            <StackPanel Spacing="3">
+                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="{x:Bind ViewModel.ScopeFullScreenGlyph, Mode=OneWay}" FontSize="22"
+                                          Foreground="{ThemeResource ScopeStepperBrush}" />
+                                <TextBlock Text="{x:Bind ViewModel.ScopeFullScreenButtonText, Mode=OneWay}" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
                         <!-- Provenance badge and device name -->
-                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Right">
+                        <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Right">
                             <Border Background="{ThemeResource SimBadgeBackgroundBrush}"
                                     BorderBrush="{ThemeResource SimBadgeBorderBrush}"
                                     BorderThickness="1"
@@ -3663,11 +3677,12 @@
                     <!-- Row 2: channel tiles + tool palette | graticule + bottom panel -->
                     <Grid Grid.Row="2" Padding="8" ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="200" />
+                            <ColumnDefinition Width="{x:Bind ViewModel.ScopeSidePanelWidth, Mode=OneWay}" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto"
+                                      Visibility="{x:Bind ViewModel.ScopeSidePanelVisibility, Mode=OneWay}">
                             <StackPanel Spacing="6">
                                 <!-- CH 1 tile: -/+ steps the range, tap the middle for full channel setup -->
                                 <Grid Background="{ThemeResource ScopeTileBrush}"
@@ -5565,7 +5580,8 @@
                 BorderBrush="{ThemeResource AppSubtleBorderBrush}"
                 BorderThickness="0,1,0,0"
                 Padding="12,6"
-                MinHeight="44">
+                MinHeight="44"
+                Visibility="{x:Bind ViewModel.AppChromeVisibility, Mode=OneWay}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
