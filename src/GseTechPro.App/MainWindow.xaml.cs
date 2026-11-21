@@ -57,6 +57,7 @@ public sealed partial class MainWindow : Window
                 _ = ShowCameraPreviewAsync(ViewModel.CameraPreviewPath);
         };
         ViewModel.PickPhotoFileAsync = PickPhotoFileAsync;
+        HookAnnotationSurface();
         RootGrid.AddHandler(UIElement.KeyDownEvent, new KeyEventHandler(OnRootKeyDown), handledEventsToo: false);
 
         Closed += OnMainWindowClosed;
@@ -76,7 +77,16 @@ public sealed partial class MainWindow : Window
             await using (var fs = File.OpenRead(path))
                 await bitmap.SetSourceAsync(fs.AsRandomAccessStream());
             if (ViewModel.CameraPreviewPath == path)
+            {
+                // The surface takes the photo's pixel size so marks (0–1 fractions) land on the right spot.
+                if (bitmap.PixelWidth > 0 && bitmap.PixelHeight > 0)
+                {
+                    CameraPhotoSurface.Width = bitmap.PixelWidth;
+                    CameraPhotoSurface.Height = bitmap.PixelHeight;
+                }
                 CameraPreviewImage.Source = bitmap;
+                RedrawAnnotations(lastOnly: false);
+            }
         }
         catch
         {

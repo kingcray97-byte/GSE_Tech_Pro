@@ -23,6 +23,10 @@ public sealed class WorkOrderPhotoRowViewModel(Attachment attachment, string ful
             ? t.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
             : "";
     public bool FileExists => File.Exists(FullPath);
+
+    /// <summary>"2 marks" when the photo has pen annotations (7.2), else "".</summary>
+    public string MarksSummary => GseTechPro.Core.Contracts.PhotoAnnotations.Summary(
+        GseTechPro.Core.Contracts.PhotoAnnotations.Deserialize(Attachment.AnnotationsJson).Count);
 }
 
 /// <summary>
@@ -71,6 +75,7 @@ public sealed partial class MainShellViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PendingPhotoVisibility))]
     [NotifyPropertyChangedFor(nameof(PendingPhotoSimulatedVisibility))]
+    [NotifyPropertyChangedFor(nameof(AnnotateButtonVisibility))]
     [NotifyCanExecuteChangedFor(nameof(SavePhotoToWorkOrderCommand))]
     private CapturedPhoto? _pendingPhoto;
 
@@ -106,6 +111,7 @@ public sealed partial class MainShellViewModel
 
     partial void OnSelectedWorkOrderPhotoChanged(WorkOrderPhotoRowViewModel? value)
     {
+        LoadAnnotationsFor(value); // 7.2: the photo's saved marks (or none)
         if (value is null)
             return;
         CameraPreviewPath = value.FileExists ? value.FullPath : null;
@@ -358,7 +364,9 @@ public sealed partial class MainShellViewModel
                 continue; // waveforms already have their own rows
             string caption = string.IsNullOrWhiteSpace(a.Caption) ? type : a.Caption!;
             string size = a.SizeBytes is long b ? $" · {b / 1024.0:0} KB" : "";
-            var preview = $"{caption}\nFile: {a.FilePath}{size}";
+            string marks = GseTechPro.Core.Contracts.PhotoAnnotations.Summary(
+                GseTechPro.Core.Contracts.PhotoAnnotations.Deserialize(a.AnnotationsJson).Count);
+            var preview = $"{caption}\nFile: {a.FilePath}{size}{(marks.Length > 0 ? $"\nAnnotated: {marks}" : "")}";
             var when = a.TakenAt ?? a.CreatedAt;
             yield return new DiagnosticRecordRow(
                 type, "", caption, FormatTimestamp(when) ?? NotRecorded, NotRecorded, string.Empty, preview,
