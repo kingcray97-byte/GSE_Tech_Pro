@@ -3314,7 +3314,7 @@
                                 <Button Width="132" Height="58"
                                         Background="{ThemeResource ScopeRunBrush}" Foreground="White" BorderThickness="0"
                                         CornerRadius="4"
-                                        Command="{x:Bind ViewModel.StartScopeCaptureCommand}"
+                                        Command="{x:Bind ViewModel.RunScopeCommand}"
                                         Visibility="{x:Bind ViewModel.ScopeRunButtonVisibility, Mode=OneWay}"
                                         AutomationProperties.Name="Run capture">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -3925,6 +3925,7 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
                                     <Button Grid.Row="0" Grid.Column="0" Style="{StaticResource ScopeToolTileButtonStyle}" Command="{x:Bind ViewModel.ScopeZoomInCommand}"
                                             AutomationProperties.Name="Zoom in">
@@ -4023,6 +4024,34 @@
                                                                Value="{x:Bind ViewModel.ScopeMathParameter, Mode=TwoWay}"
                                                                Visibility="{x:Bind ViewModel.ScopeMathParameterVisibility, Mode=OneWay}" />
                                                     <TextBlock Text="{x:Bind ViewModel.ScopeMathStatusText, Mode=OneWay}"
+                                                               TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                                               Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                    <!-- Actions (10D.1): repeat run, and what to do when a capture fails the mask -->
+                                    <Button Grid.Row="5" Grid.Column="0" Style="{StaticResource ScopeToolTileButtonStyle}"
+                                            AutomationProperties.Name="Actions">
+                                        <StackPanel Spacing="3">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xEA8F;" FontSize="20" />
+                                            <TextBlock Text="Actions" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Button.Flyout>
+                                            <Flyout Placement="RightEdgeAlignedBottom">
+                                                <StackPanel Width="320" Spacing="8">
+                                                    <TextBlock Text="Run and actions" FontWeight="Bold" />
+                                                    <ToggleSwitch Header="Repeat (Run keeps capturing until Stop)" MinHeight="{StaticResource MinTouchSize}"
+                                                                  IsOn="{x:Bind ViewModel.IsScopeRepeatEnabled, Mode=TwoWay}" />
+                                                    <TextBlock Text="When a capture fails the mask:" FontSize="{StaticResource FontSizeSmall}" />
+                                                    <CheckBox MinHeight="{StaticResource MinTouchSize}" Content="Stop the repeat run"
+                                                              IsChecked="{x:Bind ViewModel.ScopeActionStopOnFail, Mode=TwoWay}" />
+                                                    <CheckBox MinHeight="{StaticResource MinTouchSize}" Content="Beep"
+                                                              IsChecked="{x:Bind ViewModel.ScopeActionBeepOnFail, Mode=TwoWay}" />
+                                                    <CheckBox MinHeight="{StaticResource MinTouchSize}" Content="Save the capture to the work order (up to 20 per run)"
+                                                              IsChecked="{x:Bind ViewModel.ScopeActionSaveOnFail, Mode=TwoWay}" />
+                                                    <TextBlock Text="{x:Bind ViewModel.ScopeActionsStatusText, Mode=OneWay}"
                                                                TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
                                                                Foreground="{ThemeResource AppTextSecondaryBrush}" />
                                                 </StackPanel>

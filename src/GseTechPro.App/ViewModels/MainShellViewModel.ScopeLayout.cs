@@ -29,10 +29,10 @@ public sealed partial class MainShellViewModel
     // ---------------------------------------------------------------------
 
     public Visibility ScopeRunButtonVisibility =>
-        IsScopeCapturing ? Visibility.Collapsed : Visibility.Visible;
+        IsScopeCapturing || IsScopeRepeatRunning ? Visibility.Collapsed : Visibility.Visible;
 
     public Visibility ScopeStopButtonVisibility =>
-        IsScopeCapturing ? Visibility.Visible : Visibility.Collapsed;
+        IsScopeCapturing || IsScopeRepeatRunning ? Visibility.Visible : Visibility.Collapsed;
 
     partial void OnIsScopeCapturingChanged(bool value)
     {

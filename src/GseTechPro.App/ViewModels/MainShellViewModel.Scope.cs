@@ -1156,6 +1156,7 @@ public sealed partial class MainShellViewModel
     [RelayCommand]
     public async Task StopScopeCaptureAsync()
     {
+        CancelScopeRepeat();
         if (_scopeCaptureCts is not null)
         {
             try { _scopeCaptureCts.Cancel(); }

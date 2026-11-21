@@ -160,16 +160,20 @@ public sealed partial class MainShellViewModel
         ScopeMaskUpperRawPoints = upper;
         ScopeMaskLowerRawPoints = lower;
 
+        bool newlyFailed = false;
         if (result.Passed is bool passed && !_scopeMaskCounted.TryGetValue(capture, out _))
         {
             _scopeMaskCounted.AddOrUpdate(capture, this);
             if (passed) ScopeMaskPassCount++;
             else ScopeMaskFailCount++;
+            newlyFailed = !passed;
         }
 
         string provenance = capture.IsSimulated || mask.FromSimulatedCapture ? " (simulated)" : "";
         ScopeMaskStatusText = result.Message + provenance;
         ApplyScopeMaskPoints();
+        if (newlyFailed)
+            await RunScopeMaskFailActionsAsync(result);
     }
 
     private void ApplyScopeMaskPoints()
