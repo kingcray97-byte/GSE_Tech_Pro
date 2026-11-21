@@ -77,10 +77,50 @@ public sealed class ScopeOneTapTests
     }
 
     [Fact]
+    public async Task RelativeCompression_NeedsEngineInputs_ThenFindsTheWeakPosition()
+    {
+        await using var vm = await NewViewModelAsync("compression");
+        vm.SelectedScopeOneTapTest = vm.ScopeOneTapTests.Single(t => t.Id == MainShellViewModel.OneTapRelativeCompressionId);
+        Assert.Equal(Visibility.Visible, vm.ScopeOneTapCompressionInputsVisibility);
+        Assert.Equal(Visibility.Collapsed, vm.ScopeOneTapBatteryInputsVisibility);
+
+        await vm.StartScopeOneTapTestAsync();
+        Assert.Equal(MainShellViewModel.ScopeSafetyBlockedMessage, vm.ScopeOneTapStatusText);
+        vm.AcknowledgeScopeSafetyWarnings();
+        Assert.Contains("'Relative compression'", vm.ScopeSafetyAcknowledgedText);
+
+        // Cylinders and engine cycle have no defaults: nothing is captured until they are entered.
+        await vm.StartScopeOneTapTestAsync();
+        Assert.Null(vm.LastScopeCapture);
+        Assert.Contains("number of cylinders", vm.ScopeOneTapStatusText);
+        vm.ScopeCompressionCylindersText = "4";
+        await vm.StartScopeOneTapTestAsync();
+        Assert.Null(vm.LastScopeCapture);
+        Assert.Contains("4-stroke or 2-stroke", vm.ScopeOneTapStatusText);
+
+        vm.ScopeCompressionEngineCycle = "4-stroke";
+        vm.ScopeCrankingClampText = "1000";
+        await vm.StartScopeOneTapTestAsync();
+        Assert.NotNull(vm.LastScopeCapture);
+        Assert.Contains("weakest is position", vm.ScopeOneTapStatusText);
+        Assert.EndsWith("(simulated)", vm.ScopeOneTapStatusText);
+        var positions = vm.ScopeOneTapResults.Where(r => r.Parameter.StartsWith("Position ")).ToList();
+        Assert.Equal(4, positions.Count);
+        Assert.Single(positions, r => double.Parse(r.Value.TrimEnd(' ', '%'), System.Globalization.CultureInfo.InvariantCulture) < 80);
+        Assert.Contains(vm.ScopeOneTapResults, r => r.Parameter == "Cranking speed" && r.Value == "200 rpm");
+        Assert.Equal("", vm.ScopeOneTapResults.Single(r => r.Parameter.StartsWith("Spread")).VerdictText);
+
+        // Same hookup, battery test analysed on this capture: the engine never started.
+        vm.SelectedScopeOneTapTest = vm.ScopeOneTapTests[0];
+        await vm.AnalyseScopeOneTapTestAsync();
+        Assert.Contains(vm.ScopeOneTapResults, r => r.Parameter == "Cranking time" && r.Comment.Contains("still going"));
+    }
+
+    [Fact]
     public async Task ComingTests_CannotStart_AndAGuidedTestBringsItsOwnWarnings()
     {
         await using var vm = await NewViewModelAsync("coming");
-        vm.SelectedScopeOneTapTest = vm.ScopeOneTapTests.Single(t => t.Id == "relative-compression");
+        vm.SelectedScopeOneTapTest = vm.ScopeOneTapTests.Single(t => t.Id == "cylinder-balance");
         await vm.StartScopeOneTapTestAsync();
         Assert.Null(vm.LastScopeCapture);
         Assert.Contains("not built yet", vm.ScopeOneTapStatusText);

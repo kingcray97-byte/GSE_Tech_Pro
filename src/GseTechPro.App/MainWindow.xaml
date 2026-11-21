@@ -5180,6 +5180,46 @@
                                                                     Command="{x:Bind ViewModel.AnalyseScopeOneTapTestCommand}" />
                                                         </StackPanel>
                                                     </Grid>
+                                                    <Grid ColumnSpacing="10" RowSpacing="6"
+                                                          Visibility="{x:Bind ViewModel.ScopeOneTapCompressionInputsVisibility, Mode=OneWay}">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <ComboBox Grid.Row="0" Grid.Column="0" Header="System" MinWidth="96" MinHeight="{StaticResource MinTouchSize}"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeCrankingSystemVoltages}"
+                                                                  SelectedItem="{x:Bind ViewModel.ScopeCrankingSystemVoltage, Mode=TwoWay}" />
+                                                        <TextBox Grid.Row="0" Grid.Column="1" Header="Current clamp (A/V, blank = none)" MinHeight="{StaticResource MinTouchSize}"
+                                                                 PlaceholderText="e.g. 1000 for 1 mV/A"
+                                                                 Text="{x:Bind ViewModel.ScopeCrankingClampText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="0" Grid.Column="2" Header="Cylinders" MinWidth="96" MinHeight="{StaticResource MinTouchSize}"
+                                                                 PlaceholderText="required"
+                                                                 Text="{x:Bind ViewModel.ScopeCompressionCylindersText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <ComboBox Grid.Row="0" Grid.Column="3" Header="Engine cycle" MinWidth="120" MinHeight="{StaticResource MinTouchSize}"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeCompressionEngineCycles}"
+                                                                  SelectedItem="{x:Bind ViewModel.ScopeCompressionEngineCycle, Mode=TwoWay}" />
+                                                        <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Header="Maximum spread (%)" MinHeight="{StaticResource MinTouchSize}"
+                                                                 PlaceholderText="only from the manual"
+                                                                 Text="{x:Bind ViewModel.ScopeCompressionMaxSpreadText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Header="Source of the maximum (manual, page)" MinHeight="{StaticResource MinTouchSize}"
+                                                                 PlaceholderText="needed for a pass/fail"
+                                                                 Text="{x:Bind ViewModel.ScopeCompressionMaxSpreadSource, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <StackPanel Grid.Row="1" Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                                                            <Button Style="{StaticResource ActionTouchButtonStyle}" Content="Start"
+                                                                    AutomationProperties.Name="Start relative compression test"
+                                                                    Command="{x:Bind ViewModel.StartScopeOneTapTestCommand}" />
+                                                            <Button MinHeight="{StaticResource MinTouchSize}" MinWidth="88" Content="Analyse"
+                                                                    AutomationProperties.Name="Analyse the capture on screen for relative compression"
+                                                                    Command="{x:Bind ViewModel.AnalyseScopeOneTapTestCommand}" />
+                                                        </StackPanel>
+                                                    </Grid>
                                                     <TextBlock Text="{x:Bind ViewModel.ScopeOneTapStatusText, Mode=OneWay}" TextWrapping="Wrap"
                                                                FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold" />
                                                     <Border Background="{ThemeResource AppSurfaceBrush}" BorderBrush="{ThemeResource AppSubtleBorderBrush}"

@@ -23,7 +23,11 @@ public sealed partial class MainShellViewModel
     /// <summary>Last Auto setup result (for tests and the status line).</summary>
     public AutoSetupResult? LastScopeAutoSetup { get; private set; }
 
-    partial void OnSelectedSimulatorPresetChanged(SimulatedSignalPreset value) => _scopeAutoSetupPinnedPreset = null;
+    partial void OnSelectedSimulatorPresetChanged(SimulatedSignalPreset value)
+    {
+        _scopeAutoSetupPinnedPreset = null;
+        _scopeOneTapSimPreset = null;
+    }
 
     private bool CanRunScopeAutoSetup() => !IsScopeAutoSetupRunning;
 
@@ -49,7 +53,10 @@ public sealed partial class MainShellViewModel
             var current = BuildScopeCaptureRequest();
             ConfigureSimulatorPresetFor(device, current);
             if (device is SimulatedScopeDevice sim && SelectedGuidedTest is null)
+            {
                 _scopeAutoSetupPinnedPreset = sim.CurrentPreset;
+                _scopeOneTapSimPreset = null; // auto setup now owns the settings
+            }
 
             var ranges = ScopeChannelSetupViewModel.StandardVoltageRanges;
             var timebases = ScopeTimebaseOptions.Select(o => o.SecondsPerDivision).ToArray();

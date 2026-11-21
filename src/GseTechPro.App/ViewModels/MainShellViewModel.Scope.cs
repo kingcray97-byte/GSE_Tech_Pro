@@ -432,6 +432,7 @@ public sealed partial class MainShellViewModel
     partial void OnSelectedGuidedTestItemChanged(SelectableGuidedTestItem? value)
     {
         _scopeAutoSetupPinnedPreset = null;
+        _scopeOneTapSimPreset = null;
         // Keep the library browser's highlight in step with the picked test.
         SelectedScopeGuidedBrowserTest = value is null
             ? null
@@ -1148,6 +1149,11 @@ public sealed partial class MainShellViewModel
         {
             if (!simDevice.TryConfigurePreset(SelectedGuidedTest.Name))
                 simDevice.TryConfigurePreset(SelectedGuidedTest.Id);
+        }
+        else if (_scopeOneTapSimPreset is SimulatedSignalPreset oneTap)
+        {
+            // A one-tap test set up the scope: keep simulating its signal.
+            simDevice.ConfigurePreset(oneTap);
         }
         else if (_scopeAutoSetupPinnedPreset is SimulatedSignalPreset pinned)
         {

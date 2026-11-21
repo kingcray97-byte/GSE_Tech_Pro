@@ -31,6 +31,10 @@ public enum SimulatedSignalPreset
     /// channel setup) over a 5 s capture: rest, starter inrush, cranking with compression ripple, engine running.
     /// Demo values for the simulator, not specifications.</summary>
     BatteryCranking,
+    /// <summary>Relative compression: like <see cref="BatteryCranking"/> but the engine is kept from starting, so it
+    /// cranks to the end of the 5 s capture; 4 cylinders at about 200 rpm, the third compression of each engine cycle
+    /// about 70 % of the others (a weak cylinder to find). Demo values for the simulator, not specifications.</summary>
+    RelativeCompression,
 }
 
 /// <summary>
@@ -50,6 +54,7 @@ public static class SimulatedScopePresets
         SimulatedSignalPreset.SolenoidCurrent,
         SimulatedSignalPreset.CanBusFrames,
         SimulatedSignalPreset.BatteryCranking,
+        SimulatedSignalPreset.RelativeCompression,
     ];
 
     /// <summary>Human-readable label for UI preset pickers.</summary>
@@ -65,6 +70,7 @@ public static class SimulatedScopePresets
         SimulatedSignalPreset.SolenoidCurrent => "Solenoid current",
         SimulatedSignalPreset.CanBusFrames => "CAN frames (J1939, 250 kbit/s)",
         SimulatedSignalPreset.BatteryCranking => "Battery / cranking",
+        SimulatedSignalPreset.RelativeCompression => "Relative compression (weak cylinder)",
         _ => preset.ToString(),
     };
 
@@ -187,6 +193,8 @@ public static class SimulatedScopePresets
             TriggerLevelVolts = 3.0,
         },
 
+        SimulatedSignalPreset.RelativeCompression => GetCanonicalRequest(SimulatedSignalPreset.BatteryCranking),
+
         SimulatedSignalPreset.BatteryCranking => new ScopeCaptureRequest
         {
             Channels =
@@ -286,6 +294,11 @@ public static class SimulatedScopePresets
         }
 
         string normalized = testNameOrId.Trim().ToLowerInvariant();
+        if (normalized.Contains("compression"))
+        {
+            preset = SimulatedSignalPreset.RelativeCompression;
+            return true;
+        }
         if (normalized.Contains("battery") || normalized.Contains("cranking"))
         {
             preset = SimulatedSignalPreset.BatteryCranking;

@@ -334,6 +334,7 @@ public sealed class SimulatedScopeDevice : IScopeDevice
             {
                 SimulatedSignalPreset.CanBusFrames => SampleCanFrames(t, config.Channel, noise),
                 SimulatedSignalPreset.BatteryCranking => SampleBatteryCranking(t, config, noise),
+                SimulatedSignalPreset.RelativeCompression => SampleRelativeCompression(t, config, noise),
                 _ => SamplePresetAtTime(preset, t, noise),
             };
             samples[i] = baseVolts * probeScale;
@@ -590,6 +591,42 @@ public sealed class SimulatedScopeDevice : IScopeDevice
             double s = Math.Min(1.0, (t - crankEnd) / settle);
             volts = 10.1 + (14.2 - 10.1) * s;
             amps = 210.0 * (1.0 - s) - 8.0 * s;
+        }
+
+        if (config.Channel == 1)
+            return volts + 0.02 * unitNoise;
+
+        double scale = config.CurrentScaleAmpsPerVolt > 0.0 ? config.CurrentScaleAmpsPerVolt : 1000.0;
+        return (amps + 3.0 * unitNoise) / scale;
+    }
+
+    /// <summary>Relative compression bump heights per firing position (demo: the third is weak).</summary>
+    internal static readonly double[] SimulatedCompressionHeights = [1.0, 0.97, 0.70, 0.99];
+
+    /// <summary>
+    /// Relative compression (demo values, not specs): rest at 12.6 V to 0.8 s, starter inrush, then cranking
+    /// with no start to the end of the capture: 6.67 compressions/s (4 cylinders, 4-stroke, 200 rpm), each a
+    /// sin² bump of 90 A (0.45 V dip) scaled by <see cref="SimulatedCompressionHeights"/>, on 170 A / 10.3 V.
+    /// </summary>
+    private static double SampleRelativeCompression(double t, ScopeChannelConfig config, double unitNoise)
+    {
+        const double crankStart = 0.8, compressionHz = 200.0 / 60.0 * 4.0 / 2.0;
+        double volts, amps;
+        if (t < crankStart)
+        {
+            volts = 12.6;
+            amps = 0.0;
+        }
+        else
+        {
+            double s = t - crankStart;
+            double inrush = Math.Exp(-s / 0.04);
+            double phase = s * compressionHz;
+            int k = (int)Math.Floor(phase);
+            double frac = phase - k;
+            double bump = SimulatedCompressionHeights[k % SimulatedCompressionHeights.Length] * Math.Pow(Math.Sin(Math.PI * frac), 2);
+            volts = 10.3 - 1.9 * inrush - 0.45 * bump * (1.0 - inrush);
+            amps = 170.0 + 450.0 * inrush + 90.0 * bump * (1.0 - inrush);
         }
 
         if (config.Channel == 1)
