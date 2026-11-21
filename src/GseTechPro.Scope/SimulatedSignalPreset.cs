@@ -39,6 +39,10 @@ public enum SimulatedSignalPreset
     /// 4-stroke; each firing speeds the crank up and slows it again by about ±15 rpm, the third firing of each cycle about
     /// 60 % as much (a weak cylinder to find). Demo values for the simulator, not specifications.</summary>
     CylinderBalance,
+    /// <summary>Pressure transducer output on CH1 (volts only): 0.5 V at rest, a pump build-up to about 3.1 V with a
+    /// 120 Hz pump ripple, a short peak to about 3.6 V, then back to about 3.1 V. What pressure that is depends only on
+    /// the scaling the technician enters from the transducer spec. Demo values, not specifications.</summary>
+    PressureTransducer,
 }
 
 /// <summary>
@@ -60,6 +64,7 @@ public static class SimulatedScopePresets
         SimulatedSignalPreset.BatteryCranking,
         SimulatedSignalPreset.RelativeCompression,
         SimulatedSignalPreset.CylinderBalance,
+        SimulatedSignalPreset.PressureTransducer,
     ];
 
     /// <summary>Human-readable label for UI preset pickers.</summary>
@@ -77,6 +82,7 @@ public static class SimulatedScopePresets
         SimulatedSignalPreset.BatteryCranking => "Battery / cranking",
         SimulatedSignalPreset.RelativeCompression => "Relative compression (weak cylinder)",
         SimulatedSignalPreset.CylinderBalance => "Cylinder balance (60-2, weak cylinder)",
+        SimulatedSignalPreset.PressureTransducer => "Pressure transducer (0.5–4.5 V output)",
         _ => preset.ToString(),
     };
 
@@ -201,6 +207,19 @@ public static class SimulatedScopePresets
 
         SimulatedSignalPreset.RelativeCompression => GetCanonicalRequest(SimulatedSignalPreset.BatteryCranking),
 
+        SimulatedSignalPreset.PressureTransducer => new ScopeCaptureRequest
+        {
+            Channels =
+            [
+                new ScopeChannelConfig { Channel = 1, Coupling = ScopeCoupling.Dc, ProbeMultiplier = 1.0, VoltageRangeVolts = 5.0 },
+            ],
+            TimebaseSecondsPerDivision = 0.1, // 1 s: build-up, peak and hold
+            SampleRateHz = 10_000,
+            TriggerMode = ScopeTriggerMode.None,
+            TriggerChannel = 1,
+            TriggerLevelVolts = 0.0,
+        },
+
         SimulatedSignalPreset.CylinderBalance => new ScopeCaptureRequest
         {
             Channels =
@@ -313,6 +332,11 @@ public static class SimulatedScopePresets
         }
 
         string normalized = testNameOrId.Trim().ToLowerInvariant();
+        if (normalized.Contains("transducer"))
+        {
+            preset = SimulatedSignalPreset.PressureTransducer;
+            return true;
+        }
         if (normalized.Contains("balance"))
         {
             preset = SimulatedSignalPreset.CylinderBalance;

@@ -114,6 +114,103 @@ public sealed partial class ScopeChannelSetupViewModel : ObservableObject
 
     public IReadOnlyList<double> ClampScales => StandardClampScales;
 
+    public IReadOnlyList<string> PressureUnits => PressureTransducer.Units;
+
+    // ---- Pressure transducer (10D.4): every number from the transducer's published spec, no defaults ----
+
+    /// <summary>The technician says this channel has a pressure transducer on it. Turns the current clamp off.</summary>
+    [ObservableProperty]
+    private bool _isPressureEnabled;
+
+    [ObservableProperty]
+    private string _pressureUnit = "psi";
+
+    /// <summary>Transducer output (V) at the zero/low pressure point, from its spec.</summary>
+    [ObservableProperty]
+    private string _pressureZeroOutputText = "";
+
+    /// <summary>Pressure at that output (usually 0), from its spec.</summary>
+    [ObservableProperty]
+    private string _pressureZeroText = "";
+
+    [ObservableProperty]
+    private string _pressureFullOutputText = "";
+
+    [ObservableProperty]
+    private string _pressureFullText = "";
+
+    /// <summary>Transducer make/model or datasheet the numbers come from (required).</summary>
+    [ObservableProperty]
+    private string _pressureSourceText = "";
+
+    /// <summary>The valid scaling in use, or null (off, or not all numbers entered yet).</summary>
+    public ScopePressureScaling? PressureScaling { get; private set; }
+
+    public bool HasPressure => PressureScaling is not null;
+
+    /// <summary>"Off", what is still missing, or the scaling in use.</summary>
+    [ObservableProperty]
+    private string _pressureStatusText = "Off";
+
+    partial void OnIsPressureEnabledChanged(bool value)
+    {
+        if (value && CurrentScaleAmpsPerVolt > 0.0)
+            CurrentScaleAmpsPerVolt = 0.0; // one probe per channel
+        RecomputePressure();
+    }
+
+    partial void OnPressureUnitChanged(string value) => RecomputePressure();
+    partial void OnPressureZeroOutputTextChanged(string value) => RecomputePressure();
+    partial void OnPressureZeroTextChanged(string value) => RecomputePressure();
+    partial void OnPressureFullOutputTextChanged(string value) => RecomputePressure();
+    partial void OnPressureFullTextChanged(string value) => RecomputePressure();
+    partial void OnPressureSourceTextChanged(string value) => RecomputePressure();
+
+    private static double ParseOrNaN(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return double.NaN;
+        var t = text.Trim();
+        return double.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ||
+               double.TryParse(t, NumberStyles.Float, CultureInfo.CurrentCulture, out v)
+            ? v
+            : double.NaN;
+    }
+
+    private void RecomputePressure()
+    {
+        ScopePressureScaling? next = null;
+        if (!IsPressureEnabled)
+        {
+            PressureStatusText = "Off";
+        }
+        else
+        {
+            var candidate = new ScopePressureScaling
+            {
+                Unit = PressureUnit ?? "",
+                ZeroOutputVolts = ParseOrNaN(PressureZeroOutputText),
+                ZeroPressure = ParseOrNaN(PressureZeroText),
+                FullScaleOutputVolts = ParseOrNaN(PressureFullOutputText),
+                FullScalePressure = ParseOrNaN(PressureFullText),
+                Source = (PressureSourceText ?? "").Trim(),
+            };
+            var error = PressureTransducer.Validate(candidate);
+            PressureStatusText = error ?? PressureTransducer.Describe(candidate);
+            next = error is null ? candidate : null;
+        }
+
+        if (next == PressureScaling)
+            return; // record equality: nothing the trace or axes depend on changed
+        PressureScaling = next;
+        OnPropertyChanged(nameof(PressureScaling));
+        OnPropertyChanged(nameof(HasPressure));
+        OnPropertyChanged(nameof(RangeDisplay));
+        OnPropertyChanged(nameof(DetailDisplay));
+        OnPropertyChanged(nameof(SummaryText));
+        ConfigurationChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SummaryText))]
     [NotifyPropertyChangedFor(nameof(EnabledOpacity))]
@@ -176,6 +273,8 @@ public sealed partial class ScopeChannelSetupViewModel : ObservableObject
         {
             if (!IsEnabled)
                 return "Off";
+            if (PressureScaling is { } ps)
+                return $"{PressureTransducer.Format(ps.ZeroPressure)}–{PressureTransducer.Format(ps.FullScalePressure)} {ps.Unit}";
             return CurrentScaleAmpsPerVolt > 0.0
                 ? string.Create(CultureInfo.InvariantCulture, $"±{VoltageRangeVolts * CurrentScaleAmpsPerVolt:G4} A")
                 : string.Create(CultureInfo.InvariantCulture, $"±{VoltageRangeVolts:G4} V");
@@ -188,6 +287,8 @@ public sealed partial class ScopeChannelSetupViewModel : ObservableObject
         get
         {
             var couplingText = Coupling == ScopeCoupling.Ac ? "AC" : "DC";
+            if (HasPressure)
+                return string.Create(CultureInfo.InvariantCulture, $"{couplingText} ±{VoltageRangeVolts:G4} V");
             return CurrentScaleAmpsPerVolt > 0.0
                 ? string.Create(CultureInfo.InvariantCulture, $"{couplingText} {CurrentScaleAmpsPerVolt:G4} A/V")
                 : string.Create(CultureInfo.InvariantCulture, $"{couplingText} x{ProbeMultiplier:G4}");
@@ -240,7 +341,9 @@ public sealed partial class ScopeChannelSetupViewModel : ObservableObject
                 return $"{ChannelLabel}: OFF";
 
             var couplingText = Coupling == ScopeCoupling.Ac ? "AC" : "DC";
-            var clampText = CurrentScaleAmpsPerVolt > 0.0
+            var clampText = HasPressure
+                ? $" · pressure ({PressureScaling!.Unit})"
+                : CurrentScaleAmpsPerVolt > 0.0
                 ? string.Create(CultureInfo.InvariantCulture, $" · {CurrentScaleAmpsPerVolt:G4} A/V")
                 : string.Create(CultureInfo.InvariantCulture, $" · {ProbeMultiplier:G4}x");
             return string.Create(CultureInfo.InvariantCulture, $"{ChannelLabel}: ±{VoltageRangeVolts:G4} V · {couplingText}{clampText}");
@@ -251,7 +354,12 @@ public sealed partial class ScopeChannelSetupViewModel : ObservableObject
     partial void OnVoltageRangeVoltsChanged(double value) => ConfigurationChanged?.Invoke(this, EventArgs.Empty);
     partial void OnCouplingChanged(ScopeCoupling value) => ConfigurationChanged?.Invoke(this, EventArgs.Empty);
     partial void OnProbeMultiplierChanged(double value) => ConfigurationChanged?.Invoke(this, EventArgs.Empty);
-    partial void OnCurrentScaleAmpsPerVoltChanged(double value) => ConfigurationChanged?.Invoke(this, EventArgs.Empty);
+    partial void OnCurrentScaleAmpsPerVoltChanged(double value)
+    {
+        if (value > 0.0 && IsPressureEnabled)
+            IsPressureEnabled = false; // one probe per channel
+        ConfigurationChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     public ScopeChannelConfig ToChannelConfig() => new()
     {
@@ -259,8 +367,9 @@ public sealed partial class ScopeChannelSetupViewModel : ObservableObject
         VoltageRangeVolts = VoltageRangeVolts > 0.0 && double.IsFinite(VoltageRangeVolts) ? VoltageRangeVolts : 5.0,
         Coupling = Coupling,
         ProbeMultiplier = ProbeMultiplier > 0.0 && double.IsFinite(ProbeMultiplier) ? ProbeMultiplier : 1.0,
-        CurrentScaleAmpsPerVolt = CurrentScaleAmpsPerVolt >= 0.0 && double.IsFinite(CurrentScaleAmpsPerVolt) ? CurrentScaleAmpsPerVolt : 0.0,
+        CurrentScaleAmpsPerVolt = !HasPressure && CurrentScaleAmpsPerVolt >= 0.0 && double.IsFinite(CurrentScaleAmpsPerVolt) ? CurrentScaleAmpsPerVolt : 0.0,
         Label = CleanLabel,
+        Pressure = PressureScaling,
     };
 
     public void ApplyConfig(ScopeChannelConfig config, bool enable = true)
@@ -274,6 +383,22 @@ public sealed partial class ScopeChannelSetupViewModel : ObservableObject
         // A saved capture or guided-test setup brings its own labels (or none): a label typed
         // for the previous hookup would name the wrong signal.
         Label = ChannelLabels.Normalize(config.Label) ?? "";
+        // Likewise the pressure scaling: the setup's own, or none.
+        if (config.Pressure is { } ps && config.CurrentScaleAmpsPerVolt <= 0.0)
+        {
+            var c = CultureInfo.InvariantCulture;
+            PressureUnit = ps.Unit;
+            PressureZeroOutputText = ps.ZeroOutputVolts.ToString("0.###", c);
+            PressureZeroText = ps.ZeroPressure.ToString("0.###", c);
+            PressureFullOutputText = ps.FullScaleOutputVolts.ToString("0.###", c);
+            PressureFullText = ps.FullScalePressure.ToString("0.###", c);
+            PressureSourceText = ps.Source;
+            IsPressureEnabled = true;
+        }
+        else
+        {
+            IsPressureEnabled = false;
+        }
     }
 }
 

@@ -47,7 +47,8 @@ public sealed partial class MainShellViewModel
         if (IsScopeStacked && e.PropertyName is nameof(ScopeChannelSetupViewModel.Label)
                 or nameof(ScopeChannelSetupViewModel.IsEnabled)
                 or nameof(ScopeChannelSetupViewModel.VoltageRangeVolts)
-                or nameof(ScopeChannelSetupViewModel.CurrentScaleAmpsPerVolt))
+                or nameof(ScopeChannelSetupViewModel.CurrentScaleAmpsPerVolt)
+                or nameof(ScopeChannelSetupViewModel.PressureScaling))
         {
             OnScopeLanesChanged();
         }

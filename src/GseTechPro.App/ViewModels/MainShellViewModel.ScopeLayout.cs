@@ -166,9 +166,9 @@ public sealed partial class MainShellViewModel
             var a = ScopeChannels[0];
             var b = ScopeChannels[1];
             ScopeLeftAxisLabels = BuildChannelAxis(a);
-            ScopeLeftAxisUnit = a.CurrentScaleAmpsPerVolt > 0.0 ? "A" : "V";
+            ScopeLeftAxisUnit = AxisUnit(a);
             ScopeRightAxisLabels = BuildChannelAxis(b);
-            ScopeRightAxisUnit = b.CurrentScaleAmpsPerVolt > 0.0 ? "A" : "V";
+            ScopeRightAxisUnit = AxisUnit(b);
         }
 
         OnPropertyChanged(nameof(ScopeLeftAxisVisibility));
@@ -198,9 +198,19 @@ public sealed partial class MainShellViewModel
         ScopeTimeAxisUnit = TimeUnitFor(span / ScopeDivisions);
     }
 
+    private static string AxisUnit(ScopeChannelSetupViewModel ch) =>
+        ch.PressureScaling?.Unit ?? (ch.CurrentScaleAmpsPerVolt > 0.0 ? "A" : "V");
+
     private static IReadOnlyList<string> BuildChannelAxis(ScopeChannelSetupViewModel ch)
     {
         double fullScale = Math.Max(0.1, ch.VoltageRangeVolts);
+        if (ch.PressureScaling is { } ps)
+        {
+            // The graticule still spans ±range volts; label it with the pressure at each line.
+            return BuildLinearAxis(
+                GseTechPro.Scope.PressureTransducer.ToPressure(ps, fullScale),
+                GseTechPro.Scope.PressureTransducer.ToPressure(ps, -fullScale));
+        }
         if (ch.CurrentScaleAmpsPerVolt > 0.0)
             fullScale *= ch.CurrentScaleAmpsPerVolt;
         return BuildVoltageAxis(fullScale);
@@ -216,6 +226,21 @@ public sealed partial class MainShellViewModel
             if (Math.Abs(v) < fullScale * 1e-9)
                 v = 0.0;
             labels[i] = FormatAxisNumber(v, fullScale);
+        }
+        return labels;
+    }
+
+    /// <summary>Labels from <paramref name="top"/> down to <paramref name="bottom"/> in 10 equal divisions.</summary>
+    public static IReadOnlyList<string> BuildLinearAxis(double top, double bottom)
+    {
+        var labels = new string[ScopeDivisions + 1];
+        double span = Math.Abs(top - bottom) / 2.0;
+        for (int i = 0; i <= ScopeDivisions; i++)
+        {
+            double v = top + i * (bottom - top) / ScopeDivisions;
+            if (Math.Abs(v) < span * 1e-9)
+                v = 0.0;
+            labels[i] = FormatAxisNumber(v, span);
         }
         return labels;
     }

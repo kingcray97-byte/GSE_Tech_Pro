@@ -3789,6 +3789,39 @@
                                                     <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Current clamp (A/V, 0 = none)"
                                                               ItemsSource="{x:Bind ViewModel.ScopeChannel1.ClampScales}"
                                                               SelectedItem="{x:Bind ViewModel.ScopeChannel1.CurrentScaleAmpsPerVolt, Mode=TwoWay}" />
+                                                    <!-- Pressure transducer (10D.4): numbers from the transducer's published spec, no defaults -->
+                                                    <ToggleSwitch Header="Pressure transducer" OffContent="Off" OnContent="On (clamp off)"
+                                                                  IsOn="{x:Bind ViewModel.ScopeChannel1.IsPressureEnabled, Mode=TwoWay}" />
+                                                    <Grid ColumnSpacing="8" RowSpacing="6"
+                                                          Visibility="{x:Bind ViewModel.ScopeChannel1.IsPressureEnabled, Mode=OneWay}">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <ComboBox Grid.Row="0" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Unit"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeChannel1.PressureUnits}"
+                                                                  SelectedItem="{x:Bind ViewModel.ScopeChannel1.PressureUnit, Mode=TwoWay}" />
+                                                        <TextBox Grid.Row="1" Grid.Column="0" Header="Output at low point (V)" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="e.g. 0.5"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel1.PressureZeroOutputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="1" Grid.Column="1" Header="Pressure there" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="e.g. 0"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel1.PressureZeroText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="2" Grid.Column="0" Header="Output at full scale (V)" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="e.g. 4.5"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel1.PressureFullOutputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="2" Grid.Column="1" Header="Full-scale pressure" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="from the spec"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel1.PressureFullText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="3" Grid.ColumnSpan="2" Header="Transducer make/model or datasheet" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="required"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel1.PressureSourceText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBlock Grid.Row="4" Grid.ColumnSpan="2" TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                                                   Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                                   Text="{x:Bind ViewModel.ScopeChannel1.PressureStatusText, Mode=OneWay}" />
+                                                    </Grid>
                                                 </StackPanel>
                                             </Flyout>
                                         </Button.Flyout>
@@ -3857,6 +3890,39 @@
                                                     <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Current clamp (A/V, 0 = none)"
                                                               ItemsSource="{x:Bind ViewModel.ScopeChannel2.ClampScales}"
                                                               SelectedItem="{x:Bind ViewModel.ScopeChannel2.CurrentScaleAmpsPerVolt, Mode=TwoWay}" />
+                                                    <!-- Pressure transducer (10D.4): numbers from the transducer's published spec, no defaults -->
+                                                    <ToggleSwitch Header="Pressure transducer" OffContent="Off" OnContent="On (clamp off)"
+                                                                  IsOn="{x:Bind ViewModel.ScopeChannel2.IsPressureEnabled, Mode=TwoWay}" />
+                                                    <Grid ColumnSpacing="8" RowSpacing="6"
+                                                          Visibility="{x:Bind ViewModel.ScopeChannel2.IsPressureEnabled, Mode=OneWay}">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <ComboBox Grid.Row="0" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Unit"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeChannel2.PressureUnits}"
+                                                                  SelectedItem="{x:Bind ViewModel.ScopeChannel2.PressureUnit, Mode=TwoWay}" />
+                                                        <TextBox Grid.Row="1" Grid.Column="0" Header="Output at low point (V)" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="e.g. 0.5"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel2.PressureZeroOutputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="1" Grid.Column="1" Header="Pressure there" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="e.g. 0"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel2.PressureZeroText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="2" Grid.Column="0" Header="Output at full scale (V)" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="e.g. 4.5"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel2.PressureFullOutputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="2" Grid.Column="1" Header="Full-scale pressure" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="from the spec"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel2.PressureFullText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="3" Grid.ColumnSpan="2" Header="Transducer make/model or datasheet" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="required"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel2.PressureSourceText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBlock Grid.Row="4" Grid.ColumnSpan="2" TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                                                   Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                                   Text="{x:Bind ViewModel.ScopeChannel2.PressureStatusText, Mode=OneWay}" />
+                                                    </Grid>
                                                 </StackPanel>
                                             </Flyout>
                                         </Button.Flyout>
@@ -3925,6 +3991,39 @@
                                                     <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Current clamp (A/V, 0 = none)"
                                                               ItemsSource="{x:Bind ViewModel.ScopeChannel3.ClampScales}"
                                                               SelectedItem="{x:Bind ViewModel.ScopeChannel3.CurrentScaleAmpsPerVolt, Mode=TwoWay}" />
+                                                    <!-- Pressure transducer (10D.4): numbers from the transducer's published spec, no defaults -->
+                                                    <ToggleSwitch Header="Pressure transducer" OffContent="Off" OnContent="On (clamp off)"
+                                                                  IsOn="{x:Bind ViewModel.ScopeChannel3.IsPressureEnabled, Mode=TwoWay}" />
+                                                    <Grid ColumnSpacing="8" RowSpacing="6"
+                                                          Visibility="{x:Bind ViewModel.ScopeChannel3.IsPressureEnabled, Mode=OneWay}">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <ComboBox Grid.Row="0" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Unit"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeChannel3.PressureUnits}"
+                                                                  SelectedItem="{x:Bind ViewModel.ScopeChannel3.PressureUnit, Mode=TwoWay}" />
+                                                        <TextBox Grid.Row="1" Grid.Column="0" Header="Output at low point (V)" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="e.g. 0.5"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel3.PressureZeroOutputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="1" Grid.Column="1" Header="Pressure there" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="e.g. 0"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel3.PressureZeroText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="2" Grid.Column="0" Header="Output at full scale (V)" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="e.g. 4.5"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel3.PressureFullOutputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="2" Grid.Column="1" Header="Full-scale pressure" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="from the spec"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel3.PressureFullText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="3" Grid.ColumnSpan="2" Header="Transducer make/model or datasheet" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="required"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel3.PressureSourceText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBlock Grid.Row="4" Grid.ColumnSpan="2" TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                                                   Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                                   Text="{x:Bind ViewModel.ScopeChannel3.PressureStatusText, Mode=OneWay}" />
+                                                    </Grid>
                                                 </StackPanel>
                                             </Flyout>
                                         </Button.Flyout>
@@ -3993,6 +4092,39 @@
                                                     <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Current clamp (A/V, 0 = none)"
                                                               ItemsSource="{x:Bind ViewModel.ScopeChannel4.ClampScales}"
                                                               SelectedItem="{x:Bind ViewModel.ScopeChannel4.CurrentScaleAmpsPerVolt, Mode=TwoWay}" />
+                                                    <!-- Pressure transducer (10D.4): numbers from the transducer's published spec, no defaults -->
+                                                    <ToggleSwitch Header="Pressure transducer" OffContent="Off" OnContent="On (clamp off)"
+                                                                  IsOn="{x:Bind ViewModel.ScopeChannel4.IsPressureEnabled, Mode=TwoWay}" />
+                                                    <Grid ColumnSpacing="8" RowSpacing="6"
+                                                          Visibility="{x:Bind ViewModel.ScopeChannel4.IsPressureEnabled, Mode=OneWay}">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <ComboBox Grid.Row="0" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}" Header="Unit"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeChannel4.PressureUnits}"
+                                                                  SelectedItem="{x:Bind ViewModel.ScopeChannel4.PressureUnit, Mode=TwoWay}" />
+                                                        <TextBox Grid.Row="1" Grid.Column="0" Header="Output at low point (V)" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="e.g. 0.5"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel4.PressureZeroOutputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="1" Grid.Column="1" Header="Pressure there" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="e.g. 0"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel4.PressureZeroText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="2" Grid.Column="0" Header="Output at full scale (V)" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="e.g. 4.5"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel4.PressureFullOutputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="2" Grid.Column="1" Header="Full-scale pressure" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="from the spec"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel4.PressureFullText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="3" Grid.ColumnSpan="2" Header="Transducer make/model or datasheet" MinHeight="{StaticResource MinTouchSize}" PlaceholderText="required"
+                                                                 Text="{x:Bind ViewModel.ScopeChannel4.PressureSourceText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBlock Grid.Row="4" Grid.ColumnSpan="2" TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                                                   Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                                   Text="{x:Bind ViewModel.ScopeChannel4.PressureStatusText, Mode=OneWay}" />
+                                                    </Grid>
                                                 </StackPanel>
                                             </Flyout>
                                         </Button.Flyout>
@@ -5435,9 +5567,16 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{x:Bind ViewModel.ScopeStatusMessage, Mode=OneWay}"
-                                   FontSize="{StaticResource FontSizeSmall}"
-                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Text="{x:Bind ViewModel.ScopeStatusMessage, Mode=OneWay}"
+                                       FontSize="{StaticResource FontSizeSmall}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <!-- Pressure channels (10D.4): min / max / mean of the capture on screen -->
+                            <TextBlock Text="{x:Bind ViewModel.ScopePressureReadoutText, Mode=OneWay}"
+                                       FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold"
+                                       FontFamily="{StaticResource MonoFontFamily}" TextWrapping="Wrap"
+                                       Visibility="{x:Bind ViewModel.ScopePressureReadoutVisibility, Mode=OneWay}" />
+                        </StackPanel>
                         <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.ActiveWorkOrderSummaryText, Mode=OneWay}"
                                    FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold"
                                    Foreground="{ThemeResource AppAccentBrush}"

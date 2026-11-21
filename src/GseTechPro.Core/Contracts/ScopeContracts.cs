@@ -45,6 +45,37 @@ public sealed record ScopeChannelConfig
     /// </summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public string? Label { get; init; }
+
+    /// <summary>
+    /// Optional pressure-transducer scaling (Phase 10D.4): the channel's volts are shown as pressure.
+    /// Every number comes from the transducer's published spec, entered by the technician; there is no
+    /// default. Samples stay in volts. Null = not a pressure channel (left out of the JSON, so older
+    /// rows and guided-test setups are unchanged). Not used with a current clamp on the same channel.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ScopePressureScaling? Pressure { get; init; }
+}
+
+/// <summary>
+/// Linear volts → pressure scaling of a pressure transducer, from two points of its published spec:
+/// the output at one pressure (usually zero) and the output at full scale (e.g. 0.5 V = 0 psi,
+/// 4.5 V = 5000 psi). <see cref="Source"/> records where the numbers come from (make/model or
+/// datasheet), so a reading can always be traced back (AGENTS.md rule 5).
+/// </summary>
+public sealed record ScopePressureScaling
+{
+    /// <summary>Display unit of the pressures: "psi", "bar", "kPa" or "MPa".</summary>
+    public string Unit { get; init; } = "";
+    /// <summary>Transducer output (V) at <see cref="ZeroPressure"/>.</summary>
+    public double ZeroOutputVolts { get; init; }
+    /// <summary>Pressure at <see cref="ZeroOutputVolts"/>, in <see cref="Unit"/> (usually 0).</summary>
+    public double ZeroPressure { get; init; }
+    /// <summary>Transducer output (V) at <see cref="FullScalePressure"/>.</summary>
+    public double FullScaleOutputVolts { get; init; }
+    /// <summary>Pressure at <see cref="FullScaleOutputVolts"/>, in <see cref="Unit"/>.</summary>
+    public double FullScalePressure { get; init; }
+    /// <summary>Transducer make/model or datasheet the technician took the numbers from.</summary>
+    public string Source { get; init; } = "";
 }
 
 /// <summary>

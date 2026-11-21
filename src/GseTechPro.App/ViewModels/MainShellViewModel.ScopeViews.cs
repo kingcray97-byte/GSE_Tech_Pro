@@ -75,6 +75,8 @@ public sealed partial class MainShellViewModel
         var ch = ScopeChannels.FirstOrDefault(c => c.Channel == channel);
         if (ch is null)
             return "";
+        if (ch.PressureScaling is { } ps)
+            return $"{ch.DisplayName}  {ch.RangeDisplay} ({ps.ZeroOutputVolts:0.###}–{ps.FullScaleOutputVolts:0.###} V)";
         return ch.CurrentScaleAmpsPerVolt > 0.0
             ? string.Create(CultureInfo.InvariantCulture, $"{ch.DisplayName}  ±{ch.VoltageRangeVolts * ch.CurrentScaleAmpsPerVolt:G4} A")
             : string.Create(CultureInfo.InvariantCulture, $"{ch.DisplayName}  ±{ch.VoltageRangeVolts:G4} V");

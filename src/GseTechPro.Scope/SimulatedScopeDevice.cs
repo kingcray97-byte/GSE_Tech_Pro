@@ -336,6 +336,7 @@ public sealed class SimulatedScopeDevice : IScopeDevice
                 SimulatedSignalPreset.BatteryCranking => SampleBatteryCranking(t, config, noise),
                 SimulatedSignalPreset.RelativeCompression => SampleRelativeCompression(t, config, noise),
                 SimulatedSignalPreset.CylinderBalance => SampleCylinderBalance(t, noise),
+                SimulatedSignalPreset.PressureTransducer => SamplePressureTransducer(t, noise),
                 _ => SamplePresetAtTime(preset, t, noise),
             };
             samples[i] = baseVolts * probeScale;
@@ -670,6 +671,22 @@ public sealed class SimulatedScopeDevice : IScopeDevice
             : phase < 0.60 ? vHigh - (vHigh - vLow) * ((phase - 0.50) / 0.10)
             : vLow;
         return level + unitNoise * 0.002;
+    }
+
+    /// <summary>
+    /// Pressure transducer output (volts, demo values): 0.5 V to 0.2 s, rise to 3.1 V by 0.45 s, a peak to
+    /// 3.6 V around 0.5 s settling back by 0.6 s, then 3.1 V; ±0.03 V pump ripple at 120 Hz once the pump runs.
+    /// </summary>
+    private static double SamplePressureTransducer(double t, double unitNoise)
+    {
+        double v;
+        if (t < 0.2) v = 0.5;
+        else if (t < 0.45) v = 0.5 + (3.1 - 0.5) * (t - 0.2) / 0.25;
+        else if (t < 0.6) v = 3.1 + 0.5 * Math.Sin(Math.PI * (t - 0.45) / 0.15);
+        else v = 3.1;
+        if (t >= 0.2)
+            v += 0.03 * Math.Sin(2.0 * Math.PI * 120.0 * t);
+        return v + 0.003 * unitNoise;
     }
 
     private static double SampleSolenoidCurrent(double t, double unitNoise)

@@ -558,6 +558,7 @@ public sealed partial class MainShellViewModel
         OnPropertyChanged(nameof(ScopeChannel3TraceVisibility));
         OnPropertyChanged(nameof(ScopeChannel4TraceVisibility));
         RebuildScopeAxisLabels();
+        UpdateScopePressureReadout();
 
         if (!_suppressChannelConfigEvents && LastScopeCapture is not null && !IsScopeCapturing)
         {
@@ -1280,6 +1281,7 @@ public sealed partial class MainShellViewModel
                 ScopeReferenceOverlayRawPoints = Array.Empty<Point>();
                 ApplyPointCollectionsOnUiThread();
                 UpdateScopeCursorReadouts();
+                UpdateScopePressureReadout();
                 RebuildScopeAxisLabels();
             }
             return;
@@ -1355,6 +1357,7 @@ public sealed partial class MainShellViewModel
         ApplyPointCollectionsOnUiThread();
         RebuildScopeAxisLabels();
         UpdateScopeCursorReadouts();
+        UpdateScopePressureReadout();
         await RefreshScopeMathAsync();
         await RefreshScopeMaskAsync();
         await RefreshScopeDeepMeasureAsync();
@@ -1442,12 +1445,8 @@ public sealed partial class MainShellViewModel
             ? string.Create(CultureInfo.InvariantCulture, $"{1.0 / Math.Abs(dt):F1} Hz")
             : "— Hz";
 
-        string clampA = primaryChannel.CurrentScaleAmpsPerVolt > 0.0
-            ? string.Create(CultureInfo.InvariantCulture, $" ({vA * primaryChannel.CurrentScaleAmpsPerVolt:F2} A)")
-            : "";
-        string clampB = primaryChannel.CurrentScaleAmpsPerVolt > 0.0
-            ? string.Create(CultureInfo.InvariantCulture, $" ({vB * primaryChannel.CurrentScaleAmpsPerVolt:F2} A)")
-            : "";
+        string clampA = ScaledValueSuffix(primaryChannel, vA);
+        string clampB = ScaledValueSuffix(primaryChannel, vB);
 
         ScopeCursorALabel = string.Create(
             CultureInfo.InvariantCulture,
