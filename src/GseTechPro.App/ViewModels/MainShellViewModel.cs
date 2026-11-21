@@ -1961,6 +1961,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                     Child("Scope", "Overview", "Scope Capture", ""),
                     Child("Scope", "ScopeChannels", "Channels", ""),
                     Child("Scope", "GuidedTests", "Guided Tests", ""),
+                    Child("Scope", "OneTapTests", "One-tap Tests", ""),
                     Child("Scope", "RefWaveforms", "Reference Waveforms", ""),
                 },
             },
@@ -2288,6 +2289,14 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                 ActiveSectionKey = "GuidedTests";
                 BreadcrumbCategory = "Oscilloscope (4-Channel)";
                 BreadcrumbLeaf = "Automotive Guided Scope Tests (Safety First)";
+                await EnsureScopeCatalogAndDevicesLoadedAsync();
+                break;
+
+            case "OneTapTests":
+                ActiveTool = "Scope";
+                ActiveSectionKey = "OneTapTests";
+                BreadcrumbCategory = "Oscilloscope (4-Channel)";
+                BreadcrumbLeaf = "One-tap Tests (Battery / Cranking)";
                 await EnsureScopeCatalogAndDevicesLoadedAsync();
                 break;
 

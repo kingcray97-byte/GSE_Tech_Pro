@@ -18,6 +18,7 @@ public sealed partial class MainShellViewModel
     public const string ScopePanelRulers = "Rulers";
     public const string ScopePanelLibrary = "Library";
     public const string ScopePanelGuided = "Guided";
+    public const string ScopePanelOneTap = "OneTap";
 
     /// <summary>Number of graticule divisions on each axis.</summary>
     public const int ScopeDivisions = 10;
@@ -261,6 +262,9 @@ public sealed partial class MainShellViewModel
     [NotifyPropertyChangedFor(nameof(ScopeRulersPanelVisibility))]
     [NotifyPropertyChangedFor(nameof(ScopeLibraryPanelVisibility))]
     [NotifyPropertyChangedFor(nameof(ScopeGuidedPanelVisibility))]
+    [NotifyPropertyChangedFor(nameof(ScopeOneTapPanelVisibility))]
+    [NotifyPropertyChangedFor(nameof(ScopeBottomPanelMaxHeight))]
+    [NotifyPropertyChangedFor(nameof(ScopeBottomPanelTitle))]
     [NotifyPropertyChangedFor(nameof(ScopeRulerLinesVisibility))]
     private string _scopeBottomPanel = ScopePanelNone;
 
@@ -271,6 +275,12 @@ public sealed partial class MainShellViewModel
     public Visibility ScopeRulersPanelVisibility => PanelVisibility(ScopePanelRulers);
     public Visibility ScopeLibraryPanelVisibility => PanelVisibility(ScopePanelLibrary);
     public Visibility ScopeGuidedPanelVisibility => PanelVisibility(ScopePanelGuided);
+    public Visibility ScopeOneTapPanelVisibility => PanelVisibility(ScopePanelOneTap);
+
+    /// <summary>The one-tap test panel holds inputs and a result table, so it gets more height.</summary>
+    public double ScopeBottomPanelMaxHeight => ScopeBottomPanel == ScopePanelOneTap ? 430.0 : 260.0;
+
+    public string ScopeBottomPanelTitle => ScopeBottomPanel == ScopePanelOneTap ? "One-tap tests" : ScopeBottomPanel;
 
     /// <summary>Cursor lines are drawn on the graticule only while the Rulers panel is open.</summary>
     public Visibility ScopeRulerLinesVisibility => PanelVisibility(ScopePanelRulers);
@@ -306,6 +316,9 @@ public sealed partial class MainShellViewModel
                 break;
             case "RefWaveforms":
                 ScopeBottomPanel = ScopePanelLibrary;
+                break;
+            case "OneTapTests":
+                ScopeBottomPanel = ScopePanelOneTap;
                 break;
         }
     }

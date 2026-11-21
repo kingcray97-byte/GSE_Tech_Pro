@@ -137,7 +137,7 @@ public sealed class SidebarNavigationTests
 
         vm.SelectToolbarAction("Scope");
         Assert.Equal("Scope", vm.ModuleNavTitle);
-        Assert.Equal(new[] { "Overview", "ScopeChannels", "GuidedTests", "RefWaveforms" }, vm.CurrentModuleNavItems.Select(i => i.Key));
+        Assert.Equal(new[] { "Overview", "ScopeChannels", "GuidedTests", "OneTapTests", "RefWaveforms" }, vm.CurrentModuleNavItems.Select(i => i.Key));
         Assert.Equal(Visibility.Visible, vm.ModuleNavVisibility);
         Assert.Equal("Overview", vm.SelectedModuleNavItem?.Key); // first page highlighted on entry
 

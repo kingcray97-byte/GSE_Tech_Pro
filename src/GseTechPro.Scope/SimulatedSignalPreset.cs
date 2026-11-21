@@ -27,6 +27,10 @@ public enum SimulatedSignalPreset
     /// <summary>CAN frames: simulated J1939 traffic at 250 kbit/s, CAN-H on CH1 and CAN-L on CH2 (ISO 11898-2 nominal
     /// 2.5 V recessive, 3.5 V / 1.5 V dominant), for serial decoding.</summary>
     CanBusFrames,
+    /// <summary>Battery / cranking: battery voltage on CH1 and starter-cable current on CH2 (clamp scale from the
+    /// channel setup) over a 5 s capture: rest, starter inrush, cranking with compression ripple, engine running.
+    /// Demo values for the simulator, not specifications.</summary>
+    BatteryCranking,
 }
 
 /// <summary>
@@ -45,6 +49,7 @@ public static class SimulatedScopePresets
         SimulatedSignalPreset.CanSignalQuality,
         SimulatedSignalPreset.SolenoidCurrent,
         SimulatedSignalPreset.CanBusFrames,
+        SimulatedSignalPreset.BatteryCranking,
     ];
 
     /// <summary>Human-readable label for UI preset pickers.</summary>
@@ -59,6 +64,7 @@ public static class SimulatedScopePresets
         SimulatedSignalPreset.CanSignalQuality => "CAN signal quality",
         SimulatedSignalPreset.SolenoidCurrent => "Solenoid current",
         SimulatedSignalPreset.CanBusFrames => "CAN frames (J1939, 250 kbit/s)",
+        SimulatedSignalPreset.BatteryCranking => "Battery / cranking",
         _ => preset.ToString(),
     };
 
@@ -181,6 +187,27 @@ public static class SimulatedScopePresets
             TriggerLevelVolts = 3.0,
         },
 
+        SimulatedSignalPreset.BatteryCranking => new ScopeCaptureRequest
+        {
+            Channels =
+            [
+                new ScopeChannelConfig { Channel = 1, Coupling = ScopeCoupling.Dc, ProbeMultiplier = 1.0, VoltageRangeVolts = 20.0 },
+                new ScopeChannelConfig
+                {
+                    Channel = 2,
+                    Coupling = ScopeCoupling.Dc,
+                    ProbeMultiplier = 1.0,
+                    CurrentScaleAmpsPerVolt = 1000.0, // a 1 mV/A high-current clamp
+                    VoltageRangeVolts = 1.0,
+                },
+            ],
+            TimebaseSecondsPerDivision = 0.5, // 500 ms/div: 5 s holds rest, crank and start
+            SampleRateHz = 10_000,
+            TriggerMode = ScopeTriggerMode.None,
+            TriggerChannel = 1,
+            TriggerLevelVolts = 0.0,
+        },
+
         SimulatedSignalPreset.SolenoidCurrent => new ScopeCaptureRequest
         {
             Channels =
@@ -259,6 +286,11 @@ public static class SimulatedScopePresets
         }
 
         string normalized = testNameOrId.Trim().ToLowerInvariant();
+        if (normalized.Contains("battery") || normalized.Contains("cranking"))
+        {
+            preset = SimulatedSignalPreset.BatteryCranking;
+            return true;
+        }
         if (normalized.Contains("crank") || normalized.Contains("ckp"))
         {
             preset = SimulatedSignalPreset.CrankSensor;
@@ -314,6 +346,10 @@ public static class SimulatedScopePresets
             return null;
 
         var primary = request.Channels[0];
+
+        // One-tap battery / cranking test (500 ms/div at 10 kS/s).
+        if (Math.Abs(request.TimebaseSecondsPerDivision - 0.5) < 1e-6 && request.SampleRateHz == 10_000)
+            return SimulatedSignalPreset.BatteryCranking;
 
         // Serial decoding setup (500 µs/div at 5 MS/s): bus traffic rather than one CAN bit pattern.
         if (Math.Abs(request.TimebaseSecondsPerDivision - 0.0005) < 1e-7 && request.SampleRateHz == 5_000_000)

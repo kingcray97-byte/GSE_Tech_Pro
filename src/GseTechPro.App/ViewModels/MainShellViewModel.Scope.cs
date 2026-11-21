@@ -34,7 +34,7 @@ public sealed partial class MainShellViewModel
     // =========================================================================
 
     public bool IsScopeViewVisible =>
-        ActiveSectionKey is "Scope" or "ScopeChannels" or "GuidedTests" or "RefWaveforms";
+        ActiveSectionKey is "Scope" or "ScopeChannels" or "GuidedTests" or "OneTapTests" or "RefWaveforms";
 
     public Visibility ScopeViewVisibility =>
         IsScopeViewVisible ? Visibility.Visible : Visibility.Collapsed;

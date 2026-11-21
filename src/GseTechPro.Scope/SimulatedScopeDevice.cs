@@ -330,9 +330,12 @@ public sealed class SimulatedScopeDevice : IScopeDevice
         {
             double t = i * dt;
             double noise = (rng.NextDouble() - 0.5) * 2.0; // [-1, 1]
-            double baseVolts = preset == SimulatedSignalPreset.CanBusFrames
-                ? SampleCanFrames(t, config.Channel, noise)
-                : SamplePresetAtTime(preset, t, noise);
+            double baseVolts = preset switch
+            {
+                SimulatedSignalPreset.CanBusFrames => SampleCanFrames(t, config.Channel, noise),
+                SimulatedSignalPreset.BatteryCranking => SampleBatteryCranking(t, config, noise),
+                _ => SamplePresetAtTime(preset, t, noise),
+            };
             samples[i] = baseVolts * probeScale;
         }
 
@@ -559,6 +562,43 @@ public sealed class SimulatedScopeDevice : IScopeDevice
     /// Solenoid current: solenoid current ramp + hold repeating at 40 Hz (25 ms period),
     /// peaking at 1.50 V (15 A @ 10 A/V clamp).
     /// </summary>
+    /// <summary>
+    /// Battery / cranking (demo values, not specs): CH1 battery volts, any other channel the starter-cable
+    /// current as clamp output volts (amps ÷ the channel's A/V scale; 1 mV/A when none is set).
+    /// 0–0.8 s rest at 12.6 V; 0.8 s starter inrush (dip to about 8.4 V, about 620 A); cranking to 2.3 s
+    /// at about 10.1 V / 210 A with a 6.7 Hz compression ripple; then running at about 14.2 V, −8 A (charging).
+    /// </summary>
+    private static double SampleBatteryCranking(double t, ScopeChannelConfig config, double unitNoise)
+    {
+        const double crankStart = 0.8, crankEnd = 2.3, settle = 0.3;
+        double ripple = Math.Sin(2.0 * Math.PI * 6.7 * (t - crankStart));
+        double volts, amps;
+        if (t < crankStart)
+        {
+            volts = 12.6;
+            amps = 0.0;
+        }
+        else if (t < crankEnd)
+        {
+            double s = t - crankStart;
+            double inrush = Math.Exp(-s / 0.04); // starter inrush decays in tens of ms
+            volts = 10.1 - 1.7 * inrush - 0.35 * ripple * (1.0 - inrush);
+            amps = 210.0 + 410.0 * inrush + 60.0 * ripple * (1.0 - inrush);
+        }
+        else
+        {
+            double s = Math.Min(1.0, (t - crankEnd) / settle);
+            volts = 10.1 + (14.2 - 10.1) * s;
+            amps = 210.0 * (1.0 - s) - 8.0 * s;
+        }
+
+        if (config.Channel == 1)
+            return volts + 0.02 * unitNoise;
+
+        double scale = config.CurrentScaleAmpsPerVolt > 0.0 ? config.CurrentScaleAmpsPerVolt : 1000.0;
+        return (amps + 3.0 * unitNoise) / scale;
+    }
+
     private static double SampleSolenoidCurrent(double t, double unitNoise)
     {
         const double period = 0.025; // 25 ms (40 Hz)

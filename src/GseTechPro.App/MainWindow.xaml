@@ -3538,6 +3538,14 @@
                                         <TextBlock Text="Guided tests" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center" />
                                     </StackPanel>
                                 </Button>
+                                <Button Style="{StaticResource ScopeToolTileButtonStyle}" MinWidth="72" Command="{x:Bind ViewModel.ToggleScopePanelCommand}" CommandParameter="OneTap"
+                                        AutomationProperties.Name="One-tap tests">
+                                    <StackPanel Spacing="3">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE945;" FontSize="22"
+                                                  Foreground="{ThemeResource ScopeStepperBrush}" />
+                                        <TextBlock Text="One-tap tests" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
                                 <Button Style="{StaticResource ScopeToolTileButtonStyle}" MinWidth="72" Command="{x:Bind ViewModel.ToggleScopePanelCommand}" CommandParameter="Library"
                                         AutomationProperties.Name="Waveform library">
                                     <StackPanel Spacing="3">
@@ -4753,7 +4761,7 @@
 
                             <!-- Bottom panel: Measurements / Rulers / Guided tests / Waveform library -->
                             <Border Grid.Row="1"
-                                    MaxHeight="260"
+                                    MaxHeight="{x:Bind ViewModel.ScopeBottomPanelMaxHeight, Mode=OneWay}"
                                     Background="{ThemeResource ScopeToolbarBrush}"
                                     BorderBrush="{ThemeResource ScopeTileBorderBrush}"
                                     BorderThickness="1"
@@ -4769,7 +4777,7 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{x:Bind ViewModel.ScopeBottomPanel, Mode=OneWay}"
+                                        <TextBlock Text="{x:Bind ViewModel.ScopeBottomPanelTitle, Mode=OneWay}"
                                                    FontWeight="SemiBold" VerticalAlignment="Center" />
                                         <Button Grid.Column="1" Width="44" Height="44" Background="Transparent" BorderThickness="0"
                                                 Command="{x:Bind ViewModel.ToggleScopePanelCommand}" CommandParameter="None"
@@ -5099,6 +5107,126 @@
                                                     </StackPanel>
                                                 </Border>
                                             </StackPanel>
+
+                                            <!-- One-tap tests (10D.3): test rail | inputs, Start / Analyse, Parameter / Value / Comment -->
+                                            <Grid Padding="12,10" ColumnSpacing="12"
+                                                  Visibility="{x:Bind ViewModel.ScopeOneTapPanelVisibility, Mode=OneWay}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="210" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Spacing="4">
+                                                    <TextBlock Text="Test" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                                                    <ListView SelectionMode="Single"
+                                                              BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="1" CornerRadius="4"
+                                                              AutomationProperties.Name="One-tap tests"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeOneTapTests}"
+                                                              SelectedItem="{x:Bind ViewModel.SelectedScopeOneTapTest, Mode=TwoWay}">
+                                                        <ListView.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:OneTapTestItem">
+                                                                <TextBlock Text="{x:Bind DisplayLabel}" TextWrapping="Wrap"
+                                                                           VerticalAlignment="Center" MinHeight="{StaticResource MinTouchSize}"
+                                                                           Padding="0,12,0,0" />
+                                                            </DataTemplate>
+                                                        </ListView.ItemTemplate>
+                                                    </ListView>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Spacing="8">
+                                                    <TextBlock Text="{x:Bind ViewModel.ScopeOneTapDescription, Mode=OneWay}" TextWrapping="Wrap"
+                                                               FontSize="{StaticResource FontSizeSmall}" />
+                                                    <Grid ColumnSpacing="10" RowSpacing="6"
+                                                          Visibility="{x:Bind ViewModel.ScopeOneTapBatteryInputsVisibility, Mode=OneWay}">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <ComboBox Grid.Row="0" Grid.Column="0" Header="System" MinWidth="96" MinHeight="{StaticResource MinTouchSize}"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeCrankingSystemVoltages}"
+                                                                  SelectedItem="{x:Bind ViewModel.ScopeCrankingSystemVoltage, Mode=TwoWay}" />
+                                                        <TextBox Grid.Row="0" Grid.Column="1" Header="Current clamp (A/V, blank = none)" MinHeight="{StaticResource MinTouchSize}"
+                                                                 PlaceholderText="e.g. 1000 for 1 mV/A"
+                                                                 Text="{x:Bind ViewModel.ScopeCrankingClampText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="0" Grid.Column="2" Header="Battery rating from label (A)" MinHeight="{StaticResource MinTouchSize}"
+                                                                 PlaceholderText="optional"
+                                                                 Text="{x:Bind ViewModel.ScopeCrankingRatedCcaText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <ComboBox Grid.Row="0" Grid.Column="3" Header="Rating" MinWidth="110" MinHeight="{StaticResource MinTouchSize}"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeCrankingRatingStandards}"
+                                                                  SelectedItem="{x:Bind ViewModel.ScopeCrankingRatingStandard, Mode=TwoWay}" />
+                                                        <ComboBox Grid.Row="0" Grid.Column="4" Header="Battery type" HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeCrankingBatteryTypes}"
+                                                                  SelectedItem="{x:Bind ViewModel.ScopeCrankingBatteryType, Mode=TwoWay}" />
+                                                        <TextBox Grid.Row="1" Grid.Column="0" Header="Temp (&#x00B0;C)" MinWidth="96" MinHeight="{StaticResource MinTouchSize}"
+                                                                 PlaceholderText="optional"
+                                                                 Text="{x:Bind ViewModel.ScopeCrankingTemperatureText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="1" Grid.Column="1" Header="Minimum cranking voltage (V)" MinHeight="{StaticResource MinTouchSize}"
+                                                                 PlaceholderText="only from the manual"
+                                                                 Text="{x:Bind ViewModel.ScopeCrankingMinimumVoltsText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Header="Source of the minimum (manual, page)" MinHeight="{StaticResource MinTouchSize}"
+                                                                 PlaceholderText="needed for a pass/fail"
+                                                                 Text="{x:Bind ViewModel.ScopeCrankingMinimumSource, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <StackPanel Grid.Row="1" Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                                                            <Button Style="{StaticResource ActionTouchButtonStyle}" Content="Start"
+                                                                    AutomationProperties.Name="Start one-tap test"
+                                                                    Command="{x:Bind ViewModel.StartScopeOneTapTestCommand}" />
+                                                            <Button MinHeight="{StaticResource MinTouchSize}" MinWidth="88" Content="Analyse"
+                                                                    AutomationProperties.Name="Analyse the capture on screen"
+                                                                    Command="{x:Bind ViewModel.AnalyseScopeOneTapTestCommand}" />
+                                                        </StackPanel>
+                                                    </Grid>
+                                                    <TextBlock Text="{x:Bind ViewModel.ScopeOneTapStatusText, Mode=OneWay}" TextWrapping="Wrap"
+                                                               FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold" />
+                                                    <Border Background="{ThemeResource AppSurfaceBrush}" BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                                            BorderThickness="1" CornerRadius="{StaticResource CardCornerRadius}">
+                                                        <StackPanel>
+                                                            <Grid Background="{ThemeResource AppRowAltBrush}" Padding="12,6" ColumnSpacing="12">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="220" />
+                                                                    <ColumnDefinition Width="120" />
+                                                                    <ColumnDefinition Width="*" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Grid.Column="0" Text="Parameter" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
+                                                                <TextBlock Grid.Column="1" Text="Value" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
+                                                                <TextBlock Grid.Column="2" Text="Comment" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" />
+                                                            </Grid>
+                                                            <TextBlock Text="No result yet. Tap Start, or Analyse to measure the capture on screen."
+                                                                       Padding="12,10" FontSize="{StaticResource FontSizeSmall}"
+                                                                       Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                                       Visibility="{x:Bind ViewModel.ScopeOneTapNoResultsVisibility, Mode=OneWay}" />
+                                                            <ItemsControl ItemsSource="{x:Bind ViewModel.ScopeOneTapResults}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:OneTapResultRowViewModel">
+                                                                        <Grid Padding="12,6" ColumnSpacing="12" MinHeight="{StaticResource MinTouchSize}"
+                                                                              BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,1,0,0">
+                                                                            <Grid.ColumnDefinitions>
+                                                                                <ColumnDefinition Width="220" />
+                                                                                <ColumnDefinition Width="120" />
+                                                                                <ColumnDefinition Width="Auto" />
+                                                                                <ColumnDefinition Width="*" />
+                                                                            </Grid.ColumnDefinitions>
+                                                                            <TextBlock Grid.Column="0" Text="{x:Bind Parameter}" FontWeight="SemiBold"
+                                                                                       FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                                                            <TextBlock Grid.Column="1" Text="{x:Bind Value}" FontFamily="{StaticResource MonoFontFamily}"
+                                                                                       FontWeight="Bold" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" />
+                                                                            <TextBlock Grid.Column="2" Text="{x:Bind VerdictText}" FontFamily="{StaticResource MonoFontFamily}" FontWeight="Bold"
+                                                                                       VerticalAlignment="Center"
+                                                                                       Foreground="{x:Bind VerdictBrush}" Visibility="{x:Bind VerdictVisibility}" />
+                                                                            <TextBlock Grid.Column="3" Text="{x:Bind Comment}" TextWrapping="Wrap" VerticalAlignment="Center"
+                                                                                       FontSize="{StaticResource FontSizeSmall}" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                                        </Grid>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </StackPanel>
+                                            </Grid>
 
                                             <!-- Waveform library -->
                                             <Grid Visibility="{x:Bind ViewModel.ScopeLibraryPanelVisibility, Mode=OneWay}">

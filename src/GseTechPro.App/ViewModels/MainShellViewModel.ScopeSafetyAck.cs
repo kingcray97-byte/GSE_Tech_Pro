@@ -38,7 +38,7 @@ public sealed partial class MainShellViewModel
             return;
 
         int n = ScopeSafetyWarnings.Count;
-        string test = SelectedGuidedTest?.Name ?? "this test";
+        string test = SelectedGuidedTest?.Name ?? _scopeOneTapSafetyTestName ?? "this test";
         string who = string.IsNullOrWhiteSpace(SelectedTechnician) ? "the technician" : SelectedTechnician;
         string at = DateTime.Now.ToString("HH:mm", CultureInfo.InvariantCulture);
         ScopeSafetyAcknowledgedText =
