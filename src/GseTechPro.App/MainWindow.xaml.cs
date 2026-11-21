@@ -53,10 +53,50 @@ public sealed partial class MainWindow : Window
         {
             if (e.PropertyName == nameof(MainShellViewModel.IsScopeFullScreen))
                 ApplyScopeFullScreenPresenter(ViewModel.IsScopeFullScreen);
+            else if (e.PropertyName == nameof(MainShellViewModel.CameraPreviewPath))
+                _ = ShowCameraPreviewAsync(ViewModel.CameraPreviewPath);
         };
+        ViewModel.PickPhotoFileAsync = PickPhotoFileAsync;
         RootGrid.AddHandler(UIElement.KeyDownEvent, new KeyEventHandler(OnRootKeyDown), handledEventsToo: false);
 
         Closed += OnMainWindowClosed;
+    }
+
+    /// <summary>Camera (7.1): loads the preview through a stream so the file is not held open (it may be moved on Save).</summary>
+    private async Task ShowCameraPreviewAsync(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            CameraPreviewImage.Source = null;
+            return;
+        }
+        try
+        {
+            var bitmap = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage();
+            await using (var fs = File.OpenRead(path))
+                await bitmap.SetSourceAsync(fs.AsRandomAccessStream());
+            if (ViewModel.CameraPreviewPath == path)
+                CameraPreviewImage.Source = bitmap;
+        }
+        catch
+        {
+            CameraPreviewImage.Source = null;
+        }
+    }
+
+    /// <summary>Camera (7.1): file picker for Import (unpackaged apps must give the picker the window handle).</summary>
+    private async Task<string?> PickPhotoFileAsync()
+    {
+        var picker = new Windows.Storage.Pickers.FileOpenPicker
+        {
+            SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.PicturesLibrary,
+            ViewMode = Windows.Storage.Pickers.PickerViewMode.Thumbnail,
+        };
+        foreach (var ext in MainShellViewModel.ImportablePhotoExtensions)
+            picker.FileTypeFilter.Add(ext);
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+        var file = await picker.PickSingleFileAsync();
+        return file?.Path;
     }
 
     private void ApplyScopeFullScreenPresenter(bool fullScreen)

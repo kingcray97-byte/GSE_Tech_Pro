@@ -1558,6 +1558,9 @@ public sealed partial class MainShellViewModel
             var woId = explicitWorkOrderId ?? ResolveActiveWorkOrderInMemory()?.Id;
             WorkOrderWaveforms.Clear();
 
+            // Photos and recordings belong to the same work order record set (Phase 7.1).
+            await ReloadWorkOrderAttachmentsAsync(woId);
+
             if (string.IsNullOrWhiteSpace(woId))
             {
                 OnPropertyChanged(nameof(HasNoWorkOrderWaveforms));

@@ -28,6 +28,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     private readonly DataServices _dataServices;
     private readonly IDiagnosticAdapterFactory _adapterFactory;
     private readonly IScopeDeviceFactory _scopeDeviceFactory;
+    private readonly ICameraSourceFactory _cameraSourceFactory;
     private readonly IAiClient _aiClient;
     private readonly AiServiceLauncher _aiLauncher;
     private readonly DispatcherQueue? _dispatcherQueue;
@@ -77,11 +78,13 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         IAiClient? aiClient = null,
         AiServiceLauncher? aiLauncher = null,
         AiServiceStateService? aiStateService = null,
-        IScopeDeviceFactory? scopeDeviceFactory = null)
+        IScopeDeviceFactory? scopeDeviceFactory = null,
+        ICameraSourceFactory? cameraSourceFactory = null)
     {
         _dataServices = dataServices;
         _adapterFactory = adapterFactory;
         _scopeDeviceFactory = scopeDeviceFactory ?? new Scope.ScopeDeviceFactory();
+        _cameraSourceFactory = cameraSourceFactory ?? new Services.WindowsCameraSourceFactory();
         _dispatcherQueue = dispatcherQueue;
         _aiLauncher = aiLauncher ?? new AiServiceLauncher();
         _aiClient = aiClient ?? new AiServiceClient(
@@ -479,7 +482,8 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         !IsRecommendationsViewVisible &&
         !IsSettingsViewVisible &&
         !IsScopeViewVisible &&
-        !IsCanMonitorViewVisible;
+        !IsCanMonitorViewVisible &&
+        !IsCameraViewVisible;
 
     // Section-filtering inside Diagnostics / Equipment Health (Screenshot 04 shows all; sub-nav focuses or shows all)
     public Visibility DtcSectionVisibility =>
@@ -2241,7 +2245,12 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
 
             case "Camera":
                 ActiveTool = "Camera";
-                ShowPlaceholder("Camera & Pen Annotation", "Rugged tablet photo capture, pen markup, and dataplate OCR (Phase 7).");
+                ActiveSectionKey = "Camera";
+                BreadcrumbRoot = "Equipment Selection";
+                BreadcrumbCategory = "Camera";
+                BreadcrumbLeaf = "Photos for the Work Order";
+                _ = RefreshCameraSourcesAsync();
+                _ = ReloadWorkOrderAttachmentsAsync();
                 break;
 
             case "AiTechChat":
@@ -2522,6 +2531,8 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         OnPropertyChanged(nameof(ScopeViewVisibility));
         OnPropertyChanged(nameof(IsCanMonitorViewVisible));
         OnPropertyChanged(nameof(CanMonitorViewVisibility));
+        OnPropertyChanged(nameof(IsCameraViewVisible));
+        OnPropertyChanged(nameof(CameraViewVisibility));
         OnPropertyChanged(nameof(DeviceCommandBarVisibility));
         SyncScopePanelToSection();
         SyncScopeFullScreenToSection();
@@ -5431,6 +5442,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     {
         _uiThrottleTimer?.Stop();
         _playbackTimer?.Stop();
+        await CloseCameraAsync();
         AiState.StateUpdated -= OnAiStateUpdated;
         await AiState.DisposeAsync();
         if (_aiClient is IDisposable disposableClient)

@@ -25,10 +25,41 @@
 | 4 | GSE troubleshooting (readings entry, decision trees, safety warnings — TUG 660-28 first) | ✅ Done |
 | 5 | Repair history learning (recommendation engine, outcomes, comebacks) | ✅ Done |
 | 6 | Oscilloscope (PicoSDK, then Hantek, shared interface) | ✅ Done (Simulator + Hantek wrapper reviewed; real hardware unverified) |
-| 7 | Vision & voice (ECOM / CAN capture moved to 10C and done there) | ⬜ |
+| 7 | Vision & voice (ECOM / CAN capture moved to 10C and done there) | 🟡 Started: 7.1 camera and photos built; 7.2–7.6 to do |
 | 8 | Full installer (signing, silent multi-tablet, upgrades, updates) | ✅ Done |
 | 9 | Optional shop-server sync | ⬜ |
 | 10 | Owner change request 2026-11-19: llama.cpp + cloud route, Shop Foreman Pro look, GSE components, PicoScope-style scope | 🟡 Built: 10A done except real-tablet acceptance; 10B.1–10B.3 done (owner screenshot sign-off open); 10C done (10C.1–10C.5); 10D done (10D.1–10D.4) except in-app checks of 10D.1c–i, 10D.3a–c and 10D.4, and real hardware |
+
+## Phase 7 — Vision & voice 🟡 In progress (started 2026-11-21)
+
+From `docs/PROMPT.md` (Camera capture and photo annotation; skill 2 multimodal vision; skill 3 voice-first) and `docs/ARCHITECTURE.md` §4 tools
+(`vision_inspect`, `ocr_dataplate`, `voice_transcribe` / `speak`, `record_reading` read-back). ECOM / CAN capture moved to 10C and is done there.
+Rules that shape every step: simulator first (rule 4); serial and data-plate text is read by **deterministic OCR, never by the model, and the
+technician confirms it** (§4 rule 5); voice readings are **read back and confirmed before saving**; nothing needs the internet (rule 1); gloves
+and touch (rule 8). Steps, in order (each one change that builds and passes tests):
+
+1. **7.1 Camera and photos** (`ui-winui`, Core contract `architect`): a camera source abstraction with a simulator first and the tablet's camera
+   (Windows `MediaCapture`, still photo), plus import from a file; Camera tool page replacing the placeholder; caption; **Save to work order** as a
+   `photo` attachment under `{data}\photos\`; the work order's photo list and preview; photos (and the 10C CAN recordings) listed in Integrated
+   Diagnostics. Simulated photos are marked SIMULATED.
+2. **7.2 Pen annotation** (`ui-winui`): draw on a photo with pen, finger or mouse (arrows, circles, free ink, colour, undo), saved as vector strokes
+   in `attachments.annotations_json` so the original photo is never changed; shown over the photo in the preview.
+3. **7.3 Data-plate OCR** (`ai-engineer` / `ui-winui`, engine choice `architect`): offline OCR of a photo region (Windows.Media.Ocr first: OS
+   provided, no bundle or license; Tesseract as the fallback per the license table); the technician confirms or corrects every field before it is
+   saved to the asset (serial, model, part numbers). The model never reads IDs. `ocr_dataplate` tool for chat.
+4. **7.4 Photo inspection** (`ai-engineer`): `vision_inspect` sends a photo to the AI service (`lfm3-omni` image input on the tablet; route rules
+   per ADR 013) to describe what it shows and suggest manual pages to compare; answers say they are the model's description, cite manual pages,
+   carry the route badge, and never give a spec or a pass/fail.
+5. **7.5 Voice** (`ai-engineer` + `ui-winui`): big push-to-talk button (and a configurable 7220 hardware button), local speech to text
+   (`lfm3-omni` audio if fast enough on the tablet CPU, otherwise whisper.cpp) and spoken answers (Piper fallback); commands ("next step",
+   "reading is 2,300 psi", "add note", "what's the spec for…"); every spoken reading read back and confirmed before it is saved
+   (`readings.recorded_by = 'voice'`). Needs the speed check on the 7220 before choosing the engine.
+6. **7.6 Scanned-PDF OCR for manuals** (`rag-ingest`): the `ingest/` OCR stub filled in (same engine as 7.3) so image-only pages (83 in the
+   660-28 manual, the Ford Section 4 procedures) become searchable. Owner to decide whether **CANCapture file import** (ARCHITECTURE §8) is still
+   wanted now that 10C has its own `.asc` recorder and replay.
+
+**Phase 7 status:**
+- 🟡 7.1 Camera and photos (built and unit-tested; not yet checked in the running app or with a real camera). The **Camera** toolbar button now opens a Camera page instead of the placeholder: camera picker (**Simulator camera** first, then every enabled Windows video-capture device, "(rear)"/"(front)" from its panel), refresh, **Take photo**, **Import…** (JPEG/PNG up to 40 MB from a file picker opening in Pictures, e.g. photos from the Windows Camera app), a caption box (200 characters) and **Save to work order**; a list of the work order's photos (caption, time, SIMULATED mark) and a large preview. A new photo is written at once to `{data}\photos\unsaved\` so it can be previewed, and moved to `{data}\photos\{work order id}\{attachment id}.jpg|png` on Save; the attachment (`photo`, work-order scope, MIME, size, taken-at, relative path) goes through the existing `attachments` table (no migration). Simulator photos are captioned **SIMULATED …** (the 10C provenance mark) and shown with the badge; imported photos are real and the original file is copied, never moved. Saving needs an open work order (the photo is kept until one is opened). **Integrated Diagnostics** now lists the work order's attachments: photos, and the 10C CAN recordings that were saved but not shown before (Photo / Recording rows with caption, file and size; SIMULATED from the caption). Core (`architect` to review, additive): `ICameraSource`, `ICameraSourceFactory`, `CameraSourceInfo`, `CapturedPhoto`. Devices (`device-comms` to review): `SimulatedCameraSource` (our own drawn test card: gradient, colour bars, a plate-like panel with a grid, and the shot number in binary blocks so photos differ; 640×480 PNG), `PngEncoder` (8-bit RGB + zlib, no image library), `SimulatedCameraSourceFactory`. App: `WindowsCameraSourceFactory` (`DeviceInformation` discovery, `MediaCapture` still JPEG via `CapturePhotoToStreamAsync`; when Windows blocks camera access it says which privacy setting to turn on), `MainShellViewModel.Camera.cs`, preview loaded through a stream so the file is never held open, `FileOpenPicker` with the window handle (first file picker in the app). Tests: `SimulatedCameraTests` (3: valid PNG round trip, shots differ, factory), `CameraTests` (2: simulated photo saved, listed and in Integrated Diagnostics, no-work-order refusal; import JPEG/PNG as real, other files refused); all 634 C# tests pass. **Not done:** no live camera preview (still photo only: aim, tap, check the photo); not run with a real camera (the 7220's rear camera, focus and flash, JPEG size and the reported width/height are unverified); captions cannot be edited and photos cannot be deleted after saving (needs a soft-delete flow, rule 10); unsaved photos left in `photos\unsaved\` are not cleaned up; provenance is carried in the caption (no `is_simulated` column on `attachments`; `database`/`architect` to decide); no thumbnails in the list; photos are not in work-order reports or the AI context yet. Next: 7.2 pen annotation.
 
 ## Phase 10 — Owner change request (2026-11-19) 🟡 Built (checks open)
 

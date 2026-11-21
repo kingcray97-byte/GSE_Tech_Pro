@@ -5584,7 +5584,7 @@
                     </Grid>
                 </Grid>
 
-                <!-- 3G. TOOL PLACEHOLDER VIEW (Camera) -->
+                <!-- 3G. TOOL PLACEHOLDER VIEW -->
                 <Grid Grid.Row="2"
                       Padding="14,12"
                       Visibility="{x:Bind ViewModel.ToolPlaceholderVisibility, Mode=OneWay}">
@@ -5601,6 +5601,129 @@
                                        TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
+                </Grid>
+
+                <!-- =============================================================== -->
+                <!-- 3G1. CAMERA (Phase 7.1): take or import a photo, save it to the work order -->
+                <!-- =============================================================== -->
+                <Grid Grid.Row="2"
+                      Padding="16,12"
+                      RowSpacing="10"
+                      Visibility="{x:Bind ViewModel.CameraViewVisibility, Mode=OneWay}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                            <ComboBox Header="Camera" MinHeight="{StaticResource MinTouchSize}" MinWidth="260"
+                                      ItemsSource="{x:Bind ViewModel.CameraSources}"
+                                      DisplayMemberPath="Name"
+                                      SelectedItem="{x:Bind ViewModel.SelectedCameraSource, Mode=TwoWay}" />
+                            <Button MinHeight="{StaticResource MinTouchSize}" MinWidth="44" VerticalAlignment="Bottom"
+                                    AutomationProperties.Name="Refresh camera list" ToolTipService.ToolTip="Refresh camera list"
+                                    Command="{x:Bind ViewModel.RefreshCameraSourcesCommand}">
+                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE72C;" FontSize="16" />
+                            </Button>
+                            <Button Style="{StaticResource ActionTouchButtonStyle}" VerticalAlignment="Bottom" MinWidth="140"
+                                    AutomationProperties.Name="Take photo"
+                                    Command="{x:Bind ViewModel.TakePhotoCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE722;" FontSize="18" />
+                                    <TextBlock Text="Take photo" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button MinHeight="{StaticResource MinTouchSize}" MinWidth="120" VerticalAlignment="Bottom"
+                                    AutomationProperties.Name="Import photo from a file"
+                                    Command="{x:Bind ViewModel.ImportPhotoCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8B5;" FontSize="16" />
+                                    <TextBlock Text="Import..." VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <TextBlock Text="{x:Bind ViewModel.CameraWorkOrderText, Mode=OneWay}" VerticalAlignment="Center" Margin="12,0,0,0"
+                                       FontWeight="SemiBold" Foreground="{ThemeResource AppAccentBrush}" />
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <Grid Grid.Row="1" ColumnSpacing="8" Visibility="{x:Bind ViewModel.PendingPhotoVisibility, Mode=OneWay}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Background="{ThemeResource SimBadgeBackgroundBrush}" BorderBrush="{ThemeResource SimBadgeBorderBrush}"
+                                BorderThickness="1" CornerRadius="{StaticResource BadgeCornerRadius}" Padding="6,2" VerticalAlignment="Bottom"
+                                Margin="0,0,0,10"
+                                Visibility="{x:Bind ViewModel.PendingPhotoSimulatedVisibility, Mode=OneWay}">
+                            <TextBlock Text="SIMULATED" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold"
+                                       Foreground="{ThemeResource SimBadgeTextBrush}" />
+                        </Border>
+                        <TextBox Grid.Column="1" Header="Caption (what the photo shows)" MinHeight="{StaticResource MinTouchSize}"
+                                 PlaceholderText="e.g. Hydraulic leak at lift cylinder, left side" MaxLength="200"
+                                 Text="{x:Bind ViewModel.CameraCaption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <Button Grid.Column="2" Style="{StaticResource ActionTouchButtonStyle}" VerticalAlignment="Bottom"
+                                Content="Save to work order" AutomationProperties.Name="Save photo to work order"
+                                Command="{x:Bind ViewModel.SavePhotoToWorkOrderCommand}" />
+                    </Grid>
+
+                    <Grid Grid.Row="2" ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="320" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Background="{ThemeResource AppSurfaceBrush}" BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                BorderThickness="1" CornerRadius="{StaticResource CardCornerRadius}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="Photos on this work order" FontWeight="Bold" Padding="12,10" />
+                                <TextBlock Grid.Row="1" Padding="12,0" TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                           Text="No photos saved to this work order yet."
+                                           Visibility="{x:Bind ViewModel.NoWorkOrderPhotosVisibility, Mode=OneWay}" />
+                                <ListView Grid.Row="1" SelectionMode="Single" AutomationProperties.Name="Work order photos"
+                                          ItemsSource="{x:Bind ViewModel.WorkOrderPhotos}"
+                                          SelectedItem="{x:Bind ViewModel.SelectedWorkOrderPhoto, Mode=TwoWay}">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:WorkOrderPhotoRowViewModel">
+                                            <StackPanel MinHeight="{StaticResource MinTouchSize}" Padding="0,6" Spacing="2">
+                                                <TextBlock Text="{x:Bind Caption}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Text="{x:Bind TakenAtDisplay}" FontSize="{StaticResource FontSizeSmall}"
+                                                               Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                    <TextBlock Text="SIMULATED" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold"
+                                                               Foreground="{ThemeResource SimBadgeTextBrush}"
+                                                               Visibility="{x:Bind SimulatedBadgeVisibility}" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                            </Grid>
+                        </Border>
+                        <Border Grid.Column="1" Background="{ThemeResource ScopeGridBackgroundBrush}" BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                BorderThickness="1" CornerRadius="{StaticResource CardCornerRadius}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="{x:Bind ViewModel.CameraPreviewTitle, Mode=OneWay}" Padding="12,8" FontWeight="SemiBold"
+                                           Foreground="{ThemeResource ScopeAxisTextBrush}" TextTrimming="CharacterEllipsis" />
+                                <Image x:Name="CameraPreviewImage" Grid.Row="1" Stretch="Uniform" Margin="8"
+                                       AutomationProperties.Name="Photo preview" />
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <TextBlock Grid.Row="3" Text="{x:Bind ViewModel.CameraStatusText, Mode=OneWay}" TextWrapping="Wrap"
+                               FontSize="{StaticResource FontSizeSmall}" />
                 </Grid>
 
                 <!-- =============================================================== -->

@@ -106,7 +106,7 @@ public partial class MainShellViewModel
         DiagnosticRecords.Clear();
         if (wo is not null)
         {
-            foreach (var row in BuildDiagnosticRecords(wo).OrderByDescending(r => r.SortKey, StringComparer.Ordinal))
+            foreach (var row in BuildDiagnosticRecords(wo).Concat(BuildAttachmentRecords()).OrderByDescending(r => r.SortKey, StringComparer.Ordinal))
                 DiagnosticRecords.Add(row);
         }
         SelectedDiagnosticRecord = DiagnosticRecords.FirstOrDefault(r => r.SortKey == previousKey) ?? DiagnosticRecords.FirstOrDefault();
