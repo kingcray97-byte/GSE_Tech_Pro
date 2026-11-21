@@ -3912,6 +3912,7 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
                                     <Button Grid.Row="0" Grid.Column="0" Style="{StaticResource ScopeToolTileButtonStyle}" Command="{x:Bind ViewModel.ScopeZoomInCommand}"
                                             AutomationProperties.Name="Zoom in">
@@ -3976,6 +3977,45 @@
                                             <TextBlock Text="Save to WO" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
                                                        TextAlignment="Center" TextWrapping="Wrap" />
                                         </StackPanel>
+                                    </Button>
+                                    <!-- Math channel (10D.1) -->
+                                    <Button Grid.Row="4" Grid.Column="0" Style="{StaticResource ScopeToolTileButtonStyle}"
+                                            AutomationProperties.Name="Math channel">
+                                        <StackPanel Spacing="3">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8EF;" FontSize="20"
+                                                      Foreground="{ThemeResource ScopeMathBrush}" />
+                                            <TextBlock Text="Math" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Button.Flyout>
+                                            <Flyout Placement="RightEdgeAlignedBottom">
+                                                <StackPanel Width="320" Spacing="8">
+                                                    <ToggleSwitch Header="Math channel (M)" MinHeight="{StaticResource MinTouchSize}"
+                                                                  IsOn="{x:Bind ViewModel.IsScopeMathEnabled, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}"
+                                                              Header="Operation"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeMathOperations}"
+                                                              SelectedItem="{x:Bind ViewModel.SelectedScopeMathOperation, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}"
+                                                              Header="Source A (channel 1 = A … 4 = D)"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeMathChannels}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeMathSourceA, Mode=TwoWay}" />
+                                                    <ComboBox HorizontalAlignment="Stretch" MinHeight="{StaticResource MinTouchSize}"
+                                                              Header="Source B"
+                                                              ItemsSource="{x:Bind ViewModel.ScopeMathChannels}"
+                                                              SelectedItem="{x:Bind ViewModel.ScopeMathSourceB, Mode=TwoWay}"
+                                                              Visibility="{x:Bind ViewModel.ScopeMathSourceBVisibility, Mode=OneWay}" />
+                                                    <NumberBox MinHeight="{StaticResource MinTouchSize}"
+                                                               Header="{x:Bind ViewModel.ScopeMathParameterHeader, Mode=OneWay}"
+                                                               SpinButtonPlacementMode="Inline"
+                                                               Value="{x:Bind ViewModel.ScopeMathParameter, Mode=TwoWay}"
+                                                               Visibility="{x:Bind ViewModel.ScopeMathParameterVisibility, Mode=OneWay}" />
+                                                    <TextBlock Text="{x:Bind ViewModel.ScopeMathStatusText, Mode=OneWay}"
+                                                               TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                                               Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
                                     </Button>
                                 </Grid>
                             </StackPanel>
@@ -4117,6 +4157,10 @@
                                             <Polyline Points="{Binding ScopeChannel4Points}"
                                                       Stroke="{ThemeResource ScopeChannel4Brush}" StrokeThickness="1.4"
                                                       Visibility="{x:Bind ViewModel.ScopeChannel4TraceVisibility, Mode=OneWay}" />
+                                            <!-- Math channel M (own auto scale) -->
+                                            <Polyline Points="{Binding ScopeMathPoints}"
+                                                      Stroke="{ThemeResource ScopeMathBrush}" StrokeThickness="1.6"
+                                                      Visibility="{x:Bind ViewModel.ScopeMathTraceVisibility, Mode=OneWay}" />
 
                                             <!-- Rulers A and B (shown while the Rulers panel is open) -->
                                             <Line X1="{x:Bind ViewModel.ScopeCursorAX, Mode=OneWay}" Y1="0"

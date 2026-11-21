@@ -61,6 +61,7 @@
                     <SolidColorBrush x:Key="ScopeChannel3Brush" Color="#0F7B0F" />
                     <SolidColorBrush x:Key="ScopeChannel4Brush" Color="#9D5D00" />
                     <SolidColorBrush x:Key="ScopeReferenceOverlayBrush" Color="#7A3E9D" />
+                    <SolidColorBrush x:Key="ScopeMathBrush" Color="#00838F" />
                     <SolidColorBrush x:Key="ScopeCursorABrush" Color="#2E3391" />
                     <SolidColorBrush x:Key="ScopeCursorBBrush" Color="#0F7B0F" />
                     <SolidColorBrush x:Key="ScopeChromeBrush" Color="#E6E8EC" />
@@ -127,6 +128,7 @@
                     <SolidColorBrush x:Key="ScopeChannel3Brush" Color="#6CCB5F" />
                     <SolidColorBrush x:Key="ScopeChannel4Brush" Color="#FCE100" />
                     <SolidColorBrush x:Key="ScopeReferenceOverlayBrush" Color="#D099FF" />
+                    <SolidColorBrush x:Key="ScopeMathBrush" Color="#4DD0E1" />
                     <SolidColorBrush x:Key="ScopeCursorABrush" Color="#8C93F0" />
                     <SolidColorBrush x:Key="ScopeCursorBBrush" Color="#6CCB5F" />
                     <SolidColorBrush x:Key="ScopeChromeBrush" Color="#1B1C20" />
@@ -193,6 +195,7 @@
                     <SolidColorBrush x:Key="ScopeChannel3Brush" Color="#007100" />
                     <SolidColorBrush x:Key="ScopeChannel4Brush" Color="#8A5200" />
                     <SolidColorBrush x:Key="ScopeReferenceOverlayBrush" Color="#5A008A" />
+                    <SolidColorBrush x:Key="ScopeMathBrush" Color="#00606B" />
                     <SolidColorBrush x:Key="ScopeCursorABrush" Color="#1E2FB8" />
                     <SolidColorBrush x:Key="ScopeCursorBBrush" Color="#007100" />
                     <SolidColorBrush x:Key="ScopeChromeBrush" Color="#FFFFFF" />
