@@ -8,6 +8,8 @@ using GseTechPro.Core.Contracts;
 using GseTechPro.Core.Enums;
 using GseTechPro.Core.Models;
 using GseTechPro.Devices.Can;
+using GseTechPro.Devices.Protocols;
+using GseTechPro.Devices.Protocols.J1939;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 
@@ -301,7 +303,7 @@ public sealed partial class MainShellViewModel
             var key = (entry.Id, entry.IsExtended);
             if (isNew)
             {
-                var row = new CanBusRowViewModel(entry);
+                var row = new CanBusRowViewModel(entry, FindManufacturerSpnEntry);
                 _canRowsByKey[key] = row;
                 if (CanBusTable.Matches(entry, CanFilterText))
                     InsertCanRowSorted(row);
@@ -529,7 +531,13 @@ public sealed partial class MainShellViewModel
 /// <summary>One bus monitor row (one CAN id).</summary>
 public sealed class CanBusRowViewModel : ObservableObject
 {
-    public CanBusRowViewModel(CanBusEntry entry) => Entry = entry;
+    private readonly Func<int, DtcLibraryEntry?>? _proprietarySpnLookup;
+
+    public CanBusRowViewModel(CanBusEntry entry, Func<int, DtcLibraryEntry?>? proprietarySpnLookup = null)
+    {
+        Entry = entry;
+        _proprietarySpnLookup = proprietarySpnLookup;
+    }
 
     public CanBusEntry Entry { get; }
 
@@ -562,10 +570,44 @@ public sealed class CanBusRowViewModel : ObservableObject
         ? (p * 1000).ToString(p < 0.1 ? "0.0" : "0", CultureInfo.InvariantCulture) + " ms"
         : "—";
 
-    public string DecodedText => Entry.Decoded.Count == 0
-        ? ""
-        : string.Join("  ·  ", Entry.Decoded.Select(v =>
-            string.Create(CultureInfo.InvariantCulture, $"{v.Name} {v.Value:0.##} {v.Unit}")));
+    public string DecodedText => Entry.DiagnosticMessage is { } dm
+        ? DiagnosticText(dm)
+        : Entry.Decoded.Count == 0
+            ? ""
+            : string.Join("  ·  ", Entry.Decoded.Select(v =>
+                string.Create(CultureInfo.InvariantCulture, $"{v.Name} {v.Value:0.##} {v.Unit}")));
+
+    /// <summary>
+    /// DM1/DM2 text: lamps, then each DTC as SPN/FMI/OC. A proprietary SPN that the PCS guides list is
+    /// named with its PCS code and flagged as valid only for a PCS TCM (proprietary SPNs are maker-defined).
+    /// </summary>
+    private string DiagnosticText(J1939DmMessage dm)
+    {
+        var lamps = new List<string>(4);
+        if (dm.Lamps.MalfunctionIndicatorLamp) lamps.Add("MIL");
+        if (dm.Lamps.RedStopLamp) lamps.Add("Red stop");
+        if (dm.Lamps.AmberWarningLamp) lamps.Add("Amber");
+        if (dm.Lamps.ProtectLamp) lamps.Add("Protect");
+        var head = (dm.IsPreviouslyActive ? "Stored" : "Active") + " faults: " + dm.Dtcs.Count.ToString(CultureInfo.InvariantCulture)
+            + (lamps.Count > 0 ? " · lamps " + string.Join("/", lamps) : "");
+        var parts = new List<string> { head };
+        foreach (var d in dm.Dtcs)
+        {
+            var text = string.Create(CultureInfo.InvariantCulture, $"SPN {d.Spn} FMI {d.Fmi} OC {d.OccurrenceCount}");
+            if (DtcCodes.IsProprietarySpn(d.Spn) && _proprietarySpnLookup?.Invoke(d.Spn) is { } match)
+                text += $" = {match.Code} {StripPcsPrefix(match.Description)} (if PCS TCM)";
+            parts.Add(text);
+        }
+        return string.Join("  ·  ", parts);
+    }
+
+    private static string StripPcsPrefix(string? description)
+    {
+        if (string.IsNullOrEmpty(description))
+            return "";
+        var dash = description.IndexOf(" - ", StringComparison.Ordinal);
+        return dash >= 0 ? description[(dash + 3)..] : description;
+    }
 
     public Visibility SimulatedBadgeVisibility => Entry.IsSimulated ? Visibility.Visible : Visibility.Collapsed;
 

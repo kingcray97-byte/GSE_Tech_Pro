@@ -2,21 +2,22 @@
 
 Phase 2 seed content for the `dtc_library` table (`docs/ARCHITECTURE.md` §2.2). This is a deliberately bounded first set, not a claim of complete standard or OEM coverage.
 
-**Initial inventory: 540 rows**
+**Inventory: 575 rows** (540 standard + 35 PCS TCM, Phase 10C.3)
 
 | File | Stored `protocol` | Rows | Scope |
 |---|---|---:|---|
 | `j1939.json` | `J1939` | 214 | Core engine, fuel, air, lubrication, cooling, electrical, calculated-data, vehicle-speed, torque-control and J1939-network SPN/FMI combinations |
 | `j1587.json` | `J1708` | 124 | Standard J1587 MID/PID/SID/FMI combinations, centered on MID 128 plus initial transmission and brake examples |
 | `obd2.json` | `OBD2` | 202 | Generic, ISO/SAE-controlled `P0xxx` powertrain DTCs for engine, fuel, air, ignition, emissions, speed, electrical and controller faults |
+| `pcs.json` | `manufacturer` | 35 | PCS (Powertrain Control Solutions) TCM codes for the 4LHD/4LHDX / 4L60E-family transmissions on TUG / Power Stow GSE. See §6 |
 
-All three data files are **flat JSON arrays**. Each array element represents one possible `dtc_library` row and has exactly the nine source fields below.
+All data files are **flat JSON arrays**. Each array element represents one possible `dtc_library` row and has exactly the nine source fields below.
 
 ## 1. Database mapping
 
 | JSON field | `dtc_library` column | Type / rule |
 |---|---|---|
-| `protocol` | `protocol` | Exact `ProtocolType` database string: `J1939`, `J1708`, or `OBD2` |
+| `protocol` | `protocol` | Exact `ProtocolType` database string: `J1939`, `J1708`, `OBD2`, or `manufacturer` |
 | `code` | `code` | Full display/lookup key. Together with `protocol`, forms the database `UNIQUE (protocol, code)` key |
 | `spn` | `spn` | Integer SPN only for J1939; JSON `null` for J1587 and OBD II |
 | `fmi` | `fmi` | Integer FMI for J1939/J1587; JSON `null` for OBD II |
@@ -33,6 +34,7 @@ The data layer owns `id`, `created_at`, and `updated_at`. On an initial insert i
 - J1939: `SPN <decimal> FMI <decimal>`, for example `SPN 110 FMI 3`
 - J1587: `MID <decimal> PID|SID <decimal> FMI <decimal>`, for example `MID 128 PID 100 FMI 1`
 - OBD II: the uppercase five-character generic DTC, for example `P0300`
+- PCS TCM (`manufacturer`): `PCS <decimal>`, the Delphi/GM 2-digit code from the PCS guides, for example `PCS 72`
 
 Do not silently rewrite these strings when matching. Decoder output should canonicalize separators and leading zeros once at the protocol boundary, then perform the lookup. If there is no exact row, retain and display the raw numeric identifiers and report that no library match was found. **Never substitute a nearby code or invent a description.**
 
@@ -173,3 +175,20 @@ print(f"PASS: {len(seen)} unique DTC reference rows")
 ```
 
 A loader/integration test should additionally upsert all 540 rows into a clean SQLite schema and verify all 540 distinct `(protocol, code)` keys survive a second idempotent import. The domain review should not be skipped merely because JSON validation passes: it is the check for wrong standard wording, revision errors, and unsafe shop guidance.
+
+## 6. PCS TCM codes (`pcs.json`, Phase 10C.3)
+
+**Sources** (owner-supplied, in `Reference/GSE diagnostic apps/PCS/`, read only, never bundled):
+
+- *PCS 4LHD/4LHDX Technician's Guide v2.0*, Section 4 "Diagnostic Trouble Codes", printed pp.48–52: Delphi/GM 2-digit code, OBD II 3-digit DTC, J1939 SPN, fail conditions, action taken, clear conditions.
+- *PCS 4-Speed Transmission Quick Reference Guide v1.3*, DTC table pp.5–6: the same codes plus 1 (= 23 / U0001), 84 and 98, and J1939 SPNs for 21, 22 and 71 that the Technician's Guide leaves blank. Rows that rely on the Quick Reference Guide for the SPN say so in `source_citation`.
+
+Code 63 ("Reserved", Humvee only) is not seeded.
+
+**Rules for these rows**
+
+- `fmi` is always null: the guides list an SPN but no FMI. `spn` is the guide's J1939 SPN or null (codes 1, 84, 91–98).
+- Every SPN is in the J1939-71 **proprietary range 520192–524287**. A proprietary SPN means whatever the ECU's maker defines, so the app only uses these rows as a fallback when a received J1939 DTC has a proprietary SPN **and** no exact `SPN x FMI y` row: the match is shown as "matched by proprietary SPN only" and "valid only if this fault came from a PCS TCM". The CAN bus monitor shows such a DM1 entry as `SPN 522742 FMI 31 OC 1 = PCS 72 … (if PCS TCM)`.
+- `likely_causes` holds the guide's set / TCM action / clear conditions (shortened, not copied in full), the OBD II code where the guide gives one, and a pointer back to the guide's procedure. Movement-related codes (92–95, 98) start with a safety note.
+- PCS proprietary CAN status messages (gear, TFT, line pressure) are **not** decoded: the guides do not document those messages. TODO: needs spec from manual.
+

@@ -370,6 +370,9 @@ public sealed class SimulatedDiagnosticAdapter : IDiagnosticAdapter
         new DtcReadout { Code = "SPN 110 FMI 0", Protocol = ProtocolType.J1939, Spn = 110, Fmi = 0, Status = DtcStatus.Pending, Description = "Engine Coolant Temperature: High (SIMULATED)", Severity = "Medium" },
         new DtcReadout { Code = "SPN 175 FMI 4", Protocol = ProtocolType.J1939, Spn = 175, Fmi = 4, Status = DtcStatus.Stored, Description = "Engine Oil Temperature: Voltage Below Normal (SIMULATED)", Severity = "Low" },
         new DtcReadout { Code = "SPN 639 FMI 9", Protocol = ProtocolType.J1939, Spn = 639, Fmi = 9, Status = DtcStatus.Active, Description = "J1939 Network #1: Abnormal Update Rate (SIMULATED)", Severity = "High" },
+        // Proprietary PCS TCM SPN (code 72, PCS 4LHD Technician's Guide v2.0 p.50). FMI 31 is a demo choice; the
+        // guide gives no FMI, so the app matches this row to data/dtc/pcs.json by SPN only.
+        new DtcReadout { Code = "SPN 522742 FMI 31", Protocol = ProtocolType.J1939, Spn = 522742, Fmi = 31, Status = DtcStatus.Stored, Description = "Transmission #1 proprietary SPN (SIMULATED)" },
     };
 
     private static readonly IReadOnlyList<DtcReadout> J1708Dtcs = new[]

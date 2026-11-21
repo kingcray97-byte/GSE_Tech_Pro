@@ -10,6 +10,7 @@ using GseTechPro.Core.Models;
 using GseTechPro.Core.Units;
 using GseTechPro.Data;
 using GseTechPro.Devices;
+using GseTechPro.Devices.Protocols;
 using GseTechPro.Devices.Abstractions;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
@@ -562,6 +563,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     private async Task LoadDtcLibraryIndexAsync()
     {
         _dtcLibraryMap.Clear();
+        _manufacturerSpnMap.Clear();
         await using var connection = await _dataServices.Connections.OpenAsync();
         await using var command = connection.CreateCommand();
         command.CommandText = """
@@ -593,8 +595,28 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                 UpdatedAt = reader.GetString(11),
             };
             _dtcLibraryMap[(protocol, code.Trim().ToUpperInvariant())] = entry;
+            if (protocol == ProtocolType.Manufacturer && entry.Spn is int spn && DtcCodes.IsProprietarySpn(spn))
+                _manufacturerSpnMap[spn] = entry;
         }
     }
+
+    /// <summary>
+    /// Manufacturer rows (PCS TCM) that the manual ties to a proprietary J1939 SPN, keyed by SPN.
+    /// The guides give no FMI, so a received <c>SPN x FMI y</c> with no exact row is matched by SPN.
+    /// </summary>
+    private readonly Dictionary<int, DtcLibraryEntry> _manufacturerSpnMap = new();
+
+    /// <summary>
+    /// Fallback for a J1939 DTC with a proprietary SPN and no exact library row: the manufacturer
+    /// row cited for that SPN (today only the PCS TCM). The caller must flag it as SPN-only, because a
+    /// proprietary SPN means something else on another maker's ECU.
+    /// </summary>
+    public DtcLibraryEntry? FindProprietarySpnEntry(DtcReadout dtc) =>
+        dtc.Protocol == ProtocolType.J1939 && dtc.Spn is int spn ? FindManufacturerSpnEntry(spn) : null;
+
+    /// <summary>The manufacturer (PCS TCM) row cited for a proprietary SPN, or null.</summary>
+    public DtcLibraryEntry? FindManufacturerSpnEntry(int spn) =>
+        DtcCodes.IsProprietarySpn(spn) && _manufacturerSpnMap.TryGetValue(spn, out var entry) ? entry : null;
 
     /// <summary>Looks up a <see cref="DtcLibraryEntry"/> by exact <c>(protocol, code)</c> match.</summary>
     public DtcLibraryEntry? FindDtcLibraryEntry(ProtocolType protocol, string code)
@@ -955,7 +977,13 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         foreach (var dtc in _lastDtcs)
         {
             var match = FindDtcLibraryEntry(dtc.Protocol, dtc.Code);
-            Dtcs.Add(new DtcRowViewModel(dtc, match, adapterSim, IsDarkTheme, IsSunlightMode));
+            var spnOnly = false;
+            if (match is null && FindProprietarySpnEntry(dtc) is { } proprietary)
+            {
+                match = proprietary;
+                spnOnly = true;
+            }
+            Dtcs.Add(new DtcRowViewModel(dtc, match, adapterSim, IsDarkTheme, IsSunlightMode, spnOnly));
         }
         OnPropertyChanged(nameof(HasNoDtcs));
         OnPropertyChanged(nameof(NoDtcsVisibility));

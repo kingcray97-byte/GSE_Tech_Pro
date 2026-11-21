@@ -90,9 +90,13 @@ public sealed class CanCaptureTests
         await PumpUntilAsync(vm, () => vm.CanRows.Count >= SimulatedCanBusMonitor.Schedule.Count);
         await vm.StopCanMonitorAsync();
 
+        // SA 03 (transmission) sends ETC1 and, since 10C.3, a DM1 with the simulated PCS fault.
         vm.CanFilterText = "SA 03";
-        var only = Assert.Single(vm.CanRows);
-        Assert.Equal("SA 03", only.SourceText);
+        Assert.Equal(2, vm.CanRows.Count);
+        Assert.All(vm.CanRows, r => Assert.Equal("SA 03", r.SourceText));
+
+        vm.CanFilterText = "ETC1";
+        Assert.Equal("SA 03", Assert.Single(vm.CanRows).SourceText);
 
         vm.CanFilterText = "";
         Assert.Equal(SimulatedCanBusMonitor.Schedule.Count, vm.CanRows.Count);

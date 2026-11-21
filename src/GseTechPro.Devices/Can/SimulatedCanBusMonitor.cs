@@ -19,6 +19,9 @@ public sealed class SimulatedCanBusMonitor : CanBusMonitorBase
     /// <summary>One simulated broadcast: what it is, how often it repeats, and where in the cycle it starts.</summary>
     public sealed record SimulatedMessage(string Label, uint Id, bool IsExtended, double PeriodSeconds, double OffsetSeconds);
 
+    /// <summary>Proprietary SPN the simulated transmission reports in its DM1 (PCS TCM code 72).</summary>
+    public const int SimulatedPcsSpn = 522742;
+
     /// <summary>The simulated schedule (engine ECU at SA 0x00, transmission at SA 0x03, one 11-bit body frame).</summary>
     public static IReadOnlyList<SimulatedMessage> Schedule { get; } = new[]
     {
@@ -30,6 +33,7 @@ public sealed class SimulatedCanBusMonitor : CanBusMonitorBase
         new SimulatedMessage("HOURS (engine hours)", J1939Identifier.Build(6, 0, 0, 0xFE, 0xE5, 0x00), true, 1.000, 0.025),
         new SimulatedMessage("ETC1 (transmission, SA 0x03)", J1939Identifier.Build(3, 0, 0, 0xF0, 0x02, 0x03), true, 0.100, 0.030),
         new SimulatedMessage("Body controller (11-bit 0x123)", 0x123, false, 0.250, 0.035),
+        new SimulatedMessage("DM1 (transmission fault, SA 0x03)", J1939Identifier.Build(6, 0, 0, 0xFE, 0xCA, 0x03), true, 1.000, 0.040),
     };
 
     /// <summary>
@@ -125,6 +129,16 @@ public sealed class SimulatedCanBusMonitor : CanBusMonitorBase
                 data[1] = (byte)(raw >> 8);
                 data[2] = (byte)(raw >> 16);
                 data[3] = (byte)(raw >> 24);
+                break;
+            }
+            case J1939Pgn.Dm1:
+            {
+                // One active DTC: PCS TCM SPN 522742 (code 72, Intermittent Output Shaft Speed, PCS 4LHD Technician's
+                // Guide v2.0 p.50). FMI 31 and the amber lamp are demo choices — the guide gives no FMI.
+                data[0] = 0x04; // amber warning lamp on (J1939-73 §5.7.1.5)
+                data[1] = 0xFF;
+                var dtc = J1939DtcCodec.Encode(SimulatedPcsSpn, 31, occurrenceCount: 1);
+                dtc.CopyTo(data, 2);
                 break;
             }
             default:

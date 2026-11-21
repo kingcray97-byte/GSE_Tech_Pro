@@ -13,7 +13,7 @@ public sealed record DtcLibrarySeedResult(int InsertedCount, int AlreadyPresentC
     public int SourceRowCount => InsertedCount + AlreadyPresentCount;
 }
 
-/// <summary>Imports the offline, authored J1939/J1587/OBD II reference library.</summary>
+/// <summary>Imports the offline, authored J1939/J1587/OBD II reference library plus the cited PCS TCM codes.</summary>
 public interface IDtcLibrarySeeder
 {
     Task<DtcLibrarySeedResult> SeedAsync(CancellationToken cancellationToken = default);
@@ -30,6 +30,7 @@ public sealed class DtcLibrarySeeder : IDtcLibrarySeeder
         "GseTechPro.Data.Content.Dtc.j1939.json",
         "GseTechPro.Data.Content.Dtc.j1587.json",
         "GseTechPro.Data.Content.Dtc.obd2.json",
+        "GseTechPro.Data.Content.Dtc.pcs.json",
     ];
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -46,8 +47,9 @@ public sealed class DtcLibrarySeeder : IDtcLibrarySeeder
     }
 
     /// <summary>
-    /// Loads and validates all three embedded resources, then transactionally inserts only missing
-    /// keys. A clean 540-row import reports 540 inserted; an immediate repeat reports 540 present.
+    /// Loads and validates all embedded resources, then transactionally inserts only missing
+    /// keys. A clean 575-row import (540 standard + 35 PCS TCM) reports 575 inserted; an immediate
+    /// repeat reports 575 present.
     /// </summary>
     public async Task<DtcLibrarySeedResult> SeedAsync(CancellationToken cancellationToken = default)
     {

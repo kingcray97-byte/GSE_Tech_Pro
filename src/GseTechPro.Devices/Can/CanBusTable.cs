@@ -52,6 +52,13 @@ public sealed class CanBusEntry
     /// <summary>Known SPN values from the latest frame (empty when the PGN is not in our decoder).</summary>
     public IReadOnlyList<J1939LiveDataValue> Decoded { get; private set; } = Array.Empty<J1939LiveDataValue>();
 
+    /// <summary>
+    /// For a single-frame DM1 (active) or DM2 (previously active) message: the lamp status and the DTCs it
+    /// carries (SAE J1939-73 §5.7.1/§5.7.2). Null for every other PGN. Multi-packet DM1s arrive as TP.CM/TP.DT
+    /// rows and are not reassembled here.
+    /// </summary>
+    public J1939DmMessage? DiagnosticMessage { get; private set; }
+
     public string IdText => IsExtended
         ? Id.ToString("X8", CultureInfo.InvariantCulture)
         : Id.ToString("X3", CultureInfo.InvariantCulture);
@@ -91,6 +98,31 @@ public sealed class CanBusEntry
 
         if (Pgn is { } pgn && !frame.IsRemote && J1939LiveData.IsKnownPgn(pgn))
             Decoded = J1939LiveData.Extract(pgn, frame.Data).Where(v => v.Known).ToArray();
+
+        if (Pgn is J1939Pgn.Dm1 or J1939Pgn.Dm2 && !frame.IsRemote)
+            DiagnosticMessage = DecodeDiagnosticMessage(frame.Data, Pgn == J1939Pgn.Dm2);
+    }
+
+    /// <summary>
+    /// Decodes a DM1/DM2 payload and drops the placeholder DTCs J1939-73 uses for "no active fault"
+    /// (SPN 0 / FMI 0) and padding (all bytes 0xFF), so only real faults are listed.
+    /// </summary>
+    public static J1939DmMessage DecodeDiagnosticMessage(ReadOnlySpan<byte> payload, bool isDm2)
+    {
+        var message = J1939DtcCodec.DecodeDmMessage(payload, isDm2);
+        var real = new List<J1939Dtc>(message.Dtcs.Count);
+        for (var i = 0; i < message.Dtcs.Count; i++)
+        {
+            var offset = 2 + i * 4;
+            var raw = payload.Slice(offset, 4);
+            if (raw[0] == 0xFF && raw[1] == 0xFF && raw[2] == 0xFF && raw[3] == 0xFF)
+                continue;
+            var dtc = message.Dtcs[i];
+            if (dtc.Spn == 0 && dtc.Fmi == 0)
+                continue;
+            real.Add(dtc);
+        }
+        return message with { Dtcs = real };
     }
 }
 
@@ -151,6 +183,9 @@ public sealed class CanBusTable
             return true;
         if (entry.SourceAddress is { } sa &&
             (f.Equals($"SA {sa:X2}", cmp) || f.Equals($"SA 0x{sa:X2}", cmp) || f.Equals($"SA{sa:X2}", cmp)))
+            return true;
+        if (entry.DiagnosticMessage is { } dm &&
+            dm.Dtcs.Any(d => f.Equals($"SPN {d.Spn}", cmp) || f.Equals(d.Spn.ToString(CultureInfo.InvariantCulture), cmp)))
             return true;
         return entry.Decoded.Any(v => v.Name.Contains(f, cmp));
     }

@@ -138,10 +138,12 @@ public sealed class DtcRowViewModel
         DtcLibraryEntry? libraryMatch,
         bool adapterIsSimulated,
         bool isDarkTheme,
-        bool isSunlightMode)
+        bool isSunlightMode,
+        bool isProprietarySpnMatch = false)
     {
         Readout = readout;
         LibraryMatch = libraryMatch;
+        IsProprietarySpnMatch = isProprietarySpnMatch && libraryMatch is not null;
         IsSimulated = readout.IsSimulated || adapterIsSimulated;
         HasFreezeFrame = readout.Status == DtcStatus.Active ? "FF" : "";
 
@@ -165,6 +167,13 @@ public sealed class DtcRowViewModel
             SourceCitation = string.IsNullOrWhiteSpace(libraryMatch.SourceCitation)
                 ? "dtc_library match"
                 : libraryMatch.SourceCitation!;
+            if (IsProprietarySpnMatch)
+            {
+                // Proprietary SPNs are manufacturer-defined: say plainly that this is an SPN-only match.
+                Description = $"{Description} (matched by proprietary SPN {spn} only)";
+                // Caveat first: the citation line is trimmed on screen, so the warning must not be at its end.
+                SourceCitation = $"Proprietary SPN: valid only if this fault came from a PCS TCM. {SourceCitation}";
+            }
         }
         else
         {
@@ -204,11 +213,16 @@ public sealed class DtcRowViewModel
 
     public DtcReadout Readout { get; }
     public DtcLibraryEntry? LibraryMatch { get; }
+
+    /// <summary>True when the row was matched to a manufacturer (PCS TCM) entry by proprietary SPN only.</summary>
+    public bool IsProprietarySpnMatch { get; }
     public string Code => Readout.Code;
     public string Protocol => Readout.Protocol.ToString();
     public string RawIdentifiers { get; }
     public bool HasLibraryMatch { get; }
-    public string LibraryMatchLabel => HasLibraryMatch ? "Library Match" : "no library match";
+    public string LibraryMatchLabel => IsProprietarySpnMatch
+        ? "SPN-only match · PCS TCM only"
+        : HasLibraryMatch ? "Library Match" : "no library match";
     public string HasFreezeFrame { get; }
     public string Description { get; }
     public string SystemName { get; }
