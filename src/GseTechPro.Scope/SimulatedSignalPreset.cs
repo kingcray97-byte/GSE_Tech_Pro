@@ -35,6 +35,10 @@ public enum SimulatedSignalPreset
     /// cranks to the end of the 5 s capture; 4 cylinders at about 200 rpm, the third compression of each engine cycle
     /// about 70 % of the others (a weak cylinder to find). Demo values for the simulator, not specifications.</summary>
     RelativeCompression,
+    /// <summary>Cylinder balance: a 60-2 crank sensor (0.25–2.75 V) on CH1, engine running at about 800 rpm, 4 cylinders
+    /// 4-stroke; each firing speeds the crank up and slows it again by about ±15 rpm, the third firing of each cycle about
+    /// 60 % as much (a weak cylinder to find). Demo values for the simulator, not specifications.</summary>
+    CylinderBalance,
 }
 
 /// <summary>
@@ -55,6 +59,7 @@ public static class SimulatedScopePresets
         SimulatedSignalPreset.CanBusFrames,
         SimulatedSignalPreset.BatteryCranking,
         SimulatedSignalPreset.RelativeCompression,
+        SimulatedSignalPreset.CylinderBalance,
     ];
 
     /// <summary>Human-readable label for UI preset pickers.</summary>
@@ -71,6 +76,7 @@ public static class SimulatedScopePresets
         SimulatedSignalPreset.CanBusFrames => "CAN frames (J1939, 250 kbit/s)",
         SimulatedSignalPreset.BatteryCranking => "Battery / cranking",
         SimulatedSignalPreset.RelativeCompression => "Relative compression (weak cylinder)",
+        SimulatedSignalPreset.CylinderBalance => "Cylinder balance (60-2, weak cylinder)",
         _ => preset.ToString(),
     };
 
@@ -195,6 +201,19 @@ public static class SimulatedScopePresets
 
         SimulatedSignalPreset.RelativeCompression => GetCanonicalRequest(SimulatedSignalPreset.BatteryCranking),
 
+        SimulatedSignalPreset.CylinderBalance => new ScopeCaptureRequest
+        {
+            Channels =
+            [
+                new ScopeChannelConfig { Channel = 1, Coupling = ScopeCoupling.Dc, ProbeMultiplier = 1.0, VoltageRangeVolts = 20.0 },
+            ],
+            TimebaseSecondsPerDivision = 0.2, // 2 s: about 13 engine cycles at idle
+            SampleRateHz = 100_000,
+            TriggerMode = ScopeTriggerMode.None,
+            TriggerChannel = 1,
+            TriggerLevelVolts = 0.0,
+        },
+
         SimulatedSignalPreset.BatteryCranking => new ScopeCaptureRequest
         {
             Channels =
@@ -294,6 +313,11 @@ public static class SimulatedScopePresets
         }
 
         string normalized = testNameOrId.Trim().ToLowerInvariant();
+        if (normalized.Contains("balance"))
+        {
+            preset = SimulatedSignalPreset.CylinderBalance;
+            return true;
+        }
         if (normalized.Contains("compression"))
         {
             preset = SimulatedSignalPreset.RelativeCompression;

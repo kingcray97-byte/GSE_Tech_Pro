@@ -117,13 +117,44 @@ public sealed class ScopeOneTapTests
     }
 
     [Fact]
-    public async Task ComingTests_CannotStart_AndAGuidedTestBringsItsOwnWarnings()
+    public async Task CylinderBalance_NeedsWheelInputs_ThenFindsTheWeakPosition()
     {
-        await using var vm = await NewViewModelAsync("coming");
-        vm.SelectedScopeOneTapTest = vm.ScopeOneTapTests.Single(t => t.Id == "cylinder-balance");
+        await using var vm = await NewViewModelAsync("balance");
+        Assert.All(vm.ScopeOneTapTests, t => Assert.True(t.IsAvailable));
+        vm.SelectedScopeOneTapTest = vm.ScopeOneTapTests.Single(t => t.Id == MainShellViewModel.OneTapCylinderBalanceId);
+        Assert.Equal(Visibility.Visible, vm.ScopeOneTapBalanceInputsVisibility);
+        Assert.Equal(Visibility.Collapsed, vm.ScopeOneTapCompressionInputsVisibility);
+        await vm.StartScopeOneTapTestAsync();
+        vm.AcknowledgeScopeSafetyWarnings();
+
+        vm.ScopeCompressionCylindersText = "4";
+        vm.ScopeCompressionEngineCycle = "4-stroke";
         await vm.StartScopeOneTapTestAsync();
         Assert.Null(vm.LastScopeCapture);
-        Assert.Contains("not built yet", vm.ScopeOneTapStatusText);
+        Assert.Contains("tooth count", vm.ScopeOneTapStatusText);
+        vm.ScopeBalanceWheelTeethText = "60";
+        await vm.StartScopeOneTapTestAsync();
+        Assert.Null(vm.LastScopeCapture);
+        Assert.Contains("missing teeth", vm.ScopeOneTapStatusText);
+
+        vm.ScopeBalanceMissingTeethText = "2";
+        vm.ScopeBalanceMaxSpreadText = "20";
+        vm.ScopeBalanceMaxSpreadSource = "Test manual p.3";
+        await vm.StartScopeOneTapTestAsync();
+        var cap = vm.LastScopeCapture;
+        Assert.NotNull(cap);
+        Assert.Equal(100_000, cap!.SampleRateHz);
+        Assert.Equal("Crank sensor", vm.ScopeChannels[0].Label);
+        Assert.False(vm.ScopeChannels[1].IsEnabled);
+        Assert.Contains("weakest is position", vm.ScopeOneTapStatusText);
+        Assert.Contains(vm.ScopeOneTapResults, r => r.Parameter == "Engine speed" && r.Value == "800 rpm");
+        Assert.Equal("FAIL", vm.ScopeOneTapResults.Single(r => r.Parameter.StartsWith("Spread")).VerdictText);
+    }
+
+    [Fact]
+    public async Task AGuidedTestBringsItsOwnWarnings_ThenStartAsksForTheOneTapWarningsAgain()
+    {
+        await using var vm = await NewViewModelAsync("guided");
 
         // Battery test acknowledged, then a guided test: Start asks for the battery warnings again.
         vm.SelectedScopeOneTapTest = vm.ScopeOneTapTests[0];

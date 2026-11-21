@@ -335,6 +335,7 @@ public sealed class SimulatedScopeDevice : IScopeDevice
                 SimulatedSignalPreset.CanBusFrames => SampleCanFrames(t, config.Channel, noise),
                 SimulatedSignalPreset.BatteryCranking => SampleBatteryCranking(t, config, noise),
                 SimulatedSignalPreset.RelativeCompression => SampleRelativeCompression(t, config, noise),
+                SimulatedSignalPreset.CylinderBalance => SampleCylinderBalance(t, noise),
                 _ => SamplePresetAtTime(preset, t, noise),
             };
             samples[i] = baseVolts * probeScale;
@@ -634,6 +635,41 @@ public sealed class SimulatedScopeDevice : IScopeDevice
 
         double scale = config.CurrentScaleAmpsPerVolt > 0.0 ? config.CurrentScaleAmpsPerVolt : 1000.0;
         return (amps + 3.0 * unitNoise) / scale;
+    }
+
+    /// <summary>Cylinder balance speed rise per firing position (demo: the third is weak).</summary>
+    internal static readonly double[] SimulatedBalanceHeights = [1.0, 0.96, 0.60, 0.98];
+
+    /// <summary>
+    /// Cylinder balance (demo values, not specs): 60-2 crank sensor at 800 rpm mean, 4 cylinders 4-stroke
+    /// (26.7 firings/s). During firing k the crank speed is 800 + 15·h·sin(2π f (t − t_k)) rpm, h from
+    /// <see cref="SimulatedBalanceHeights"/>; the crank angle is that speed integrated exactly, so tooth
+    /// timing carries the speed change. Teeth 58 and 59 of each revolution are missing.
+    /// </summary>
+    private static double SampleCylinderBalance(double t, double unitNoise)
+    {
+        const double meanRpm = 800.0, swingRpm = 15.0, cylinders = 4.0;
+        double w0 = meanRpm / 60.0 * 2.0 * Math.PI;           // rad/s
+        double a = swingRpm / 60.0 * 2.0 * Math.PI;           // rad/s
+        double f = meanRpm / 60.0 * cylinders / 2.0;          // firings per second (4-stroke)
+        int k = (int)Math.Floor(t * f);
+        double h = SimulatedBalanceHeights[k % SimulatedBalanceHeights.Length];
+        double tk = k / f;
+        double theta = w0 * t + a * h / (2.0 * Math.PI * f) * (1.0 - Math.Cos(2.0 * Math.PI * f * (t - tk)));
+
+        double toothPos = theta / (2.0 * Math.PI) * 60.0;
+        long tooth = (long)Math.Floor(toothPos);
+        double phase = toothPos - tooth;
+        long slot = tooth % 60;
+        const double vLow = 0.25, vHigh = 2.75;
+        if (slot is 58 or 59)
+            return vLow + unitNoise * 0.002;
+
+        double level = phase < 0.10 ? vLow + (vHigh - vLow) * (phase / 0.10)
+            : phase < 0.50 ? vHigh
+            : phase < 0.60 ? vHigh - (vHigh - vLow) * ((phase - 0.50) / 0.10)
+            : vLow;
+        return level + unitNoise * 0.002;
     }
 
     private static double SampleSolenoidCurrent(double t, double unitNoise)

@@ -62,6 +62,7 @@ public sealed partial class MainShellViewModel
 {
     public const string OneTapBatteryCrankingId = "battery-cranking";
     public const string OneTapRelativeCompressionId = "relative-compression";
+    public const string OneTapCylinderBalanceId = "cylinder-balance";
 
     /// <summary>The same warnings as the Starter Current guided test: a crank is the same hazard.</summary>
     public static IReadOnlyList<string> OneTapBatteryCrankingSafetyWarningIds { get; } =
@@ -84,14 +85,16 @@ public sealed partial class MainShellViewModel
         new(OneTapRelativeCompressionId, "Relative compression",
             "Compares compression between cylinders from the starter current (current clamp on channel B; without one, the battery voltage dips on channel A). Keep the engine from starting as its manual says, tap Start, then crank for the whole 5 s capture, staying within the starter's cranking time limit. Results are % of the strongest cylinder; confirm a low one with a compression gauge.",
             IsAvailable: true),
-        new("cylinder-balance", "Cylinder balance",
-            "Engine speed change per cylinder.", IsAvailable: false, ComingNote: "coming in 10D.3c"),
+        new(OneTapCylinderBalanceId, "Cylinder balance",
+            "Compares how much each cylinder speeds up the crankshaft, with the engine running at a steady idle. Crank position sensor signal on channel A, connected as the engine manual says. Enter the crank wheel's tooth count (counting missing teeth) and missing teeth from the sensor or wheel spec. Tap Start: the capture is 2 s.",
+            IsAvailable: true),
     ];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ScopeOneTapDescription))]
     [NotifyPropertyChangedFor(nameof(ScopeOneTapBatteryInputsVisibility))]
     [NotifyPropertyChangedFor(nameof(ScopeOneTapCompressionInputsVisibility))]
+    [NotifyPropertyChangedFor(nameof(ScopeOneTapBalanceInputsVisibility))]
     private OneTapTestItem? _selectedScopeOneTapTest;
 
     public string ScopeOneTapDescription => SelectedScopeOneTapTest?.Description ?? "Pick a test.";
@@ -119,6 +122,25 @@ public sealed partial class MainShellViewModel
 
     [ObservableProperty]
     private string _scopeCompressionMaxSpreadSource = "";
+
+    public Visibility ScopeOneTapBalanceInputsVisibility =>
+        SelectedScopeOneTapTest?.Id == OneTapCylinderBalanceId ? Visibility.Visible : Visibility.Collapsed;
+
+    // ---- Cylinder balance inputs (cylinders and engine cycle are shared with relative compression) ----
+
+    /// <summary>Tooth positions on the crank wheel, counting missing teeth (60 for 60-2). Required, no default.</summary>
+    [ObservableProperty]
+    private string _scopeBalanceWheelTeethText = "";
+
+    /// <summary>Missing teeth in the reference gap (2 for 60-2, 0 for none). Required, no default.</summary>
+    [ObservableProperty]
+    private string _scopeBalanceMissingTeethText = "";
+
+    [ObservableProperty]
+    private string _scopeBalanceMaxSpreadText = "";
+
+    [ObservableProperty]
+    private string _scopeBalanceMaxSpreadSource = "";
 
     // ---- Battery / cranking inputs (all optional except the system voltage) ----
 
@@ -251,9 +273,34 @@ public sealed partial class MainShellViewModel
 
         if (!TryOptionalPositive(ScopeCrankingClampText, "Current clamp scale (A/V)", out double? clamp, out string? error) ||
             (test.Id == OneTapBatteryCrankingId && !TryReadCrankingInputs(out _, out _, out error)) ||
-            (test.Id == OneTapRelativeCompressionId && !TryReadCompressionInputs(out _, out error)))
+            (test.Id == OneTapRelativeCompressionId && !TryReadCompressionInputs(out _, out error)) ||
+            (test.Id == OneTapCylinderBalanceId && !TryReadBalanceInputs(out _, out error)))
         {
             ScopeOneTapStatusText = error!;
+            return;
+        }
+
+        if (test.Id == OneTapCylinderBalanceId)
+        {
+            ApplyCaptureRequestToUi(new ScopeCaptureRequest
+            {
+                Channels =
+                [
+                    new ScopeChannelConfig
+                    {
+                        Channel = 1, Coupling = ScopeCoupling.Dc, ProbeMultiplier = 1.0,
+                        VoltageRangeVolts = 20.0, // Hall and inductive sensors; the over-range row says when to go higher
+                        Label = "Crank sensor",
+                    },
+                ],
+                TimebaseSecondsPerDivision = 0.2, // 2 s: about a dozen engine cycles at idle
+                SampleRateHz = 100_000,           // fine tooth timing
+                TriggerMode = ScopeTriggerMode.None,
+                TriggerChannel = 1,
+            });
+            _scopeAutoSetupPinnedPreset = null;
+            _scopeOneTapSimPreset = SimulatedSignalPreset.CylinderBalance;
+            await CaptureAndAnalyseOneTapAsync("Capturing 2 s: keep the engine at a steady idle.");
             return;
         }
 
@@ -290,10 +337,15 @@ public sealed partial class MainShellViewModel
             ? SimulatedSignalPreset.RelativeCompression
             : SimulatedSignalPreset.BatteryCranking;
 
-        var before = LastScopeCapture;
-        ScopeOneTapStatusText = test.Id == OneTapRelativeCompressionId
+        await CaptureAndAnalyseOneTapAsync(test.Id == OneTapRelativeCompressionId
             ? "Capturing 5 s: crank the engine now, without letting it start."
-            : "Capturing 5 s: crank the engine now.";
+            : "Capturing 5 s: crank the engine now.");
+    }
+
+    private async Task CaptureAndAnalyseOneTapAsync(string capturingText)
+    {
+        var before = LastScopeCapture;
+        ScopeOneTapStatusText = capturingText;
         await StartScopeCaptureAsync();
         if (ReferenceEquals(before, LastScopeCapture) || LastScopeCapture is null)
         {
@@ -316,16 +368,20 @@ public sealed partial class MainShellViewModel
         }
         if (!capture.Channels.TryGetValue(1, out var volts))
         {
-            ScopeOneTapStatusText = "The capture has no channel A (battery voltage).";
+            ScopeOneTapStatusText = "The capture has no channel A.";
             return;
         }
         var test = SelectedScopeOneTapTest ?? ScopeOneTapTests[0];
         CrankingTestInputs? inputs = null;
         RelativeCompressionInputs? compression = null;
+        CylinderBalanceInputs? balance = null;
         string? error = null;
-        bool ok = test.Id == OneTapRelativeCompressionId
-            ? TryReadCompressionInputs(out compression, out error)
-            : TryReadCrankingInputs(out inputs, out _, out error);
+        bool ok = test.Id switch
+        {
+            OneTapRelativeCompressionId => TryReadCompressionInputs(out compression, out error),
+            OneTapCylinderBalanceId => TryReadBalanceInputs(out balance, out error),
+            _ => TryReadCrankingInputs(out inputs, out _, out error),
+        };
         if (!ok)
         {
             ScopeOneTapStatusText = error!;
@@ -348,6 +404,11 @@ public sealed partial class MainShellViewModel
 
         var (success, message, rows) = await Task.Run(() =>
         {
+            if (balance is not null)
+            {
+                var cb = CylinderBalanceTest.Analyse(volts, rate, balance, simulated, vRange);
+                return (cb.Success, cb.Message, cb.Rows);
+            }
             double[]? amps = clampVolts?.Select(v => v * scale).ToArray();
             if (compression is not null)
             {
@@ -368,30 +429,77 @@ public sealed partial class MainShellViewModel
         StatusBannerMessage = ScopeOneTapStatusText;
     }
 
-    /// <summary>Reads the relative compression inputs: cylinders and engine cycle are required (from the engine).</summary>
-    private bool TryReadCompressionInputs(out RelativeCompressionInputs? inputs, out string? error)
+    /// <summary>Reads the cylinder balance inputs: engine and crank wheel facts are required, the spread limit optional.</summary>
+    private bool TryReadBalanceInputs(out CylinderBalanceInputs? inputs, out string? error)
     {
         inputs = null;
+        if (!TryReadEngine(out int cylinders, out int strokes, out error))
+            return false;
+        if (!int.TryParse(ScopeBalanceWheelTeethText?.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int teeth) ||
+            teeth is < 4 or > 720)
+        {
+            error = "Enter the crank wheel's tooth count, counting missing teeth (e.g. 60 for 60-2), from the sensor or wheel spec.";
+            return false;
+        }
+        if (!int.TryParse(ScopeBalanceMissingTeethText?.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int missing) ||
+            missing < 0 || missing >= teeth / 2)
+        {
+            error = "Enter the number of missing teeth in the gap (e.g. 2 for 60-2, 0 when there is no gap).";
+            return false;
+        }
+        if (!TryReadSpread(ScopeBalanceMaxSpreadText, out var spread, out error))
+            return false;
+        inputs = new CylinderBalanceInputs
+        {
+            Cylinders = cylinders,
+            StrokesPerCycle = strokes,
+            WheelTeeth = teeth,
+            MissingTeeth = missing,
+            MaximumSpreadPercent = spread,
+            MaximumSpreadSource = string.IsNullOrWhiteSpace(ScopeBalanceMaxSpreadSource) ? null : ScopeBalanceMaxSpreadSource.Trim(),
+        };
+        return true;
+    }
+
+    /// <summary>Cylinders and engine cycle, shared by relative compression and cylinder balance (same engine).</summary>
+    private bool TryReadEngine(out int cylinders, out int strokes, out string? error)
+    {
         error = null;
-        if (!int.TryParse(ScopeCompressionCylindersText?.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int cylinders) ||
+        strokes = 0;
+        if (!int.TryParse(ScopeCompressionCylindersText?.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out cylinders) ||
             cylinders is < 1 or > 16)
         {
             error = "Enter the number of cylinders (1–16) from the engine.";
             return false;
         }
-        int strokes = ScopeCompressionEngineCycle switch { "4-stroke" => 4, "2-stroke" => 2, _ => 0 };
+        strokes = ScopeCompressionEngineCycle switch { "4-stroke" => 4, "2-stroke" => 2, _ => 0 };
         if (strokes == 0)
         {
             error = "Pick 4-stroke or 2-stroke for the engine.";
             return false;
         }
-        if (!TryOptionalPositive(ScopeCompressionMaxSpreadText, "Maximum spread (%)", out var spread, out error))
+        return true;
+    }
+
+    private static bool TryReadSpread(string? text, out double? spread, out string? error)
+    {
+        if (!TryOptionalPositive(text, "Maximum spread (%)", out spread, out error))
             return false;
         if (spread > 100.0)
         {
             error = "Maximum spread must be 100 % or less, or blank.";
             return false;
         }
+        return true;
+    }
+
+    /// <summary>Reads the relative compression inputs: cylinders and engine cycle are required (from the engine).</summary>
+    private bool TryReadCompressionInputs(out RelativeCompressionInputs? inputs, out string? error)
+    {
+        inputs = null;
+        if (!TryReadEngine(out int cylinders, out int strokes, out error) ||
+            !TryReadSpread(ScopeCompressionMaxSpreadText, out var spread, out error))
+            return false;
         inputs = new RelativeCompressionInputs
         {
             Cylinders = cylinders,

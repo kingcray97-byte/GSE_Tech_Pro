@@ -5220,6 +5220,46 @@
                                                                     Command="{x:Bind ViewModel.AnalyseScopeOneTapTestCommand}" />
                                                         </StackPanel>
                                                     </Grid>
+                                                    <Grid ColumnSpacing="10" RowSpacing="6"
+                                                          Visibility="{x:Bind ViewModel.ScopeOneTapBalanceInputsVisibility, Mode=OneWay}">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <TextBox Grid.Row="0" Grid.Column="0" Header="Cylinders" MinWidth="96" MinHeight="{StaticResource MinTouchSize}"
+                                                                 PlaceholderText="required"
+                                                                 Text="{x:Bind ViewModel.ScopeCompressionCylindersText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <ComboBox Grid.Row="0" Grid.Column="1" Header="Engine cycle" MinWidth="120" MinHeight="{StaticResource MinTouchSize}"
+                                                                  ItemsSource="{x:Bind ViewModel.ScopeCompressionEngineCycles}"
+                                                                  SelectedItem="{x:Bind ViewModel.ScopeCompressionEngineCycle, Mode=TwoWay}" />
+                                                        <TextBox Grid.Row="0" Grid.Column="2" Header="Wheel teeth, counting missing" MinHeight="{StaticResource MinTouchSize}"
+                                                                 PlaceholderText="e.g. 60 for 60-2"
+                                                                 Text="{x:Bind ViewModel.ScopeBalanceWheelTeethText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="0" Grid.Column="3" Header="Missing teeth" MinHeight="{StaticResource MinTouchSize}"
+                                                                 PlaceholderText="e.g. 2 for 60-2, 0 = none"
+                                                                 Text="{x:Bind ViewModel.ScopeBalanceMissingTeethText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Header="Maximum spread (%)" MinHeight="{StaticResource MinTouchSize}"
+                                                                 PlaceholderText="only from the manual"
+                                                                 Text="{x:Bind ViewModel.ScopeBalanceMaxSpreadText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <TextBox Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Header="Source of the maximum (manual, page)" MinHeight="{StaticResource MinTouchSize}"
+                                                                 PlaceholderText="needed for a pass/fail"
+                                                                 Text="{x:Bind ViewModel.ScopeBalanceMaxSpreadSource, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <StackPanel Grid.Row="1" Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                                                            <Button Style="{StaticResource ActionTouchButtonStyle}" Content="Start"
+                                                                    AutomationProperties.Name="Start cylinder balance test"
+                                                                    Command="{x:Bind ViewModel.StartScopeOneTapTestCommand}" />
+                                                            <Button MinHeight="{StaticResource MinTouchSize}" MinWidth="88" Content="Analyse"
+                                                                    AutomationProperties.Name="Analyse the capture on screen for cylinder balance"
+                                                                    Command="{x:Bind ViewModel.AnalyseScopeOneTapTestCommand}" />
+                                                        </StackPanel>
+                                                    </Grid>
                                                     <TextBlock Text="{x:Bind ViewModel.ScopeOneTapStatusText, Mode=OneWay}" TextWrapping="Wrap"
                                                                FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold" />
                                                     <Border Background="{ThemeResource AppSurfaceBrush}" BorderBrush="{ThemeResource AppSubtleBorderBrush}"
