@@ -38,6 +38,13 @@ public sealed record ScopeChannelConfig
     /// <see cref="ScopeMeasurementStatus.NotConfigured"/> (ADR-011 §4).
     /// </summary>
     public double CurrentScaleAmpsPerVolt { get; init; }
+    /// <summary>
+    /// Optional name the technician gives the channel ("Crank sensor", "CAN-H"), shown on the
+    /// channel tile and saved with the capture. Null = no label (left out of the JSON, so older
+    /// rows and guided-test setups are unchanged). Display text only: never used to pick a test.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? Label { get; init; }
 }
 
 /// <summary>

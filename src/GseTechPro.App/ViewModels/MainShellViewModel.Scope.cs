@@ -520,6 +520,7 @@ public sealed partial class MainShellViewModel
         {
             var vm = new ScopeChannelSetupViewModel(ch, isEnabled: ch == 1);
             vm.ConfigurationChanged += OnScopeChannelConfigurationChanged;
+            vm.PropertyChanged += OnScopeChannelLabelPropertyChanged;
             ScopeChannels.Add(vm);
         }
 

@@ -3693,10 +3693,17 @@
                                                 <RowDefinition Height="*" />
                                                 <RowDefinition Height="*" />
                                             </Grid.RowDefinitions>
-                                            <TextBlock Text="{x:Bind ViewModel.ScopeChannel1.ChannelLetter}" FontWeight="Bold" FontSize="13"
-                                                       Foreground="{ThemeResource ScopeChannel1Brush}" />
-                                            <TextBlock Text="{x:Bind ViewModel.ScopeChannel1.DetailDisplay, Mode=OneWay}" FontSize="{StaticResource FontSizeBadge}"
-                                                       HorizontalAlignment="Right" Foreground="{ThemeResource ScopeAxisTextBrush}" />
+                                            <Grid ColumnSpacing="4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{x:Bind ViewModel.ScopeChannel1.TileTitle, Mode=OneWay}" FontWeight="Bold" FontSize="13"
+                                                           TextTrimming="CharacterEllipsis" Foreground="{ThemeResource ScopeChannel1Brush}"
+                                                           ToolTipService.ToolTip="{x:Bind ViewModel.ScopeChannel1.TileTitle, Mode=OneWay}" />
+                                                <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.ScopeChannel1.DetailDisplay, Mode=OneWay}" FontSize="{StaticResource FontSizeBadge}"
+                                                           VerticalAlignment="Center" Foreground="{ThemeResource ScopeAxisTextBrush}" />
+                                            </Grid>
                                             <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.ScopeChannel1.RangeDisplay, Mode=OneWay}" FontWeight="SemiBold" FontSize="15"
                                                        VerticalAlignment="Bottom" Foreground="{ThemeResource ScopeChannel1Brush}" />
                                         </Grid>
@@ -3754,10 +3761,17 @@
                                                 <RowDefinition Height="*" />
                                                 <RowDefinition Height="*" />
                                             </Grid.RowDefinitions>
-                                            <TextBlock Text="{x:Bind ViewModel.ScopeChannel2.ChannelLetter}" FontWeight="Bold" FontSize="13"
-                                                       Foreground="{ThemeResource ScopeChannel2Brush}" />
-                                            <TextBlock Text="{x:Bind ViewModel.ScopeChannel2.DetailDisplay, Mode=OneWay}" FontSize="{StaticResource FontSizeBadge}"
-                                                       HorizontalAlignment="Right" Foreground="{ThemeResource ScopeAxisTextBrush}" />
+                                            <Grid ColumnSpacing="4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{x:Bind ViewModel.ScopeChannel2.TileTitle, Mode=OneWay}" FontWeight="Bold" FontSize="13"
+                                                           TextTrimming="CharacterEllipsis" Foreground="{ThemeResource ScopeChannel2Brush}"
+                                                           ToolTipService.ToolTip="{x:Bind ViewModel.ScopeChannel2.TileTitle, Mode=OneWay}" />
+                                                <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.ScopeChannel2.DetailDisplay, Mode=OneWay}" FontSize="{StaticResource FontSizeBadge}"
+                                                           VerticalAlignment="Center" Foreground="{ThemeResource ScopeAxisTextBrush}" />
+                                            </Grid>
                                             <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.ScopeChannel2.RangeDisplay, Mode=OneWay}" FontWeight="SemiBold" FontSize="15"
                                                        VerticalAlignment="Bottom" Foreground="{ThemeResource ScopeChannel2Brush}" />
                                         </Grid>
@@ -3815,10 +3829,17 @@
                                                 <RowDefinition Height="*" />
                                                 <RowDefinition Height="*" />
                                             </Grid.RowDefinitions>
-                                            <TextBlock Text="{x:Bind ViewModel.ScopeChannel3.ChannelLetter}" FontWeight="Bold" FontSize="13"
-                                                       Foreground="{ThemeResource ScopeChannel3Brush}" />
-                                            <TextBlock Text="{x:Bind ViewModel.ScopeChannel3.DetailDisplay, Mode=OneWay}" FontSize="{StaticResource FontSizeBadge}"
-                                                       HorizontalAlignment="Right" Foreground="{ThemeResource ScopeAxisTextBrush}" />
+                                            <Grid ColumnSpacing="4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{x:Bind ViewModel.ScopeChannel3.TileTitle, Mode=OneWay}" FontWeight="Bold" FontSize="13"
+                                                           TextTrimming="CharacterEllipsis" Foreground="{ThemeResource ScopeChannel3Brush}"
+                                                           ToolTipService.ToolTip="{x:Bind ViewModel.ScopeChannel3.TileTitle, Mode=OneWay}" />
+                                                <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.ScopeChannel3.DetailDisplay, Mode=OneWay}" FontSize="{StaticResource FontSizeBadge}"
+                                                           VerticalAlignment="Center" Foreground="{ThemeResource ScopeAxisTextBrush}" />
+                                            </Grid>
                                             <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.ScopeChannel3.RangeDisplay, Mode=OneWay}" FontWeight="SemiBold" FontSize="15"
                                                        VerticalAlignment="Bottom" Foreground="{ThemeResource ScopeChannel3Brush}" />
                                         </Grid>
@@ -3876,10 +3897,17 @@
                                                 <RowDefinition Height="*" />
                                                 <RowDefinition Height="*" />
                                             </Grid.RowDefinitions>
-                                            <TextBlock Text="{x:Bind ViewModel.ScopeChannel4.ChannelLetter}" FontWeight="Bold" FontSize="13"
-                                                       Foreground="{ThemeResource ScopeChannel4Brush}" />
-                                            <TextBlock Text="{x:Bind ViewModel.ScopeChannel4.DetailDisplay, Mode=OneWay}" FontSize="{StaticResource FontSizeBadge}"
-                                                       HorizontalAlignment="Right" Foreground="{ThemeResource ScopeAxisTextBrush}" />
+                                            <Grid ColumnSpacing="4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{x:Bind ViewModel.ScopeChannel4.TileTitle, Mode=OneWay}" FontWeight="Bold" FontSize="13"
+                                                           TextTrimming="CharacterEllipsis" Foreground="{ThemeResource ScopeChannel4Brush}"
+                                                           ToolTipService.ToolTip="{x:Bind ViewModel.ScopeChannel4.TileTitle, Mode=OneWay}" />
+                                                <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.ScopeChannel4.DetailDisplay, Mode=OneWay}" FontSize="{StaticResource FontSizeBadge}"
+                                                           VerticalAlignment="Center" Foreground="{ThemeResource ScopeAxisTextBrush}" />
+                                            </Grid>
                                             <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.ScopeChannel4.RangeDisplay, Mode=OneWay}" FontWeight="SemiBold" FontSize="15"
                                                        VerticalAlignment="Bottom" Foreground="{ThemeResource ScopeChannel4Brush}" />
                                         </Grid>
@@ -4254,6 +4282,51 @@
                                             </Flyout>
                                         </Button.Flyout>
                                     </Button>
+                                    <!-- Channel labels (10D.1h): name each channel; saved with the capture -->
+                                    <Button Grid.Row="6" Grid.Column="1" Style="{StaticResource ScopeToolTileButtonStyle}"
+                                            AutomationProperties.Name="Channel labels">
+                                        <StackPanel Spacing="3">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8EC;" FontSize="20" />
+                                            <TextBlock Text="Labels" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Button.Flyout>
+                                            <Flyout Placement="RightEdgeAlignedBottom">
+                                                <StackPanel Width="320" Spacing="8">
+                                                    <TextBlock Text="Channel labels" FontWeight="Bold" />
+                                                    <TextBlock TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                                               Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                               Text="Name what each channel is connected to. Labels show on the channel tiles and above the trace, and are saved with the capture. Choosing a guided test or opening a saved capture replaces them." />
+                                                    <TextBox Header="{x:Bind ViewModel.ScopeChannel1.LabelHeader}"
+                                                             MinHeight="{StaticResource MinTouchSize}"
+                                                             MaxLength="{x:Bind ViewModel.ScopeChannelLabelMaxLength}"
+                                                             PlaceholderText="e.g. Crank sensor"
+                                                             Text="{x:Bind ViewModel.ScopeChannel1.Label, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                             AutomationProperties.Name="Channel 1 label" />
+                                                    <TextBox Header="{x:Bind ViewModel.ScopeChannel2.LabelHeader}"
+                                                             MinHeight="{StaticResource MinTouchSize}"
+                                                             MaxLength="{x:Bind ViewModel.ScopeChannelLabelMaxLength}"
+                                                             PlaceholderText="e.g. Crank sensor"
+                                                             Text="{x:Bind ViewModel.ScopeChannel2.Label, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                             AutomationProperties.Name="Channel 2 label" />
+                                                    <TextBox Header="{x:Bind ViewModel.ScopeChannel3.LabelHeader}"
+                                                             MinHeight="{StaticResource MinTouchSize}"
+                                                             MaxLength="{x:Bind ViewModel.ScopeChannelLabelMaxLength}"
+                                                             PlaceholderText="e.g. Crank sensor"
+                                                             Text="{x:Bind ViewModel.ScopeChannel3.Label, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                             AutomationProperties.Name="Channel 3 label" />
+                                                    <TextBox Header="{x:Bind ViewModel.ScopeChannel4.LabelHeader}"
+                                                             MinHeight="{StaticResource MinTouchSize}"
+                                                             MaxLength="{x:Bind ViewModel.ScopeChannelLabelMaxLength}"
+                                                             PlaceholderText="e.g. Crank sensor"
+                                                             Text="{x:Bind ViewModel.ScopeChannel4.Label, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                             AutomationProperties.Name="Channel 4 label" />
+                                                    <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                                            Command="{x:Bind ViewModel.ClearScopeChannelLabelsCommand}" Content="Clear all labels" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
                                     <!-- Mask (10D.1): pass/fail against a known-good capture -->
                                     <Button Grid.Row="4" Grid.Column="1" Style="{StaticResource ScopeToolTileButtonStyle}"
                                             AutomationProperties.Name="Mask">
@@ -4332,6 +4405,11 @@
                                         <Run Text="A " /><Run Text="{x:Bind ViewModel.ScopeLeftAxisUnit, Mode=OneWay}" />
                                     </TextBlock>
                                     <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="14" Margin="4,0,0,4">
+                                        <TextBlock Text="{x:Bind ViewModel.ScopeChannelLabelLegend, Mode=OneWay}"
+                                                   FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold"
+                                                   Foreground="{ThemeResource ScopeAxisTextBrush}"
+                                                   TextTrimming="CharacterEllipsis" MaxWidth="520"
+                                                   Visibility="{x:Bind ViewModel.ScopeChannelLabelLegendVisibility, Mode=OneWay}" />
                                         <TextBlock Text="{x:Bind ViewModel.ScopeZoomLabel, Mode=OneWay}"
                                                    FontFamily="{StaticResource MonoFontFamily}"
                                                    FontSize="{StaticResource FontSizeSmall}"

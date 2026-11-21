@@ -142,6 +142,31 @@ public sealed partial class ScopeChannelSetupViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(DetailDisplay))]
     private double _currentScaleAmpsPerVolt;
 
+    /// <summary>
+    /// Channel label typed by the technician (10D.1h). Display text only: changing it never
+    /// reconfigures the device. Cleaned by <see cref="ChannelLabels.Normalize"/> when shown or saved.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CleanLabel))]
+    [NotifyPropertyChangedFor(nameof(HasLabel))]
+    [NotifyPropertyChangedFor(nameof(DisplayName))]
+    [NotifyPropertyChangedFor(nameof(TileTitle))]
+    private string _label = "";
+
+    /// <summary>The cleaned label, or null when none.</summary>
+    public string? CleanLabel => ChannelLabels.Normalize(Label);
+
+    public bool HasLabel => CleanLabel is not null;
+
+    /// <summary>"A" or "A Crank sensor": used in the legend and saved-capture lists.</summary>
+    public string DisplayName => ChannelLabels.DisplayName(Channel, Label);
+
+    /// <summary>Channel tile heading: same as <see cref="DisplayName"/>.</summary>
+    public string TileTitle => DisplayName;
+
+    /// <summary>Header for this channel's box in the Labels flyout.</summary>
+    public string LabelHeader => $"Channel {ChannelLetter} label";
+
     public double EnabledOpacity => IsEnabled ? 1.0 : 0.65;
 
     /// <summary>Compact range readout for the scope channel tile ("±5 V", "±20 A", or "Off").</summary>
@@ -235,6 +260,7 @@ public sealed partial class ScopeChannelSetupViewModel : ObservableObject
         Coupling = Coupling,
         ProbeMultiplier = ProbeMultiplier > 0.0 && double.IsFinite(ProbeMultiplier) ? ProbeMultiplier : 1.0,
         CurrentScaleAmpsPerVolt = CurrentScaleAmpsPerVolt >= 0.0 && double.IsFinite(CurrentScaleAmpsPerVolt) ? CurrentScaleAmpsPerVolt : 0.0,
+        Label = CleanLabel,
     };
 
     public void ApplyConfig(ScopeChannelConfig config, bool enable = true)
@@ -245,6 +271,9 @@ public sealed partial class ScopeChannelSetupViewModel : ObservableObject
         Coupling = config.Coupling;
         ProbeMultiplier = config.ProbeMultiplier > 0.0 ? config.ProbeMultiplier : 1.0;
         CurrentScaleAmpsPerVolt = config.CurrentScaleAmpsPerVolt >= 0.0 ? config.CurrentScaleAmpsPerVolt : 0.0;
+        // A saved capture or guided-test setup brings its own labels (or none): a label typed
+        // for the previous hookup would name the wrong signal.
+        Label = ChannelLabels.Normalize(config.Label) ?? "";
     }
 }
 
@@ -568,7 +597,9 @@ public sealed class SavedWaveformRowViewModel
 
         var configs = ScopeJson.DeserializeChannelConfigs(waveform.ChannelConfigJson);
         ChannelSummary = configs.Count > 0
-            ? string.Join(", ", configs.Select(c => $"CH{c.Channel} (±{c.VoltageRangeVolts:G4}V {c.Coupling.ToString().ToUpperInvariant()})"))
+            ? string.Join(", ", configs.Select(c => ChannelLabels.Normalize(c.Label) is { } lbl
+                ? $"CH{c.Channel} {lbl} (±{c.VoltageRangeVolts:G4}V {c.Coupling.ToString().ToUpperInvariant()})"
+                : $"CH{c.Channel} (±{c.VoltageRangeVolts:G4}V {c.Coupling.ToString().ToUpperInvariant()})"))
             : "CH1";
 
         TimebaseDisplay = FormatTimebase(waveform.Timebase ?? 0.001);
