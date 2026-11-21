@@ -3435,6 +3435,53 @@
                                             AutomationProperties.Name="Raise trigger level" />
                                 </Grid>
 
+                                <!-- Waveform buffer tile (10D.1): step through the last N captures -->
+                                <Grid Width="200" Height="58" Background="{ThemeResource ScopeTileBrush}"
+                                      BorderBrush="{ThemeResource ScopeTileBorderBrush}" BorderThickness="1" CornerRadius="4"
+                                      ToolTipService.ToolTip="{x:Bind ViewModel.ScopeBufferDetailText, Mode=OneWay}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Style="{StaticResource ScopeStepperButtonStyle}" Content="&#x2039;"
+                                            Command="{x:Bind ViewModel.ScopeBufferPreviousCommand}"
+                                            AutomationProperties.Name="Previous capture in buffer" />
+                                    <Button Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="8,2"
+                                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                                            AutomationProperties.Name="Waveform buffer">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="*" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="Waveform buffer" FontSize="{StaticResource FontSizeSmall}" />
+                                            <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.ScopeBufferPositionText, Mode=OneWay}"
+                                                       FontSize="15" FontWeight="SemiBold" VerticalAlignment="Bottom" />
+                                        </Grid>
+                                        <Button.Flyout>
+                                            <Flyout Placement="BottomEdgeAlignedLeft">
+                                                <StackPanel Width="280" Spacing="8">
+                                                    <TextBlock Text="{x:Bind ViewModel.ScopeBufferDetailText, Mode=OneWay}"
+                                                               TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}" />
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                                                Command="{x:Bind ViewModel.ScopeBufferFirstCommand}" Content="Oldest" />
+                                                        <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                                                Command="{x:Bind ViewModel.ScopeBufferLastCommand}" Content="Newest" />
+                                                        <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                                                Command="{x:Bind ViewModel.ClearScopeBufferCommand}" Content="Clear" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                    <Button Grid.Column="2" Style="{StaticResource ScopeStepperButtonStyle}" Content="&#x203A;"
+                                            Command="{x:Bind ViewModel.ScopeBufferNextCommand}"
+                                            AutomationProperties.Name="Next capture in buffer" />
+                                </Grid>
+
                                 <Rectangle Width="1" Margin="4,6" Fill="{ThemeResource ScopeTileBorderBrush}" />
 
                                 <Button Style="{StaticResource ScopeToolTileButtonStyle}" MinWidth="72" 

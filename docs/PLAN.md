@@ -118,6 +118,9 @@ Reference only: we copy the **workflow**, not Pico's guided-test text, images, `
 4. **Pressure transducer support** (`scope`): a generic pressure-transducer channel scaling (V→psi/bar from the transducer's published spec, entered by the tech) for hydraulic GSE tests. No invented specs.
 5. **Phase 6 step 6** (test + review) finishes first, so 10D builds on a reviewed base.
 
+**10D status (2026-11-20):**
+- ✅ 10D.1a Waveform buffer. `GseTechPro.Scope.WaveformBuffer<T>` keeps the newest captures, bounded by count (64, as PicoScope) and memory (256 MB; a 4 M-sample capture is 32 MB, so about 8 of those fit), dropping the oldest; an oversized single capture is still kept. Every Run stores the capture with its measurements and reference comparison (`MainShellViewModel.ScopeBuffer.cs`); a top-bar "Waveform buffer n / N" tile with ‹ › steppers (disabled while capturing) and a flyout (Oldest, Newest, Clear) shows any buffered capture again — trace, rulers, measurements and Save to WO follow the capture on screen; a new Run always goes to the end. Verdicts shown for an older capture are the ones computed when it was taken. Tests: `WaveformBufferTests` (6), `ScopeBufferTests` (1). Checked in the running app at 1920×1080 (simulator): three Runs → "3 / 3", ‹ → "2 / 3" with "Showing buffered capture 2 / 3". **Not done:** buffer is in memory only (not saved with the work order); the simulator gives identical traces, so stepping is only visibly different on real hardware; remaining 10D.1 items (spinner-style timebase/trigger already exist from 10B.3; Auto setup, multi-view, channel labels, notes, full screen, masks, DeepMeasure, serial decoding, actions) still to do.
+
 ### Phase 10 order and owners
 
 1. `architect`: ADR 012/013 + Core routing contracts (10A.1, 10A.4 contracts) — **first, it blocks 10A.**

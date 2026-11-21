@@ -60,6 +60,8 @@ public sealed partial class MainShellViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsScopeCaptureIdle))]
+    [NotifyCanExecuteChangedFor(nameof(ScopeBufferPreviousCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ScopeBufferNextCommand))]
     private bool _isScopeCapturing;
 
     public bool IsScopeCaptureIdle => !IsScopeCapturing;
@@ -1117,6 +1119,7 @@ public sealed partial class MainShellViewModel
 
             IsScopeSimulated = capture.IsSimulated || device.IsSimulated;
             LastScopeCapture = capture;
+            PushScopeBuffer(capture, comparisonResult, IsScopeSimulated);
 
             ApplyScopeComparisonResult(comparisonResult, ActiveReferenceExpectations);
             await RefreshScopeWaveformRenderAsync();
