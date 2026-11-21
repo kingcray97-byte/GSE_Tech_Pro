@@ -431,6 +431,7 @@ public sealed partial class MainShellViewModel
 
     partial void OnSelectedGuidedTestItemChanged(SelectableGuidedTestItem? value)
     {
+        _scopeAutoSetupPinnedPreset = null;
         if (_suppressGuidedTestSelectionSync)
             return;
 
@@ -1060,25 +1061,7 @@ public sealed partial class MainShellViewModel
             var device = _activeScopeDevice!;
             var request = BuildScopeCaptureRequest();
 
-            // Configure simulator preset when capturing against the simulator
-            if (device is SimulatedScopeDevice simDevice)
-            {
-                if (SelectedGuidedTest is not null)
-                {
-                    if (!simDevice.TryConfigurePreset(SelectedGuidedTest.Name))
-                    {
-                        simDevice.TryConfigurePreset(SelectedGuidedTest.Id);
-                    }
-                }
-                else if (SimulatedScopePresets.TryMatchFromCaptureRequest(request) is SimulatedSignalPreset inferred)
-                {
-                    simDevice.ConfigurePreset(inferred);
-                }
-                else
-                {
-                    simDevice.ConfigurePreset(SelectedSimulatorPreset);
-                }
-            }
+            ConfigureSimulatorPresetFor(device, request);
 
             // Configure enabled channels on the device
             foreach (var chConfig in request.Channels)
@@ -1141,6 +1124,32 @@ public sealed partial class MainShellViewModel
         finally
         {
             IsScopeCapturing = false;
+        }
+    }
+
+    /// <summary>On the simulator, picks the signal for the technician's setup (guided test, inferred, or chosen preset).</summary>
+    private void ConfigureSimulatorPresetFor(IScopeDevice device, ScopeCaptureRequest request)
+    {
+        if (device is not SimulatedScopeDevice simDevice)
+            return;
+
+        if (SelectedGuidedTest is not null)
+        {
+            if (!simDevice.TryConfigurePreset(SelectedGuidedTest.Name))
+                simDevice.TryConfigurePreset(SelectedGuidedTest.Id);
+        }
+        else if (_scopeAutoSetupPinnedPreset is SimulatedSignalPreset pinned)
+        {
+            // Auto setup changed the settings for this signal; keep simulating it rather than re-inferring.
+            simDevice.ConfigurePreset(pinned);
+        }
+        else if (SimulatedScopePresets.TryMatchFromCaptureRequest(request) is SimulatedSignalPreset inferred)
+        {
+            simDevice.ConfigurePreset(inferred);
+        }
+        else
+        {
+            simDevice.ConfigurePreset(SelectedSimulatorPreset);
         }
     }
 

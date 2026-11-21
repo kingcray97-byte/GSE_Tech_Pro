@@ -3484,7 +3484,19 @@
 
                                 <Rectangle Width="1" Margin="4,6" Fill="{ThemeResource ScopeTileBorderBrush}" />
 
-                                <Button Style="{StaticResource ScopeToolTileButtonStyle}" MinWidth="72" 
+                                <!-- Auto setup (10D.1): range, timebase, sample rate and trigger from the signal -->
+                                <Button Style="{StaticResource ScopeToolTileButtonStyle}" MinWidth="72"
+                                        Command="{x:Bind ViewModel.RunScopeAutoSetupCommand}"
+                                        ToolTipService.ToolTip="Measure the signal and set range, timebase and trigger"
+                                        AutomationProperties.Name="Auto setup">
+                                    <StackPanel Spacing="3">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE945;" FontSize="22"
+                                                  Foreground="{ThemeResource ScopeStepperBrush}" />
+                                        <TextBlock Text="Auto setup" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Style="{StaticResource ScopeToolTileButtonStyle}" MinWidth="72"
                                         AutomationProperties.Name="Device">
                                     <StackPanel Spacing="3">
                                         <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE703;" FontSize="22"
