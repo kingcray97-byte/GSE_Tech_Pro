@@ -26,8 +26,8 @@ public sealed class ScopeDataSmokeTests : IAsyncLifetime
         });
 
         var initialized = await _services.InitializeAsync();
-        Assert.Equal(new[] { 1, 2, 3, 4, 5, 6 }, initialized.AppliedMigrations);
-        Assert.Equal(6, SqliteMigrator.LatestVersion);
+        Assert.Equal(new[] { 1, 2, 3, 4, 5, 6, 7 }, initialized.AppliedMigrations);
+        Assert.Equal(7, SqliteMigrator.LatestVersion);
     }
 
     [Fact]

@@ -39,15 +39,15 @@ public sealed class ScopeDataTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Migration006_FreshDatabase_ReachesVersionSix()
+    public async Task Migration006_FreshDatabase_ReachesLatestVersion()
     {
-        Assert.Equal(6, SqliteMigrator.LatestVersion);
+        Assert.Equal(7, SqliteMigrator.LatestVersion);
 
         await using var connection = await _services!.Connections.OpenAsync();
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT MAX(version) FROM schema_migrations;";
         var version = Convert.ToInt32(await command.ExecuteScalarAsync());
-        Assert.Equal(6, version);
+        Assert.Equal(7, version);
     }
 
     [Fact]

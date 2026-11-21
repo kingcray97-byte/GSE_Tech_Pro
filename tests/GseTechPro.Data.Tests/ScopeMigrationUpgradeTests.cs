@@ -61,7 +61,8 @@ public sealed class ScopeMigrationUpgradeTests
             }
 
             var applied = await services.Migrator.MigrateAsync();
-            Assert.Equal(new[] { 6 }, applied);
+            // 6 rebuilds the scope tables; 7 adds waveforms.notes (10D.1i) on top.
+            Assert.Equal(new[] { 6, 7 }, applied);
             Assert.Empty(await services.Migrator.MigrateAsync());
 
             var reference = await services.ReferenceWaveforms.GetByIdAsync("legacy-reference");
@@ -84,6 +85,7 @@ public sealed class ScopeMigrationUpgradeTests
             Assert.Equal(ScopeDeviceKind.Hantek, waveform.ScopeDevice);
             Assert.Equal("legacy-guided", waveform.GuidedTestId);
             Assert.Equal("legacy-reference", waveform.ReferenceWaveformId);
+            Assert.Null(waveform.Notes);
 
             await using (var connection = await services.Connections.OpenAsync())
             {
@@ -91,6 +93,8 @@ public sealed class ScopeMigrationUpgradeTests
                     "SELECT \"notnull\" FROM pragma_table_info('reference_waveforms') WHERE name = 'data_path';"));
                 Assert.Equal(1L, await Scalar(connection,
                     "SELECT COUNT(*) FROM pragma_table_info('guided_tests') WHERE name = 'scope_setup_json';"));
+                Assert.Equal(1L, await Scalar(connection,
+                    "SELECT COUNT(*) FROM pragma_table_info('waveforms') WHERE name = 'notes';"));
                 Assert.Equal(1L, await Scalar(connection,
                     "SELECT COUNT(*) FROM pragma_foreign_key_list('guided_tests') " +
                     "WHERE \"table\" = 'reference_waveforms' AND \"from\" = 'reference_waveform_id';"));

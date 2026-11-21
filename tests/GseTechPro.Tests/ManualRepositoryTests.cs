@@ -29,8 +29,8 @@ public sealed class ManualRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task FreshDatabase_WithBundledVec_CreatesVersionSixAndEmbeddings()
     {
-        Assert.Equal(6, SqliteMigrator.LatestVersion);
-        Assert.Equal(new[] { 1, 2, 3, 4, 5, 6 }, _initialization.AppliedMigrations);
+        Assert.Equal(7, SqliteMigrator.LatestVersion);
+        Assert.Equal(new[] { 1, 2, 3, 4, 5, 6, 7 }, _initialization.AppliedMigrations);
         Assert.True(_initialization.VectorSearchAvailable, string.Join(Environment.NewLine, _initialization.Notices));
         Assert.True(await _services.IsVec0AvailableAsync());
 
@@ -60,7 +60,7 @@ public sealed class ManualRepositoryTests : IAsyncLifetime
                 var services = new DataServices(options);
                 var result = await services.InitializeAsync();
 
-                Assert.Equal(new[] { 1, 2, 3, 4, 5, 6 }, result.AppliedMigrations);
+                Assert.Equal(new[] { 1, 2, 3, 4, 5, 6, 7 }, result.AppliedMigrations);
                 Assert.False(result.VectorSearchAvailable);
                 Assert.Contains(result.Notices, notice => notice.Contains("vec", StringComparison.OrdinalIgnoreCase));
                 Assert.False(await services.IsVec0AvailableAsync());
@@ -75,7 +75,7 @@ public sealed class ManualRepositoryTests : IAsyncLifetime
                     {
                         await using var version = connection.CreateCommand();
                         version.CommandText = "SELECT MAX(version) FROM schema_migrations;";
-                        Assert.Equal(6L, await version.ExecuteScalarAsync());
+                        Assert.Equal(7L, await version.ExecuteScalarAsync());
 
                         await using var table = connection.CreateCommand();
                         table.CommandText = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'embeddings';";

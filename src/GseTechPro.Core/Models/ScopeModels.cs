@@ -72,6 +72,11 @@ public sealed record Waveform : EntityBase
     public string? ReferenceWaveformId { get; init; }
     /// <summary>Serialized <see cref="Contracts.ScopeMeasurement"/>[] — measurements + verdicts.</summary>
     public string? MeasurementsJson { get; init; }
+    /// <summary>
+    /// Technician's free-text notes for this capture (what was connected, engine state, what was
+    /// seen), or null. Column: waveforms.notes (migration 7). Display text only.
+    /// </summary>
+    public string? Notes { get; init; }
     public string CreatedAt { get; init; } = Clock.UtcNow;
     public string? DeletedAt { get; init; }
 }

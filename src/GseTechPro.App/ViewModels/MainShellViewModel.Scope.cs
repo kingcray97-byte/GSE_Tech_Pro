@@ -1518,6 +1518,7 @@ public sealed partial class MainShellViewModel
             GuidedTestId = SelectedGuidedTest?.Id,
             ReferenceWaveformId = ActiveReferenceWaveform?.Id ?? SelectedGuidedTest?.ReferenceWaveformId,
             MeasurementsJson = ScopeJson.SerializeMeasurements(measurementsToSave),
+            Notes = CaptureNotes.Normalize(ScopeNotes),
             CreatedAt = Clock.UtcNow,
         };
 
@@ -1591,6 +1592,9 @@ public sealed partial class MainShellViewModel
                 IsSimulated = isSim,
                 CapturedAt = waveform.CreatedAt,
             };
+
+            // A saved capture brings its own notes (or none).
+            ScopeNotes = waveform.Notes ?? "";
 
             // Restore channel setups
             var savedChannels = ScopeJson.DeserializeChannelConfigs(waveform.ChannelConfigJson);

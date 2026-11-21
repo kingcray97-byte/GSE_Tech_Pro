@@ -3955,6 +3955,7 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
                                     <Button Grid.Row="0" Grid.Column="0" Style="{StaticResource ScopeToolTileButtonStyle}" Command="{x:Bind ViewModel.ScopeZoomInCommand}"
                                             AutomationProperties.Name="Zoom in">
@@ -4323,6 +4324,37 @@
                                                              AutomationProperties.Name="Channel 4 label" />
                                                     <Button Style="{StaticResource ActionTouchButtonStyle}"
                                                             Command="{x:Bind ViewModel.ClearScopeChannelLabelsCommand}" Content="Clear all labels" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                    <!-- Notes (10D.1i): free text saved with the capture -->
+                                    <Button Grid.Row="7" Grid.Column="0" Style="{StaticResource ScopeToolTileButtonStyle}"
+                                            AutomationProperties.Name="Capture notes">
+                                        <StackPanel Spacing="3">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE70B;" FontSize="20" />
+                                            <TextBlock Text="Notes" FontSize="{StaticResource FontSizeBadge}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Button.Flyout>
+                                            <Flyout Placement="RightEdgeAlignedBottom">
+                                                <StackPanel Width="400" Spacing="8">
+                                                    <TextBlock Text="Capture notes" FontWeight="Bold" />
+                                                    <TextBlock TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}"
+                                                               Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                               Text="What is connected, engine or unit state, what you saw. Saved with the capture by Save to WO; opening a saved capture shows its notes." />
+                                                    <TextBox AcceptsReturn="True" TextWrapping="Wrap" Height="180"
+                                                             MaxLength="{x:Bind ViewModel.ScopeNotesMaxLength}"
+                                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                             PlaceholderText="e.g. Engine idling, A on CKP signal at ECU pin, B on CMP. Dropout every 4th rev."
+                                                             Text="{x:Bind ViewModel.ScopeNotes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                             AutomationProperties.Name="Capture notes text" />
+                                                    <Grid>
+                                                        <TextBlock Text="{x:Bind ViewModel.ScopeNotesCountText, Mode=OneWay}" VerticalAlignment="Center"
+                                                                   FontSize="{StaticResource FontSizeSmall}" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                        <Button HorizontalAlignment="Right" Style="{StaticResource ActionTouchButtonStyle}"
+                                                                Command="{x:Bind ViewModel.ClearScopeNotesCommand}" Content="Clear notes" />
+                                                    </Grid>
                                                 </StackPanel>
                                             </Flyout>
                                         </Button.Flyout>

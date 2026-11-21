@@ -7,7 +7,7 @@ namespace GseTechPro.Data.Migrations;
 /// <summary>Small, forward-only migration runner for embedded, versioned SQL scripts.</summary>
 public sealed class SqliteMigrator
 {
-    public const int LatestVersion = 6;
+    public const int LatestVersion = 7;
     public const int VectorMigrationVersion = 3;
     private const string InitialMigrationResource = "GseTechPro.Data.Migrations.001_Initial.sql";
     private const string RecordingsMigrationResource = "GseTechPro.Data.Migrations.002_Recordings.sql";
@@ -15,6 +15,7 @@ public sealed class SqliteMigrator
     private const string GseTroubleshootingMigrationResource = "GseTechPro.Data.Migrations.004_GseTroubleshooting.sql";
     private const string RepairHistoryMigrationResource = "GseTechPro.Data.Migrations.005_RepairHistory.sql";
     private const string ScopeMigrationResource = "GseTechPro.Data.Migrations.006_Scope.sql";
+    private const string ScopeNotesMigrationResource = "GseTechPro.Data.Migrations.007_ScopeNotes.sql";
 
     private static readonly IReadOnlyList<EmbeddedMigration> Migrations =
     [
@@ -24,6 +25,7 @@ public sealed class SqliteMigrator
         new(4, GseTroubleshootingMigrationResource),
         new(5, RepairHistoryMigrationResource),
         new(6, ScopeMigrationResource),
+        new(7, ScopeNotesMigrationResource),
     ];
 
     private readonly ISqliteConnectionFactory _connectionFactory;

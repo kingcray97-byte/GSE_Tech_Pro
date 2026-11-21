@@ -656,8 +656,12 @@ public sealed class SavedWaveformRowViewModel
 
     public string OverallVerdictBadge { get; }
 
-    public string DisplayLabel =>
-        $"{GuidedTestName} · {ChannelSummary} · {TimebaseDisplay} · {SampleRateDisplay} ({CreatedAt})";
+    /// <summary>First line of the capture's notes ("" when none), for the saved-capture list.</summary>
+    public string NotesPreview => CaptureNotes.Preview(Waveform.Notes);
+
+    public string DisplayLabel => NotesPreview.Length == 0
+        ? $"{GuidedTestName} · {ChannelSummary} · {TimebaseDisplay} · {SampleRateDisplay} ({CreatedAt})"
+        : $"{GuidedTestName} · {ChannelSummary} · {TimebaseDisplay} · {SampleRateDisplay} ({CreatedAt}) · Note: {NotesPreview}";
 
     public static string FormatTimebase(double secondsPerDiv)
     {
