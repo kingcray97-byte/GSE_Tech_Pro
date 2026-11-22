@@ -33,6 +33,14 @@ public interface IAiClient
         => throw new NotImplementedException(
             "SearchRepairHistoryAsync is implemented in GseTechPro.App/Services/AiServiceClient.cs (Phase 5, ADR-010).");
 
+    /// <summary>
+    /// POST /vision/inspect: the model describes one photo and the service suggests manual pages (Phase 7.4).
+    /// Default implementation throws so existing implementers keep building; the HTTP call is in
+    /// <c>GseTechPro.App/Services/AiServiceClient.cs</c>.
+    /// </summary>
+    Task<PhotoInspectionResponse> InspectPhotoAsync(PhotoInspectionRequest request, CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("InspectPhotoAsync is implemented in GseTechPro.App/Services/AiServiceClient.cs (Phase 7.4).");
+
     /// <summary>GET /health — liveness + degradation probe (drives "warming up / ready / degraded" UI).</summary>
     Task<AiServiceHealth> HealthAsync(CancellationToken cancellationToken = default);
 

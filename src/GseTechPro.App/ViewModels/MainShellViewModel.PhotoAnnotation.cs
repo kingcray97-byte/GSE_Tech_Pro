@@ -68,6 +68,7 @@ public sealed partial class MainShellViewModel
     [NotifyPropertyChangedFor(nameof(AnnotationToolbarVisibility))]
     [NotifyPropertyChangedFor(nameof(AnnotateButtonVisibility))]
     [NotifyPropertyChangedFor(nameof(DataPlateButtonVisibility))]
+    [NotifyPropertyChangedFor(nameof(InspectPhotoButtonVisibility))]
     private bool _isAnnotating;
 
     public Visibility AnnotationToolbarVisibility => IsAnnotating ? Visibility.Visible : Visibility.Collapsed;
@@ -127,6 +128,7 @@ public sealed partial class MainShellViewModel
             _annotationShapes.AddRange(PhotoAnnotations.Deserialize(photo.Attachment.AnnotationsJson));
         OnPropertyChanged(nameof(AnnotateButtonVisibility));
         OnPropertyChanged(nameof(DataPlateButtonVisibility));
+        ResetPhotoInspectionForSelection(); // 7.4: an answer belongs to one photo
         RaiseAnnotationsChanged(lastOnly: false);
     }
 

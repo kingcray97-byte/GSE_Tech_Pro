@@ -39,8 +39,11 @@ from app.models import (
     SearchManualsRequest,
     SearchManualsResponse,
     SearchResultOut,
+    VisionInspectRequest,
+    VisionInspectResponse,
 )
 from app.perf import log_event
+from app.prompts import load_prompt
 from app.state import ServiceState
 from ingest.job import get_job
 from ingest.pipeline import start_ingest_job
@@ -48,6 +51,7 @@ from rag.config import VEC0_DIM
 from rag.db import connect
 from recommender import UnknownWorkOrderError, run_repair_history_search
 from tools.manuals import run_manual_search
+from vision.inspect import ImageError, decode_image, inspect_photo, manual_search_fn
 
 router = APIRouter()
 log = logging.getLogger("gse.ai.guided")
@@ -366,3 +370,103 @@ def guided_next(body: GuidedNextRequest, request: Request) -> GuidedStep:
         return _no_tree_step(session.session_id)
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------- vision (Phase 7.4)
+
+VISION_UNAVAILABLE_MESSAGE = (
+    "Photo inspection is unavailable: the image part of the local model is not set up on this tablet. "
+    "Manual search still works."
+)
+
+
+def _vision_prompt() -> str:
+    return load_prompt("vision.md")
+
+
+def tablet_vision_configured(cfg) -> bool:  # noqa: ANN001 - rag.config.Config
+    """The tablet's llama-server can take images: it has a projector, or it is attached (we do not start it)."""
+    ls = cfg.llama_server
+    return bool(ls.mmproj.strip()) or not ls.binary.strip()
+
+
+@router.post("/vision/inspect", response_model=VisionInspectResponse)
+def vision_inspect(body: VisionInspectRequest, request: Request) -> VisionInspectResponse:
+    """Describe one photo and suggest manual pages (ARCHITECTURE 4.4 vision_inspect; rules in vision/inspect.py).
+
+    A photo is a job detail (ADR-013 rule 3): the cloud route is used only when job details may go to the cloud,
+    otherwise it is skipped for this request. A remote route that fails is skipped without marking it down for
+    chat (it may simply not take images); the tablet is always last.
+    """
+    svc = _svc(request)
+    try:
+        decode_image(body.image_base64, body.media_type)
+    except ImageError as exc:
+        raise ApiError(400, "invalid_request", str(exc)) from exc
+    if not svc.warm.is_set():
+        raise ApiError(503, "ai_starting", "AI is starting.", detail="warm-up probe in progress")
+
+    routing = body.routing or RoutingIn()
+    routes_cfg = svc.config.routes
+    plan = plan_routes(routing.mode, routing.cloud_allowed, routes_cfg.shop_server.configured, routes_cfg.cloud.configured)
+    if not routing.share_job_details_with_cloud:
+        plan = [r for r in plan if r != CLOUD]
+    prompt = _vision_prompt()
+    ctx = svc.tool_context()
+    search = manual_search_fn(ctx.db_path, ctx.embedder)
+    args = dict(
+        system_prompt=prompt,
+        image_base64=body.image_base64,
+        media_type=body.media_type,
+        caption=body.caption,
+        is_simulated_photo=body.is_simulated_photo,
+        search=search,
+    )
+    if svc.unloader is not None:
+        svc.unloader.touch()
+    with svc.chat_lock:
+        answered = None
+        for route in plan:
+            if route == TABLET:
+                break
+            ok, _ = svc.route_health.check(route)
+            if not ok:
+                continue
+            backend = svc.backend_for(route)
+            try:
+                result = inspect_photo(backend=backend, **args)
+            except ChatUnavailable as exc:
+                log.warning("vision route %s failed (%s); falling back", route, exc.code)
+                continue
+            answered = (route, result, getattr(backend, "label", None) or "")
+            break
+        if answered is None:
+            if not tablet_vision_configured(svc.config):
+                raise ApiError(503, "ai_unavailable", VISION_UNAVAILABLE_MESSAGE,
+                               detail="vision_unavailable: llama_server.mmproj is not set")
+            reason = svc.ensure_tablet_ready()
+            offline_message = svc.config.degradation.offline_chat_message
+            if reason == "model_loading":
+                raise ApiError(503, "ai_starting", "AI is starting.", detail="model_loading")
+            if reason is not None:
+                raise ApiError(503, "ai_unavailable", offline_message, detail=reason)
+            try:
+                result = inspect_photo(backend=svc.backend, **args)
+            except ChatUnavailable as exc:
+                raise ApiError(503, exc.code, offline_message if exc.code == "ai_unavailable" else "AI is starting.",
+                               detail=exc.detail) from exc
+            answered = (TABLET, result, svc.config.models.chat)
+    route, result, model_label = answered
+    if svc.unloader is not None:
+        svc.unloader.touch()
+    log_event("vision_inspect", route=route, model_ms=result.model_ms, pages=len(result.citations),
+              notes=len(result.notes), redacted=result.redacted)
+    return VisionInspectResponse(
+        description=result.description,
+        notes=result.notes,
+        citations=result.citations,
+        is_suggestion=True,
+        search_query=result.search_query,
+        route=route,
+        model=model_label or None,
+    )

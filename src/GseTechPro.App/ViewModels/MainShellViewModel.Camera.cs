@@ -80,6 +80,7 @@ public sealed partial class MainShellViewModel
     [NotifyPropertyChangedFor(nameof(PendingPhotoSimulatedVisibility))]
     [NotifyPropertyChangedFor(nameof(AnnotateButtonVisibility))]
     [NotifyPropertyChangedFor(nameof(DataPlateButtonVisibility))]
+    [NotifyPropertyChangedFor(nameof(InspectPhotoButtonVisibility))]
     [NotifyCanExecuteChangedFor(nameof(SavePhotoToWorkOrderCommand))]
     private CapturedPhoto? _pendingPhoto;
 

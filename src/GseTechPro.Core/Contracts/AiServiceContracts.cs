@@ -45,6 +45,8 @@ public static class AiServiceProtocol
     public const string IngestStatusPath = "/ingest/status";
     public const string GuidedStartPath = "/guided/start";
     public const string GuidedNextPath = "/guided/next";
+    /// <summary>Phase 7.4 photo inspection (<see cref="PhotoInspectionRequest"/>).</summary>
+    public const string VisionInspectPath = "/vision/inspect";
 }
 
 /// <summary>Error codes returned in <see cref="AiError.Code"/> (mirrors <c>HostErrorCodes</c> style).</summary>

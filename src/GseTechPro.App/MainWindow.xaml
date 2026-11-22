@@ -5774,10 +5774,12 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <Grid ColumnSpacing="8" Padding="12,6,8,6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
@@ -5797,6 +5799,14 @@
                                         <StackPanel Orientation="Horizontal" Spacing="8">
                                             <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE8D2;" FontSize="16" />
                                             <TextBlock Text="Read data plate" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Column="3" MinHeight="{StaticResource MinTouchSize}" AutomationProperties.Name="Ask the AI to describe this photo"
+                                            Visibility="{x:Bind ViewModel.InspectPhotoButtonVisibility, Mode=OneWay}"
+                                            Command="{x:Bind ViewModel.OpenPhotoInspectionCommand}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE7B3;" FontSize="16" />
+                                            <TextBlock Text="Inspect photo" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
                                 </Grid>
@@ -5844,6 +5854,113 @@
                                         <Canvas x:Name="CameraRegionCanvas" IsHitTestVisible="False" />
                                     </Grid>
                                 </Viewbox>
+                                <!-- Photo inspection (7.4): the AI's description + manual pages from the service's own search -->
+                                <Border Grid.Row="3" Visibility="{x:Bind ViewModel.PhotoInspectionPanelVisibility, Mode=OneWay}"
+                                        BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,1,0,0">
+                                    <ScrollViewer MaxHeight="320" Padding="12,8,12,10" VerticalScrollBarVisibility="Auto">
+                                        <StackPanel Spacing="8">
+                                            <Grid ColumnSpacing="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="Inspect photo (AI)" FontWeight="Bold" VerticalAlignment="Center" />
+                                                <Button Grid.Column="1" MinHeight="{StaticResource MinTouchSize}" MinWidth="{StaticResource MinTouchSize}"
+                                                        AutomationProperties.Name="Close photo inspection" Content="Close"
+                                                        Command="{x:Bind ViewModel.ClosePhotoInspectionCommand}" />
+                                            </Grid>
+                                            <Grid ColumnSpacing="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox Header="What should the AI look at? (optional)" MinHeight="{StaticResource MinTouchSize}"
+                                                         MaxLength="500" PlaceholderText="e.g. Leak at the lift cylinder hose"
+                                                         Text="{x:Bind ViewModel.PhotoInspectionQuestion, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                <Button Grid.Column="1" VerticalAlignment="Bottom" Style="{StaticResource AccentButtonStyle}"
+                                                        MinHeight="{StaticResource MinTouchSize}" AutomationProperties.Name="Describe photo"
+                                                        Command="{x:Bind ViewModel.InspectPhotoCommand}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsInspectingPhoto, Mode=OneWay}"
+                                                                      Visibility="{x:Bind ViewModel.PhotoInspectionBusyVisibility, Mode=OneWay}" />
+                                                        <TextBlock Text="Describe photo" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </Grid>
+                                            <TextBlock Text="{x:Bind ViewModel.PhotoInspectionStatusText, Mode=OneWay}" TextWrapping="Wrap"
+                                                       FontSize="{StaticResource FontSizeSmall}" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                            <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.PhotoInspectionResultVisibility, Mode=OneWay}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Border BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="1"
+                                                            CornerRadius="{StaticResource BadgeCornerRadius}" Padding="8,3"
+                                                            ToolTipService.ToolTip="{x:Bind ViewModel.PhotoInspectionRouteBadgeToolTip, Mode=OneWay}"
+                                                            Visibility="{x:Bind ViewModel.PhotoInspectionRouteBadgeVisibility, Mode=OneWay}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE70A;" FontSize="12" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                            <TextBlock Text="{x:Bind ViewModel.PhotoInspectionRouteBadgeText, Mode=OneWay}" FontSize="{StaticResource FontSizeSmall}"
+                                                                       FontWeight="SemiBold" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Background="{ThemeResource SimBadgeBackgroundBrush}" BorderBrush="{ThemeResource SimBadgeBorderBrush}"
+                                                            BorderThickness="1" CornerRadius="{StaticResource BadgeCornerRadius}" Padding="8,3"
+                                                            ToolTipService.ToolTip="{x:Bind ViewModel.PhotoInspectionRouteBadgeToolTip, Mode=OneWay}"
+                                                            Visibility="{x:Bind ViewModel.PhotoInspectionCloudBadgeVisibility, Mode=OneWay}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE753;" FontSize="12" Foreground="{ThemeResource SimBadgeTextBrush}" />
+                                                            <TextBlock Text="{x:Bind ViewModel.PhotoInspectionRouteBadgeText, Mode=OneWay}" FontSize="{StaticResource FontSizeSmall}"
+                                                                       FontWeight="Bold" Foreground="{ThemeResource SimBadgeTextBrush}" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Background="{ThemeResource AiSuggestionBadgeBackgroundBrush}" BorderBrush="{ThemeResource AiSuggestionBadgeBorderBrush}"
+                                                            BorderThickness="1" CornerRadius="{StaticResource BadgeCornerRadius}" Padding="8,3">
+                                                        <TextBlock Text="AI SUGGESTION" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold"
+                                                                   Foreground="{ThemeResource AiSuggestionBadgeTextBrush}" />
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Text="{x:Bind ViewModel.PhotoInspectionLabel}" FontWeight="SemiBold" TextWrapping="Wrap"
+                                                           FontSize="{StaticResource FontSizeSmall}" />
+                                                <TextBlock Text="{x:Bind ViewModel.PhotoInspectionDescription, Mode=OneWay}" TextWrapping="Wrap"
+                                                           IsTextSelectionEnabled="True" />
+                                                <ItemsControl ItemsSource="{x:Bind ViewModel.PhotoInspectionNotes}"
+                                                              Visibility="{x:Bind ViewModel.PhotoInspectionNotesVisibility, Mode=OneWay}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="x:String">
+                                                            <Grid ColumnSpacing="6" Margin="0,0,0,4">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="*" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE7BA;" FontSize="13"
+                                                                          Foreground="{ThemeResource AiSuggestionBadgeTextBrush}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                                                                <TextBlock Grid.Column="1" Text="{x:Bind}" TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <StackPanel Spacing="6" Visibility="{x:Bind ViewModel.PhotoInspectionPagesVisibility, Mode=OneWay}">
+                                                    <TextBlock Text="Manual pages to compare (tap to open):" FontWeight="SemiBold"
+                                                               FontSize="{StaticResource FontSizeSmall}" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                    <!-- One page per line: ItemsWrapGrid sizes every item like the first and cut long titles off. -->
+                                                    <ItemsControl ItemsSource="{x:Bind ViewModel.PhotoInspectionPages}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:CitationItemViewModel">
+                                                                <Button Style="{StaticResource ActionTouchButtonStyle}" Margin="0,0,8,6"
+                                                                        Click="OnCitationButtonClick" ToolTipService.ToolTip="{x:Bind Label}">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="{x:Bind Glyph}" FontSize="14" />
+                                                                        <TextBlock Text="{x:Bind Label}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                                    </StackPanel>
+                                                                </Button>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                                <TextBlock Text="{x:Bind ViewModel.PhotoInspectionSearchText, Mode=OneWay}" TextWrapping="Wrap"
+                                                           FontSize="{StaticResource FontSizeSmall}" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </Border>
                             </Grid>
                         </Border>
                     </Grid>

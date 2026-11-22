@@ -27,6 +27,7 @@ public sealed partial class MainShellViewModel
     [NotifyPropertyChangedFor(nameof(PhotoListVisibility))]
     [NotifyPropertyChangedFor(nameof(DataPlateButtonVisibility))]
     [NotifyPropertyChangedFor(nameof(AnnotateButtonVisibility))]
+    [NotifyPropertyChangedFor(nameof(InspectPhotoButtonVisibility))]
     private bool _isReadingDataPlate;
 
     public Visibility DataPlatePanelVisibility => IsReadingDataPlate ? Visibility.Visible : Visibility.Collapsed;

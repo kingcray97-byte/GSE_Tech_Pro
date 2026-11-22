@@ -128,6 +128,31 @@ class ChatResponse(_Wire):
     model: Optional[str] = None
 
 
+# ---------------------------------------------------------------- vision (Phase 7.4)
+
+
+class VisionInspectRequest(BaseModel):
+    """POST /vision/inspect. Matches Core PhotoInspectionRequest. The image is checked in vision.inspect.decode_image."""
+
+    image_base64: str = Field(min_length=1, max_length=5_600_000)  # 4 MB of image, base64
+    media_type: Literal["image/jpeg", "image/png"] = "image/jpeg"
+    caption: Optional[str] = Field(default=None, max_length=500)
+    work_order_id: Optional[str] = None
+    asset_id: Optional[str] = None
+    is_simulated_photo: bool = False
+    routing: Optional[RoutingIn] = None
+
+
+class VisionInspectResponse(_Wire):
+    description: str
+    notes: list[str] = Field(default_factory=list)
+    citations: list[Citation] = Field(default_factory=list)
+    is_suggestion: bool = True
+    search_query: Optional[str] = None
+    route: RouteName = "tablet"
+    model: Optional[str] = None
+
+
 # ---------------------------------------------------------------- search
 
 

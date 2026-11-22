@@ -30,7 +30,7 @@ gse-ai = "app.main:main"
 
 [tool.setuptools]
 # Import roots shipped with the service. rag/ and ingest/ are owned by rag-ingest; app/ and tools/ by ai-engineer.
-packages = ["app", "tools", "rag", "ingest"]
+packages = ["app", "tools", "rag", "ingest", "recommender", "vision"]
 
 [tool.setuptools.package-data]
 app = ["config.yaml"]

@@ -351,3 +351,24 @@ def test_temperature_from_config_reaches_litellm(monkeypatch):
     assert captured["temperature"] == 0.3
     LlamaCppChatBackend(offline_config()).complete([{"role": "user", "content": "x"}], None)
     assert captured["temperature"] == 0.0
+
+
+def test_photo_reaches_llama_server_as_an_image_part(make_client, seeded_db):
+    """Phase 7.4: the real LiteLLM -> llama-server path keeps the OpenAI image_url part (what --mmproj reads)."""
+    import base64
+
+    jpeg = b"\xff\xd8\xff\xe0" + b"\x00" * 32
+    b64 = base64.b64encode(jpeg).decode("ascii")
+    reply = "Oily film on the hose fitting.\nLook up: hydraulic hose fitting leak"
+    with FakeLlamaServer(reply=reply) as chat_srv, FakeLlamaServer() as embed_srv:
+        overrides = {"llama_server.port": chat_srv.port, "llama_server.embedding.port": embed_srv.port}
+        cfg = offline_config(**overrides)
+        client = make_client(db_path=seeded_db, probe_fn=probe_now, overrides=overrides,
+                             backend=LlamaCppChatBackend(cfg))
+        resp = client.post("/vision/inspect", json={"image_base64": b64, "media_type": "image/jpeg"})
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["description"].startswith("Oily film")
+        sent = [p for path, p in chat_srv.requests if path == "/v1/chat/completions"]
+        user = sent[0]["messages"][-1]
+        parts = {p["type"]: p for p in user["content"]}
+        assert parts["image_url"]["image_url"]["url"] == f"data:image/jpeg;base64,{b64}"
