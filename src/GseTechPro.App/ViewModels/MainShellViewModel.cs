@@ -30,6 +30,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     private readonly IScopeDeviceFactory _scopeDeviceFactory;
     private readonly ICameraSourceFactory _cameraSourceFactory;
     private readonly IMicrophoneFactory _microphoneFactory;
+    private readonly ISpeechOutput _speechOutput;
     private readonly ITextRecognizer _textRecognizer;
     private readonly IAiClient _aiClient;
     private readonly AiServiceLauncher _aiLauncher;
@@ -83,7 +84,8 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         IScopeDeviceFactory? scopeDeviceFactory = null,
         ICameraSourceFactory? cameraSourceFactory = null,
         ITextRecognizer? textRecognizer = null,
-        IMicrophoneFactory? microphoneFactory = null)
+        IMicrophoneFactory? microphoneFactory = null,
+        ISpeechOutput? speechOutput = null)
     {
         _dataServices = dataServices;
         _adapterFactory = adapterFactory;
@@ -91,6 +93,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         _cameraSourceFactory = cameraSourceFactory ?? new Services.WindowsCameraSourceFactory();
         _textRecognizer = textRecognizer ?? new Services.WindowsTextRecognizer();
         _microphoneFactory = microphoneFactory ?? new Services.WindowsMicrophoneFactory();
+        _speechOutput = speechOutput ?? new Services.WindowsSpeechOutput();
         _dispatcherQueue = dispatcherQueue;
         _aiLauncher = aiLauncher ?? new AiServiceLauncher();
         _aiClient = aiClient ?? new AiServiceClient(
@@ -2268,6 +2271,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                 EnsureWelcomeChatMessage();
                 if (Microphones.Count == 0)
                     _ = RefreshMicrophonesAsync(); // 7.5a push-to-talk
+                ShowVoiceHintFor("AiChat");
                 break;
         }
 
@@ -2428,6 +2432,9 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                 BreadcrumbCategory = "AI Tech Chat";
                 BreadcrumbLeaf = "Technician Assistant & Citations";
                 EnsureWelcomeChatMessage();
+                if (Microphones.Count == 0)
+                    await RefreshMicrophonesAsync();
+                ShowVoiceHintFor("AiChat");
                 break;
 
             case "GuidedTree":
@@ -2437,6 +2444,9 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                 BreadcrumbLeaf = "Guided Troubleshooting";
                 await ReloadGuidedCatalogFromDatabaseAsync();
                 await ReloadWorkOrderReadingsAsync();
+                if (Microphones.Count == 0)
+                    await RefreshMicrophonesAsync(); // 7.5b voice commands
+                ShowVoiceHintFor("GuidedTree");
                 break;
 
             case "ManualSearch":
@@ -3749,8 +3759,8 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                         SpecUnit = specUnitCanonical,
                         SpecSource = specSource,
                         PassFail = computedPassFail,
-                        Source = ReadingSource.Manual,
-                        IsSimulated = false,
+                        Source = _guidedReadingVoice.Voice ? ReadingSource.Voice : ReadingSource.Manual, // 7.5b
+                        IsSimulated = _guidedReadingVoice.Voice && _guidedReadingVoice.Simulated,
                         EnteredAt = Clock.UtcNow,
                         EnteredBy = SelectedTechnician,
                         Notes = string.IsNullOrWhiteSpace(GuidedAnswerText) ? null : GuidedAnswerText.Trim(),
@@ -5452,6 +5462,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         _playbackTimer?.Stop();
         await CloseCameraAsync();
         await CloseMicrophoneAsync();
+        (_speechOutput as IDisposable)?.Dispose();
         AiState.StateUpdated -= OnAiStateUpdated;
         await AiState.DisposeAsync();
         if (_aiClient is IDisposable disposableClient)

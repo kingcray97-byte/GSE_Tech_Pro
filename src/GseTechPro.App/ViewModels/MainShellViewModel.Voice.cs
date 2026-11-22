@@ -193,6 +193,11 @@ public sealed partial class MainShellViewModel
                 VoiceStatusText = notes.Length > 0 ? notes : "Nothing usable was heard. Try again.";
                 return;
             }
+            if (ActiveSectionKey == "GuidedTree")
+            {
+                await HandleGuidedVoiceAsync(heard, audio.IsSimulated); // 7.5b: commands on the guided step
+                return;
+            }
             ChatInputText = string.IsNullOrWhiteSpace(ChatInputText) ? heard : ChatInputText.TrimEnd() + " " + heard;
             VoiceStatusText = (audio.IsSimulated ? "SIMULATED microphone. " : "") +
                               $"Heard: “{heard}”. Check the words in the box, fix them if needed, then tap Send.";

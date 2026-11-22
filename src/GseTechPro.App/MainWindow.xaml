@@ -2493,6 +2493,71 @@
                                                 Click="OnGuidedVerdictButtonClick"
                                                 Content="N/A — Continue" />
                                     </StackPanel>
+
+                                    <!-- Voice commands (7.5b): every reading and note is read back and saved only after yes / Save -->
+                                    <Border BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,1,0,0" Padding="0,10,0,0">
+                                        <StackPanel Spacing="8">
+                                            <Grid ColumnSpacing="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" MaxWidth="460" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Button MinWidth="120" MinHeight="56" Style="{StaticResource AccentButtonStyle}"
+                                                        AutomationProperties.Name="Push to talk: voice command"
+                                                        ToolTipService.ToolTip="Say: reading is 2,300 psi · next step · add note … · or a question"
+                                                        Command="{x:Bind ViewModel.ToggleTalkCommand}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="{x:Bind ViewModel.TalkButtonGlyph, Mode=OneWay}" FontSize="20" />
+                                                        <TextBlock Text="{x:Bind ViewModel.TalkButtonText, Mode=OneWay}" FontWeight="Bold" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <ComboBox Grid.Column="1" MinHeight="{StaticResource MinTouchSize}" MinWidth="220" VerticalAlignment="Center"
+                                                          AutomationProperties.Name="Microphone"
+                                                          ItemsSource="{x:Bind ViewModel.Microphones}"
+                                                          SelectedItem="{x:Bind ViewModel.SelectedMicrophone, Mode=TwoWay}"
+                                                          DisplayMemberPath="Name" />
+                                                <TextBox Grid.Column="2" MinHeight="{StaticResource MinTouchSize}" VerticalContentAlignment="Center"
+                                                         AutomationProperties.Name="Words the simulated microphone says"
+                                                         PlaceholderText="Words the simulated microphone says"
+                                                         Visibility="{x:Bind ViewModel.SimulatedVoicePhraseVisibility, Mode=OneWay}"
+                                                         Text="{x:Bind ViewModel.SimulatedVoicePhrase, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                <ToggleSwitch Grid.Column="3" MinHeight="{StaticResource MinTouchSize}" VerticalAlignment="Center"
+                                                              OnContent="Read back aloud" OffContent="Read back aloud"
+                                                              IsOn="{x:Bind ViewModel.IsVoiceReadBackSpoken, Mode=TwoWay}" />
+                                            </Grid>
+                                            <Grid ColumnSpacing="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Ellipse Width="12" Height="12" Fill="#E53935" VerticalAlignment="Center"
+                                                         Visibility="{x:Bind ViewModel.VoiceListeningVisibility, Mode=OneWay}" />
+                                                <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.VoiceStatusText, Mode=OneWay}" TextWrapping="Wrap"
+                                                           FontSize="{StaticResource FontSizeSmall}" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                            </Grid>
+                                            <Border Visibility="{x:Bind ViewModel.VoiceConfirmVisibility, Mode=OneWay}"
+                                                    Background="{ThemeResource AiSuggestionBadgeBackgroundBrush}" BorderBrush="{ThemeResource AiSuggestionBadgeBorderBrush}"
+                                                    BorderThickness="1" CornerRadius="{StaticResource CardCornerRadius}" Padding="12,8">
+                                                <Grid ColumnSpacing="8">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{x:Bind ViewModel.VoiceConfirmText, Mode=OneWay}" FontWeight="SemiBold" TextWrapping="Wrap"
+                                                               VerticalAlignment="Center" Foreground="{ThemeResource AiSuggestionBadgeTextBrush}" />
+                                                    <Button Grid.Column="1" MinHeight="{StaticResource MinTouchSize}" MinWidth="110" Style="{StaticResource AccentButtonStyle}"
+                                                            AutomationProperties.Name="Save what was heard" Content="Save"
+                                                            Command="{x:Bind ViewModel.ConfirmVoiceItemCommand}" />
+                                                    <Button Grid.Column="2" MinHeight="{StaticResource MinTouchSize}" MinWidth="110"
+                                                            AutomationProperties.Name="Throw away what was heard" Content="Throw away"
+                                                            Command="{x:Bind ViewModel.CancelVoiceItemCommand}" />
+                                                </Grid>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
