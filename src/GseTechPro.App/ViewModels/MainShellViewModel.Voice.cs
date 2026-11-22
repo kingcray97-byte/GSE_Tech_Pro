@@ -117,6 +117,7 @@ public sealed partial class MainShellViewModel
             VoiceStatusText = "No microphone found.";
             return;
         }
+        _speechOutput.Stop(); // 7.5c: never record the tablet's own voice
         try
         {
             _openMicrophone ??= await _microphoneFactory.OpenAsync(info);

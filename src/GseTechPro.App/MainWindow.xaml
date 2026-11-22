@@ -2136,6 +2136,26 @@
                                 </Grid>
                             </Grid>
 
+                            <!-- Spoken answers (7.5c): off by default; the answer is always on screen too -->
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <ToggleSwitch MinHeight="{StaticResource MinTouchSize}" VerticalAlignment="Center"
+                                              AutomationProperties.Name="Read answers aloud"
+                                              OnContent="Read answers aloud" OffContent="Read answers aloud"
+                                              IsOn="{x:Bind ViewModel.IsChatAnswerSpoken, Mode=TwoWay}" />
+                                <Button Style="{StaticResource ActionTouchButtonStyle}"
+                                        AutomationProperties.Name="Stop reading"
+                                        ToolTipService.ToolTip="Stop the spoken answer"
+                                        Command="{x:Bind ViewModel.StopSpeakingCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE71A;" FontSize="15" />
+                                        <TextBlock Text="Stop reading" />
+                                    </StackPanel>
+                                </Button>
+                                <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="520"
+                                           FontSize="{StaticResource FontSizeSmall}" Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                           Text="{x:Bind ViewModel.PushToTalkHintText, Mode=OneWay}" />
+                            </StackPanel>
+
                             <Grid ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -6327,6 +6347,35 @@
                                         Command="{x:Bind ViewModel.ToggleUnitSystemCommand}"
                                         Content="{x:Bind ViewModel.UnitSystemLabel, Mode=OneWay}"
                                         ToolTipService.ToolTip="Switch shop default display units (per-reading overrides are kept)" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Voice (7.5c): saved on this tablet -->
+                        <Border Background="{ThemeResource AppSurfaceBrush}"
+                                BorderBrush="{ThemeResource AppSubtleBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource CardCornerRadius}"
+                                Padding="20">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Voice" FontSize="18" FontWeight="SemiBold" />
+                                <TextBlock TextWrapping="Wrap"
+                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                           Text="Spoken with the Windows voice on this tablet (offline). Everything spoken is also on screen." />
+                                <ToggleSwitch Header="Read Tech Chat answers aloud"
+                                              MinHeight="{StaticResource MinTouchSize}"
+                                              IsOn="{x:Bind ViewModel.IsChatAnswerSpoken, Mode=TwoWay}" />
+                                <ToggleSwitch Header="Read back spoken readings and notes on the guided step"
+                                              MinHeight="{StaticResource MinTouchSize}"
+                                              IsOn="{x:Bind ViewModel.IsVoiceReadBackSpoken, Mode=TwoWay}" />
+                                <ComboBox Header="Push-to-talk key"
+                                          MinHeight="{StaticResource MinTouchSize}"
+                                          MinWidth="200"
+                                          ItemsSource="{x:Bind ViewModel.PushToTalkKeyOptions}"
+                                          SelectedIndex="{x:Bind ViewModel.SelectedPushToTalkKeyIndex, Mode=TwoWay}" />
+                                <TextBlock TextWrapping="Wrap"
+                                           FontSize="{StaticResource FontSizeSmall}"
+                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                           Text="{x:Bind ViewModel.PushToTalkHintText, Mode=OneWay}" />
                             </StackPanel>
                         </Border>
 

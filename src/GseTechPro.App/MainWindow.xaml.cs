@@ -124,7 +124,11 @@ public sealed partial class MainWindow : Window
     /// <summary>F11 toggles scope full screen; Esc leaves it (keys a text box or flyout handles first are ignored).</summary>
     private void OnRootKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (e.Key == VirtualKey.F11)
+        if (ViewModel.HandlePushToTalkKey(e.Key.ToString(), e.KeyStatus.WasKeyDown))
+        {
+            e.Handled = true; // 7.5c push-to-talk key (Settings > Voice)
+        }
+        else if (e.Key == VirtualKey.F11)
         {
             ViewModel.ToggleScopeFullScreen();
             e.Handled = ViewModel.IsScopeViewVisible || ViewModel.IsScopeFullScreen;

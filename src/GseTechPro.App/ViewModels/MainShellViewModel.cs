@@ -644,6 +644,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     public async Task ReloadDatabaseRecordsAsync()
     {
         await LoadAiRoutingSettingsAsync();
+        await LoadVoicePreferencesAsync(); // 7.5c
 
         var shops = await _dataServices.Shops.GetAllAsync();
         if (shops.Count > 0)
@@ -2719,6 +2720,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                 citations: response.Citations,
                 route: response.Route ?? AiRoute.Tablet,
                 model: response.Model));
+            SpeakChatAnswer(response); // 7.5c: only when "Read answers aloud" is on
 
             StatusBannerMessage = response.Citations.Count > 0
                 ? $"AI suggestion received ({response.Citations.Count} citation(s))."

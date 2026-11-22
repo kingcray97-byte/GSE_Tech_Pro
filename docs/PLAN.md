@@ -25,7 +25,7 @@
 | 4 | GSE troubleshooting (readings entry, decision trees, safety warnings — TUG 660-28 first) | ✅ Done |
 | 5 | Repair history learning (recommendation engine, outcomes, comebacks) | ✅ Done |
 | 6 | Oscilloscope (PicoSDK, then Hantek, shared interface) | ✅ Done (Simulator + Hantek wrapper reviewed; real hardware unverified) |
-| 7 | Vision & voice (ECOM / CAN capture moved to 10C and done there) | 🟡 Started: 7.1 camera and photos, 7.2 pen annotation and 7.3 data-plate OCR built and checked in the app on the simulator (2026-11-21); 7.4 photo inspection built and checked (stand-in and real LFM3-Omni on the dev PC); 7.5a speech to text and 7.5b voice commands built; 7.5c–7.6 to do |
+| 7 | Vision & voice (ECOM / CAN capture moved to 10C and done there) | 🟡 Started: 7.1 camera and photos, 7.2 pen annotation and 7.3 data-plate OCR built and checked in the app on the simulator (2026-11-21); 7.4 photo inspection built and checked (stand-in and real LFM3-Omni on the dev PC); 7.5a speech to text, 7.5b voice commands and 7.5c spoken answers + push-to-talk key built; 7.5d–7.6 to do |
 | 8 | Full installer (signing, silent multi-tablet, upgrades, updates) | ✅ Done |
 | 9 | Optional shop-server sync | ⬜ |
 | 10 | Owner change request 2026-11-19: llama.cpp + cloud route, Shop Foreman Pro look, GSE components, PicoScope-style scope | 🟡 Built: 10A done except real-tablet acceptance; 10B.1–10B.3 done (owner screenshot sign-off open); 10C done (10C.1–10C.5); 10D done (10D.1–10D.4), all checked in the app on the simulator (2026-11-21), real hardware still open |
@@ -74,6 +74,15 @@ and touch (rule 8). Steps, in order (each one change that builds and passes test
      read back aloud and on screen and saved only after "yes" or a tap (`readings.source = 'voice'`: the readings table has no `recorded_by` column; that one is on `complaints`).
    - **7.5c Spoken answers + hands-free:** read Tech Chat answers aloud (switch), a configurable key for the 7220's programmable
      buttons as push-to-talk.
+     ✅ **Built (2026-11-22).** "Read answers aloud" switch on Tech Chat and in Settings > Voice (off by default, saved on the
+     tablet in `app_settings` key `voice.preferences` with the read-back switch and the key). `Core/Speech/SpokenAnswer` strips
+     markdown, speaks "AI suggestion." first, safety lines (warning, lockout, stored pressure …) before the rest, cuts long answers
+     at a sentence (~900 characters, "The rest is on screen.") and ends with the sources; values are never reworded. "Stop reading"
+     button; Talk silences the tablet before recording. Push-to-talk key (Off, F8–F10, F12, F13–F24; default F9) works like the Talk
+     button on Tech Chat and the guided step only, press once to start and again to stop (rugged buttons send a press, not a hold),
+     key repeat ignored. Checked in the app with the real LFM3-Omni: F9 recorded and transcribed the simulated microphone, the answer
+     arrived with read-aloud on, settings saved. Not checked: hearing the voice (no ears on this run), the 7220 buttons mapped to
+     the key in Dell's software (7.5d). 11 new tests; C# suite 719 passing.
    - **7.5d Tablet check:** speed and RAM on the 7220 with the tablet model files, real voices in shop noise and with gloves;
      whisper.cpp only if this fails.
 6. **7.6 Scanned-PDF OCR for manuals** (`rag-ingest`): the `ingest/` OCR stub filled in (same engine as 7.3) so image-only pages (83 in the
