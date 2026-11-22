@@ -44,6 +44,11 @@ public sealed partial class MainShellViewModel
         ScopeSafetyAcknowledgedText =
             $"{n} safety warning{(n == 1 ? "" : "s")} for '{test}' read by {who} at {at}. Keep following them while you work.";
         AreScopeSafetyWarningsAcknowledged = true;
+
+        // The one-tap panel still asked to read the warnings (found in the app check); move it on to the next step.
+        if (SelectedGuidedTest is null && _scopeOneTapSafetyTestName is { } oneTap
+            && ScopeOneTapStatusText.StartsWith($"{oneTap}: read the ", StringComparison.Ordinal))
+            ScopeOneTapStatusText = $"{oneTap}: safety warnings read. Enter what you know, then tap Start.";
     }
 
     /// <summary>Opens the full warning list again.</summary>

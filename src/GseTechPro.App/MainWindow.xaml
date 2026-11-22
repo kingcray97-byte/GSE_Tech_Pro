@@ -4291,7 +4291,7 @@
                                                        TextAlignment="Center" TextWrapping="Wrap" />
                                         </StackPanel>
                                         <Button.Flyout>
-                                            <Flyout Placement="RightEdgeAlignedBottom">
+                                            <Flyout Placement="RightEdgeAlignedBottom" FlyoutPresenterStyle="{StaticResource WideFlyoutPresenterStyle}">
                                                 <StackPanel Width="640" Spacing="8">
                                                     <TextBlock Text="DeepMeasure: every cycle" FontWeight="Bold" />
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -4401,7 +4401,7 @@
                                                        TextAlignment="Center" TextWrapping="Wrap" />
                                         </StackPanel>
                                         <Button.Flyout>
-                                            <Flyout Placement="RightEdgeAlignedBottom">
+                                            <Flyout Placement="RightEdgeAlignedBottom" FlyoutPresenterStyle="{StaticResource WideFlyoutPresenterStyle}">
                                                 <StackPanel Width="720" Spacing="8">
                                                     <TextBlock Text="Serial decoding: CAN (J1939)" FontWeight="Bold" />
                                                     <StackPanel Orientation="Horizontal" Spacing="8">

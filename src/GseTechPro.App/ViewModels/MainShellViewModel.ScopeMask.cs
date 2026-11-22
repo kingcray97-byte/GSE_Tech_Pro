@@ -157,8 +157,11 @@ public sealed partial class MainShellViewModel
             return; // superseded while computing
 
         LastScopeMaskResult = result;
-        ScopeMaskUpperRawPoints = upper;
-        ScopeMaskLowerRawPoints = lower;
+        // A capture the mask cannot test (other timebase, sample rate or channel) gets no envelope drawn over it:
+        // the old outline on a different time scale looked like a real limit (found in the app check).
+        bool testable = result.Passed is not null;
+        ScopeMaskUpperRawPoints = testable ? upper : Array.Empty<Point>();
+        ScopeMaskLowerRawPoints = testable ? lower : Array.Empty<Point>();
 
         bool newlyFailed = false;
         if (result.Passed is bool passed && !_scopeMaskCounted.TryGetValue(capture, out _))

@@ -59,6 +59,26 @@ public sealed class DataPlatesTests
     }
 
     [Fact]
+    public void Parse_LabelLettersInsideAHyphenatedValue_DoNotSplitIt()
+    {
+        // Found in the app check: the simulator plate's "P/N SIM-PN-0001" became two part numbers, "SIM" and "0001".
+        var pn = Assert.Single(DataPlates.Parse(["P/N SIM-PN-0001"]));
+        Assert.Equal(DataPlateFieldKind.PartNumber, pn.Kind);
+        Assert.Equal("SIM-PN-0001", pn.Value);
+
+        var sn = Assert.Single(DataPlates.Parse(["S/N 4711-SN-2"]));
+        Assert.Equal("4711-SN-2", sn.Value);
+
+        var model = Assert.Single(DataPlates.Parse(["MODEL TM/MODEL-1"]));
+        Assert.Equal("TM/MODEL-1", model.Value);
+
+        // Two labels on one line still split at the space before the second one.
+        var both = DataPlates.Parse(["MODEL SIM-100 S/N: SIM-001I7"]);
+        Assert.Contains(both, x => x is { Kind: DataPlateFieldKind.Model, Value: "SIM-100" });
+        Assert.Contains(both, x => x is { Kind: DataPlateFieldKind.SerialNumber, Value: "SIM-001I7" });
+    }
+
+    [Fact]
     public void Region_FromCorners_ClampsAndDropsStrayTaps()
     {
         var r = OcrRegion.FromCorners(0.8, 0.9, 0.2, -0.5)!;

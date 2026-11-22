@@ -68,7 +68,15 @@ public sealed class DataPlateTests
         // A new photo must be saved first.
         await vm.TakePhotoAsync();
         Assert.Equal(Visibility.Collapsed, vm.DataPlateButtonVisibility);
+        // The bound button must hear about it when the saved photo becomes the selection (found in the app check).
+        var seen = new List<Visibility>();
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(vm.DataPlateButtonVisibility)) seen.Add(vm.DataPlateButtonVisibility);
+        };
         await vm.SavePhotoToWorkOrderAsync();
+        Assert.Equal(Visibility.Visible, seen.LastOrDefault(Visibility.Collapsed));
+        Assert.Equal(Visibility.Visible, vm.DataPlateButtonVisibility);
         await ImportRealPhotoAsync(vm);
         var photo = vm.SelectedWorkOrderPhoto!;
         Assert.False(photo.IsSimulated);

@@ -126,6 +126,7 @@ public sealed partial class MainShellViewModel
         if (photo is not null)
             _annotationShapes.AddRange(PhotoAnnotations.Deserialize(photo.Attachment.AnnotationsJson));
         OnPropertyChanged(nameof(AnnotateButtonVisibility));
+        OnPropertyChanged(nameof(DataPlateButtonVisibility));
         RaiseAnnotationsChanged(lastOnly: false);
     }
 

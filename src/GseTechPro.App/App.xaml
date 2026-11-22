@@ -235,6 +235,14 @@
 
 
 
+            <!-- Flyouts with tables (DeepMeasure, Serial decoding): the default presenter caps width at ~456 px and
+                 clips them. Wider, but never wider than the window; the content scrolls when the window is narrow. -->
+            <Style x:Key="WideFlyoutPresenterStyle" TargetType="FlyoutPresenter">
+                <Setter Property="MaxWidth" Value="800" />
+                <Setter Property="ScrollViewer.HorizontalScrollMode" Value="Auto" />
+                <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
+            </Style>
+
             <!-- Scope screen: bench-scope tool tile (icon over small label, 64x56, glove friendly) -->
             <Style x:Key="ScopeToolTileButtonStyle" TargetType="Button">
                 <Setter Property="MinWidth" Value="64" />

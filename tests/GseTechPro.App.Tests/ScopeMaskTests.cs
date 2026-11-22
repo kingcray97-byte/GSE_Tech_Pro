@@ -67,5 +67,15 @@ public sealed class ScopeMaskTests
         Assert.Null(vm.LastScopeMaskResult!.Passed);
         Assert.Contains("make a new mask", vm.ScopeMaskStatusText);
         Assert.Equal("Pass 0 · Fail 0", vm.ScopeMaskCountText);
+        // No envelope over a capture it cannot test (found in the app check).
+        Assert.Empty(vm.ScopeMaskUpperRawPoints);
+        Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, vm.ScopeMaskTraceVisibility);
+
+        // Back on the mask's settings, the envelope returns.
+        vm.ScopeTimebaseSecondsPerDivision /= 2;
+        await vm.StartScopeCaptureAsync();
+        Assert.True(vm.LastScopeMaskResult!.Passed);
+        Assert.NotEmpty(vm.ScopeMaskUpperRawPoints);
+        Assert.Equal(Microsoft.UI.Xaml.Visibility.Visible, vm.ScopeMaskTraceVisibility);
     }
 }

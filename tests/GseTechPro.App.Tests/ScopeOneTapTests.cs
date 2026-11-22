@@ -25,6 +25,20 @@ public sealed class ScopeOneTapTests
     }
 
     [Fact]
+    public async Task Acknowledging_MovesTheStatusOnFromTheReadTheWarningsPrompt()
+    {
+        // Found in the app check: after "I have read these warnings" the panel still said to read them.
+        await using var vm = await NewViewModelAsync("ack-status");
+        vm.SelectedScopeOneTapTest = vm.ScopeOneTapTests[0];
+        for (int i = 0; i < 100 && !vm.ScopeOneTapStatusText.Contains("read the "); i++)
+            await Task.Delay(20);
+        Assert.StartsWith("Battery / cranking: read the ", vm.ScopeOneTapStatusText);
+
+        vm.AcknowledgeScopeSafetyWarnings();
+        Assert.Equal("Battery / cranking: safety warnings read. Enter what you know, then tap Start.", vm.ScopeOneTapStatusText);
+    }
+
+    [Fact]
     public async Task BatteryCranking_WarningsFirst_ThenCapturesAndFillsTheTable()
     {
         await using var vm = await NewViewModelAsync("battery");

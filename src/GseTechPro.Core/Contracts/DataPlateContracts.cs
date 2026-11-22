@@ -105,7 +105,8 @@ public static class DataPlates
     ];
 
     private static readonly Regex LabelRegex = new(
-        @"(?<![A-Z0-9])(?:" + string.Join("|", Labels.Select((l, i) => $"(?<k{i}>{l.Pattern})")) + @")(?=[\s:#.\-=]|$)",
+        // A label never starts right after a hyphen or slash, so "SIM-PN-0001" or "4711-SN-2" stays one value.
+        @"(?<![A-Z0-9\-/_])(?:" + string.Join("|", Labels.Select((l, i) => $"(?<k{i}>{l.Pattern})")) + @")(?=[\s:#.\-=]|$)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     /// <summary>
