@@ -233,6 +233,15 @@ def test_search_terms_use_look_up_words_and_drop_numbers():
     assert search_terms("Corroded battery terminal.", None) == "Corroded battery terminal"
 
 
+def test_inline_look_up_from_the_real_model_is_used_and_hidden():
+    """Found with the real LFM3-Omni: "Look up:" on the same line as the description."""
+    seen = []
+    r = _run("A grid of grey squares. Look up: lift hose leak check", caption=None,
+             search=lambda q, k: seen.append(q) or [])
+    assert seen == ["lift hose leak check"]
+    assert r.description == "A grid of grey squares." and "Look up" not in r.description
+
+
 def test_search_failure_or_no_database_keeps_the_description():
     def boom(_q, _k):
         raise RuntimeError("db locked")

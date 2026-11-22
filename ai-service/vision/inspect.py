@@ -65,7 +65,8 @@ _VERDICT = re.compile(
     r"in\s+spec|meets?\s+spec|acceptable|unacceptable|serviceable|unserviceable)\b",
     re.IGNORECASE,
 )
-_LOOK_UP = re.compile(r"^\s*look\s*up\s*:\s*(?P<terms>.+)$", re.IGNORECASE | re.MULTILINE)
+# Anywhere in the text: the real LFM3-Omni often writes "... Look up: lift hose leak" on the same line (in-app check).
+_LOOK_UP = re.compile(r"look\s*up\s*:\s*(?P<terms>[^\n]+)", re.IGNORECASE)
 
 
 class ImageError(ValueError):
@@ -221,8 +222,9 @@ def inspect_photo(
     else:
         notes.append(NOTE_NO_PAGES)
 
+    shown = _LOOK_UP.sub("", description).strip()  # the search words are shown on their own line in the app
     return InspectionResult(
-        description=description,
+        description=shown or description,
         notes=notes,
         citations=citations,
         search_query=query or None,
