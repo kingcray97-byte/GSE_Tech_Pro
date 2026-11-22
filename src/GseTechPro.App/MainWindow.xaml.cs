@@ -57,6 +57,8 @@ public sealed partial class MainWindow : Window
                 _ = ShowCameraPreviewAsync(ViewModel.CameraPreviewPath);
         };
         ViewModel.PickPhotoFileAsync = PickPhotoFileAsync;
+        ViewModel.PickManualFilesAsync = PickManualFilesAsync;
+        ViewModel.PickManualFolderAsync = PickManualFolderAsync;
         HookAnnotationSurface();
         RootGrid.AddHandler(UIElement.KeyDownEvent, new KeyEventHandler(OnRootKeyDown), handledEventsToo: false);
 
@@ -107,6 +109,33 @@ public sealed partial class MainWindow : Window
         WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
         var file = await picker.PickSingleFileAsync();
         return file?.Path;
+    }
+
+    /// <summary>Manual Search › Import PDFs…: one or more PDF files (opens in Documents).</summary>
+    private async Task<IReadOnlyList<string>?> PickManualFilesAsync()
+    {
+        var picker = new Windows.Storage.Pickers.FileOpenPicker
+        {
+            SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary,
+            ViewMode = Windows.Storage.Pickers.PickerViewMode.List,
+        };
+        picker.FileTypeFilter.Add(".pdf");
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+        var files = await picker.PickMultipleFilesAsync();
+        return files is null || files.Count == 0 ? null : files.Select(f => f.Path).ToList();
+    }
+
+    /// <summary>Manual Search › Import folder…: every PDF in a local folder (and its subfolders).</summary>
+    private async Task<string?> PickManualFolderAsync()
+    {
+        var picker = new Windows.Storage.Pickers.FolderPicker
+        {
+            SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary,
+        };
+        picker.FileTypeFilter.Add("*");
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+        var folder = await picker.PickSingleFolderAsync();
+        return folder?.Path;
     }
 
     private void ApplyScopeFullScreenPresenter(bool fullScreen)
