@@ -229,6 +229,15 @@ public sealed class ManualSearchResultViewModel
 
     public Visibility FallbackBadgeVisibility =>
         IsFallback ? Visibility.Visible : Visibility.Collapsed;
+
+    /// <summary>True when the text was read by OCR from a scanned page (Phase 7.6).</summary>
+    public bool IsOcr => Result.Ocr;
+
+    public Visibility OcrBadgeVisibility => IsOcr ? Visibility.Visible : Visibility.Collapsed;
+
+    public string OcrNote => IsOcr
+        ? "Text read by OCR from a scanned page. OCR can misread characters (0/O, 1/I, 5/S): check every number against the page."
+        : "";
 }
 
 /// <summary>

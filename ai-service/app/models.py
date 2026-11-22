@@ -195,6 +195,7 @@ class SearchResultOut(_Wire):
     text: Optional[str] = None
     score: float
     citation: str
+    ocr: bool = False  # text read by OCR from a scanned page (Phase 7.6): numbers must be checked against the page
 
 
 class SearchManualsResponse(_Wire):

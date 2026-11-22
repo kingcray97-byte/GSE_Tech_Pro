@@ -1,8 +1,10 @@
 """Hybrid manual search: BM25 (FTS5) + vec0 KNN, merged with Reciprocal Rank Fusion.
 
 Returns a dict shaped like ADR-008 `SearchManualsResponse`:
-    {"results": [ {chunk_id, manual_id, manual_title, page_start, page_end, section, text, score, citation} ],
+    {"results": [ {chunk_id, manual_id, manual_title, page_start, page_end, section, text, score, citation, ocr} ],
      "fallback": bool}
+`ocr` is True when the chunk's text was read by OCR from a scanned page (chunk tag `source:ocr`): OCR can misread
+characters, so every number in it must be checked against the page.
 `fallback` is True when vectors were not used (no sqlite-vec / embedding model unavailable): BM25-only ranking.
 
 Safety rules:
@@ -26,6 +28,7 @@ CHUNK_KINDS = frozenset(
     {"text", "table", "procedure", "specs", "troubleshooting", "wiring", "torque", "diagram_caption"}
 )
 MAX_TOP_K = 50
+OCR_TAG = "source:ocr"  # written by ingest/pipeline.py on chunks read by OCR
 MIN_KNN_POOL = 50
 
 # Small English stopword list: keeps "the/how/do" from matching every page. Never used for escaping.
@@ -179,7 +182,8 @@ def hybrid_search(
     rows = conn.execute(
         f"""
         SELECT c.id, c.guid, c.manual_id, m.title AS manual_title, c.page_start, c.page_end,
-               c.section, c.chunk_text
+               c.section, c.chunk_text,
+               EXISTS (SELECT 1 FROM chunk_tags AS t WHERE t.chunk_id = c.id AND t.tag = '{OCR_TAG}') AS ocr
         FROM manual_chunks AS c JOIN manuals AS m ON m.id = c.manual_id
         WHERE c.id IN ({placeholders})
         """,
@@ -203,6 +207,7 @@ def hybrid_search(
                 "text": r["chunk_text"] if include_text else None,
                 "score": round(scores[cid], 4),
                 "citation": _citation(r["manual_title"], r["page_start"], r["page_end"]),
+                "ocr": bool(r["ocr"]),  # text read by OCR from a scanned page: check numbers against the page
             }
         )
     return {"results": results, "fallback": fallback}
@@ -218,12 +223,13 @@ def get_manual_page(conn: sqlite3.Connection, manual_id: str, page_number: int) 
         return None
     rows = conn.execute(
         """
-        SELECT c.guid, c.page_start, c.page_end, c.section, c.chunk_kind, c.heading, c.chunk_text
+        SELECT c.guid, c.page_start, c.page_end, c.section, c.chunk_kind, c.heading, c.chunk_text,
+               EXISTS (SELECT 1 FROM chunk_tags AS t WHERE t.chunk_id = c.id AND t.tag = ?) AS ocr
         FROM manual_chunks AS c
         WHERE c.manual_id = ? AND c.deleted_at IS NULL AND c.page_start <= ? AND c.page_end >= ?
         ORDER BY c.page_start, c.id
         """,
-        (manual_id, page_number, page_number),
+        (OCR_TAG, manual_id, page_number, page_number),
     ).fetchall()
     return {
         "manual_id": manual["id"],
@@ -240,6 +246,7 @@ def get_manual_page(conn: sqlite3.Connection, manual_id: str, page_number: int) 
                 "chunk_kind": r["chunk_kind"],
                 "heading": r["heading"],
                 "text": r["chunk_text"],
+                "ocr": bool(r["ocr"]),
             }
             for r in rows
         ],

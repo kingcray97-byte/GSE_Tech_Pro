@@ -259,6 +259,44 @@ public sealed class AiServiceClientAndStateTests
         var legacyHits = await client.SearchManualsAsync("hydraulic pressure test port", 3);
         Assert.Single(legacyHits);
         Assert.Equal("chunk-guid-1", legacyHits[0].ChunkId);
+        Assert.False(hit.Ocr); // older services send no "ocr": typed text
+        Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, new ManualSearchResultViewModel(hit, false).OcrBadgeVisibility);
+    }
+
+    [Fact]
+    public async Task SearchManualsFullAsync_OcrPassage_ShowsScannedBadgeAndCheckNumbersNote()
+    {
+        var responseJson = """
+            {
+              "results": [
+                {
+                  "chunk_id": "chunk-guid-ocr",
+                  "manual_id": "manual-uuid-1",
+                  "manual_title": "TUG 660-28",
+                  "page_start": 1700,
+                  "page_end": 1700,
+                  "section": null,
+                  "text": "MODEL 60 TRAC-LOK ...",
+                  "score": 0.5,
+                  "citation": "TUG 660-28, page 1700",
+                  "ocr": true
+                }
+              ],
+              "fallback": false
+            }
+            """;
+        var handler = new MockHttpMessageHandler((_, _) => Task.FromResult(CreateJsonResponse(HttpStatusCode.OK, responseJson)));
+        using var httpClient = new HttpClient(handler);
+        using var client = new AiServiceClient(httpClient, TestToken);
+
+        var full = await client.SearchManualsFullAsync(new SearchManualsRequest { Query = "trac-lok clutch pack" });
+
+        var hit = Assert.Single(full.Results);
+        Assert.True(hit.Ocr);
+        var row = new ManualSearchResultViewModel(hit, full.Fallback);
+        Assert.Equal(Microsoft.UI.Xaml.Visibility.Visible, row.OcrBadgeVisibility);
+        Assert.Contains("check every number against the page", row.OcrNote);
+        Assert.Equal("TUG 660-28, page 1700", row.Citation); // the citation itself is unchanged
     }
 
     [Fact]

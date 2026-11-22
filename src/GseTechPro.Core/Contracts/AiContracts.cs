@@ -47,4 +47,7 @@ public sealed record SearchResult
     public double Score { get; init; }
     /// <summary>e.g. "TUG 660-28 Maintenance Manual, page 12".</summary>
     public string Citation { get; init; } = "";
+    /// <summary>True when the text was read by OCR from a scanned page (chunk tag <c>source:ocr</c>, Phase 7.6):
+    /// numbers in it must be checked against the page.</summary>
+    public bool Ocr { get; init; }
 }

@@ -21,6 +21,12 @@ ChunkKindCode = Literal[
 ]
 
 
+OCR_PASSAGE_NOTE = (
+    "(scanned page, text read by OCR: it may misread characters; if you quote a number from it, tell the "
+    "technician to check it against the page)"
+)
+
+
 def no_vectors(_texts: list[str]) -> None:
     """Embedder stand-in: 'no vectors right now'. hybrid_search then ranks BM25-only and reports fallback=True."""
     return None
@@ -86,7 +92,8 @@ def _search_manuals(ctx: ToolContext, args: BaseModel) -> ToolResult:
     sources = []
     for i, r in enumerate(results, start=1):
         snippet = " ".join(str(r.get("text") or "").split())[:400]
-        lines.append(f"[{i}] {r['citation']}: {snippet}")
+        ocr = f" {OCR_PASSAGE_NOTE}" if r.get("ocr") else ""
+        lines.append(f"[{i}] {r['citation']}{ocr}: {snippet}")
         sources.append(
             ToolSource(
                 kind="manual-page",

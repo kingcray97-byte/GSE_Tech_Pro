@@ -1,7 +1,7 @@
 """Per-page text extraction with pypdf (BSD-3, ADR-005). Never modifies the source file.
 
-A page with almost no text layer is `scanned` when it contains images (needs OCR, not implemented yet)
-and `blank` otherwise (no error recorded). A page whose text cannot be extracted at all (for example a drawing
+A page with almost no text layer is `scanned` when it contains images (read by OCR in ingest/ocr.py, see
+`apply_ocr`) and `blank` otherwise (no error recorded). A page whose text cannot be extracted at all (for example a drawing
 whose content stream exceeds pypdf's parsing limits) keeps `extract_error` and no lines, so one bad page never
 fails the whole manual.
 
@@ -32,6 +32,7 @@ class PageText:
     scanned: bool
     blank: bool
     extract_error: str | None = None  # text extraction failed on this page (reason), lines are empty
+    ocr: bool = False  # lines were read by OCR from the page image (scanned page), not from a text layer
 
 
 @dataclass
@@ -117,6 +118,15 @@ def read_pdf(path: str | Path) -> PdfDocument:
             )
         )
     return PdfDocument(path=path, page_count=len(pages), title=title, pages=pages)
+
+
+def apply_ocr(page: PageText, ocr_lines: list[str]) -> PageText | None:
+    """A scanned page with its OCR lines (glyph-normalized like extracted text), or None when OCR found too little
+    text to index (the page stays scanned)."""
+    lines = [normalize_line(line).rstrip() for line in ocr_lines]
+    if len("".join(lines).strip()) < MIN_TEXT_CHARS:
+        return None
+    return replace(page, lines=lines, scanned=False, blank=False, ocr=True)
 
 
 def _repeat_key(line: str) -> str:

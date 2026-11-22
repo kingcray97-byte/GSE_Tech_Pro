@@ -3,6 +3,10 @@
 Writes only the RAG tables (manuals, manual_pages, manual_chunks, chunk_tags, embeddings). FTS5 is kept in
 sync by the triggers in 001_Initial.sql. Original PDFs are only read; a copy is stored under
 <database folder>/manuals/<sha256>.pdf and `manuals.file_path` is relative to the database folder.
+
+Scanned (image-only) pages are read by OCR (ingest/ocr.py) and their chunks tagged `source:ocr`. Importing a manual
+that is already in the library (same file hash) fills in its scanned pages that have no text yet, without touching
+the chunks it already has.
 """
 
 from __future__ import annotations
@@ -20,12 +24,17 @@ from typing import Any, Iterable, Mapping, Sequence
 
 from ingest.chunker import ChunkDraft, chunk_pages
 from ingest.job import IngestionJob, register_job
-from ingest.pdf_text import PdfDocument, PageText, read_pdf, strip_repeated_lines
+from ingest.ocr import PageOcr, make_page_ocr
+from ingest.pdf_text import PdfDocument, PageText, apply_ocr, read_pdf, strip_repeated_lines
 from rag.config import Config
 from rag.db import connect, delete_embeddings, is_vec0_available, to_vec_blob
 from rag.embedding import Embedder, make_document_embedder
+from rag.search import OCR_TAG  # chunk text read by OCR from a page image: numbers must be checked against the page
 
-OCR_PENDING_MESSAGE = "scanned page needs OCR (not yet implemented)"
+OCR_PENDING_MESSAGE = "scanned page not searchable: OCR is unavailable on this computer"
+OCR_EMPTY_MESSAGE = "scanned page not searchable: OCR found no readable text"
+OCR_FAILED_MESSAGE = "scanned page not searchable: OCR could not read it"
+OCR_STOPPED_MESSAGE = "scanned page not read: the import was cancelled"
 TEXT_EXTRACT_FAILED_MESSAGE = "page text could not be extracted; page skipped"
 OFFICE_SUFFIXES = frozenset({".doc", ".docx", ".ppt", ".pptx"})
 MANUALS_SUBDIR = "manuals"
@@ -240,7 +249,7 @@ def _write_content(conn: sqlite3.Connection, manual_id: str, pages: list[PageTex
 
 
 def _write_chunks(conn: sqlite3.Connection, manual_id: str, chunks: list[ChunkDraft],
-                  base_tags: list[str]) -> int:
+                  base_tags: list[str], ocr_pages: set[int] | frozenset[int] = frozenset()) -> int:
     now = _now()
     for ch in chunks:
         cur = conn.execute(
@@ -252,6 +261,8 @@ def _write_chunks(conn: sqlite3.Connection, manual_id: str, chunks: list[ChunkDr
         )
         chunk_id = cur.lastrowid
         tags = set(base_tags) | {f"kind:{k}" for k in ch.kinds if k != "text"}
+        if ocr_pages.intersection(ch.pages or range(ch.page_start, ch.page_end + 1)):
+            tags.add(OCR_TAG)
         for tag in sorted(tags):
             conn.execute("INSERT OR IGNORE INTO chunk_tags (chunk_id, tag) VALUES (?, ?)", (chunk_id, tag))
     return len(chunks)
@@ -322,6 +333,133 @@ def embed_missing(
     return written
 
 
+# ---------------------------------------------------------------- OCR
+
+_AUTO_OCR = object()  # default for ingest_files(page_ocr=...): Windows OCR when it can run here
+
+
+class _OcrSource:
+    """Builds the OCR engine once per ingest run, and only when a scanned page needs it."""
+
+    def __init__(self, page_ocr: PageOcr | None | object) -> None:
+        self._given = page_ocr
+        self._ocr: PageOcr | None = None
+        self._reason: str | None = None
+        self._ready = False
+
+    def get(self) -> tuple[PageOcr | None, str | None]:
+        if not self._ready:
+            if self._given is _AUTO_OCR:
+                self._ocr, self._reason = make_page_ocr()
+            elif self._given is None:
+                self._ocr, self._reason = None, "OCR is turned off"
+            else:
+                self._ocr = self._given  # type: ignore[assignment]
+            self._ready = True
+        return self._ocr, self._reason
+
+
+def _ocr_pages(
+    path: Path, pages: list[PageText], wanted: list[int], ocr_source: _OcrSource, job: IngestionJob
+) -> tuple[list[PageText], list[int]]:
+    """OCR the `wanted` scanned pages. Returns (pages with OCR text applied, page numbers read by OCR). Every wanted
+    page that is still not searchable gets one job error saying why."""
+    if not wanted:
+        return pages, []
+    ocr, reason = ocr_source.get()
+    if ocr is None:
+        for number in wanted:
+            job.add_error(path.name, f"{OCR_PENDING_MESSAGE} ({reason})", page=number)
+        return pages, []
+    by_number = {p.number: p for p in pages}
+    read: dict[int, PageText] = {}
+    failed: dict[int, str] = {}
+    for result in ocr.read_pages(path, wanted, keep_going=job.wait_if_paused):
+        if result.number not in by_number:
+            continue
+        if result.error:
+            failed[result.number] = result.error
+            continue
+        page = apply_ocr(by_number[result.number], result.lines)
+        if page is not None:
+            read[result.number] = page
+        else:
+            failed[result.number] = ""
+    for number in wanted:
+        if number in read:
+            continue
+        if number not in failed:
+            job.add_error(path.name, OCR_STOPPED_MESSAGE, page=number)
+        elif failed[number]:
+            job.add_error(path.name, f"{OCR_FAILED_MESSAGE} ({failed[number]})", page=number)
+        else:
+            job.add_error(path.name, OCR_EMPTY_MESSAGE, page=number)
+    if read:
+        job.add_note(f"{path.name}: {len(read)} scanned page(s) read by {ocr.engine}")
+    return [read.get(p.number, p) for p in pages], sorted(read)
+
+
+def _pages_without_text(conn: sqlite3.Connection, manual_id: str) -> list[int]:
+    """Pages of an imported manual that have an image and never had a chunk (live or deleted): the scanned pages an
+    earlier import could not read. Pages whose chunks were deleted on purpose are left alone."""
+    rows = conn.execute(
+        """SELECT p.page_number FROM manual_pages AS p
+           WHERE p.manual_id = ? AND p.has_image = 1
+             AND NOT EXISTS (SELECT 1 FROM manual_chunks AS c
+                             WHERE c.manual_id = p.manual_id AND c.page_start <= p.page_number
+                               AND c.page_end >= p.page_number)
+           ORDER BY p.page_number""",
+        (manual_id,),
+    ).fetchall()
+    return [int(r[0]) for r in rows]
+
+
+def _manual_base_tags(conn: sqlite3.Connection, manual_id: str) -> list[str]:
+    rows = conn.execute(
+        """SELECT DISTINCT t.tag FROM chunk_tags AS t JOIN manual_chunks AS c ON c.id = t.chunk_id
+           WHERE c.manual_id = ? AND t.tag NOT LIKE 'kind:%' AND t.tag <> ?
+           ORDER BY t.tag""",
+        (manual_id, OCR_TAG),
+    ).fetchall()
+    return [str(r[0]) for r in rows]
+
+
+def _backfill_ocr(
+    path: Path, manual_id: str, *, conn: sqlite3.Connection, job: IngestionJob, embedder: Embedder | None,
+    ocr_source: _OcrSource,
+) -> int:
+    """Read the scanned pages an earlier import left without text and add their chunks. Returns chunks created."""
+    wanted = _pages_without_text(conn, manual_id)
+    if not wanted:
+        return 0
+    ocr, _reason = ocr_source.get()
+    if ocr is None:
+        return 0  # nothing new can be read here; the earlier import already reported these pages
+    blanks = [PageText(number=n, lines=[], has_images=True, scanned=True, blank=False) for n in wanted]
+    pages, read = _ocr_pages(path, blanks, wanted, ocr_source, job)
+    if not read:
+        return 0
+    chunks = chunk_pages([p for p in pages if p.ocr])
+    base_tags = _manual_base_tags(conn, manual_id)
+    with _tx(conn):
+        created = _write_chunks(conn, manual_id, chunks, base_tags, set(read))
+        first_section: dict[int, str | None] = {}
+        for ch in chunks:
+            first_section.setdefault(ch.page_start, ch.section)
+        for number, section in first_section.items():
+            if section:
+                conn.execute(
+                    "UPDATE manual_pages SET section = ? WHERE manual_id = ? AND page_number = ? AND section IS NULL",
+                    (section, manual_id, number),
+                )
+        conn.execute("UPDATE manuals SET updated_at = ? WHERE id = ?", (_now(), manual_id))
+    with job._lock:
+        job.chunks_created += created
+    if embedder is not None:
+        embed_missing(conn, embedder, job=job, manual_id=manual_id)
+    return created
+
+
 # ---------------------------------------------------------------- orchestration
 
 
@@ -333,6 +471,7 @@ def _ingest_one(
     embedder: Embedder | None,
     overrides: Mapping[str, str],
     force_reingest: bool,
+    ocr_source: _OcrSource,
 ) -> str:
     size = path.stat().st_size
     if size > MAX_PDF_BYTES:
@@ -346,16 +485,19 @@ def _ingest_one(
         (file_hash,),
     ).fetchone()
     if existing is not None and not force_reingest:
+        added = _backfill_ocr(path, existing["id"], conn=conn, job=job, embedder=embedder, ocr_source=ocr_source)
+        if added:
+            job.add_note(f"{path.name}: already imported; {added} chunk(s) added from its scanned pages")
+            return "ocr-added"
         job.add_note(f"{path.name}: duplicate of an existing manual (same file hash), skipped")
         return "duplicate"
 
     doc = read_pdf(path)
-    pages = strip_repeated_lines(doc.pages)
-    for page in pages:
-        if page.scanned:
-            job.add_error(path.name, OCR_PENDING_MESSAGE, page=page.number)
-        elif page.extract_error:
+    for page in doc.pages:
+        if page.extract_error:
             job.add_error(path.name, f"{TEXT_EXTRACT_FAILED_MESSAGE} ({page.extract_error})", page=page.number)
+    read_pages, ocr_read = _ocr_pages(path, doc.pages, [p.number for p in doc.pages if p.scanned], ocr_source, job)
+    pages = strip_repeated_lines(read_pages)
     chunks = chunk_pages(pages)
     meta = build_meta(doc, path, overrides)
     data_dir = _data_dir(conn)
@@ -372,7 +514,7 @@ def _ingest_one(
             _insert_manual(conn, manual_id, meta, rel_path, file_hash, doc.page_count)
             outcome = "imported"
         _write_content(conn, manual_id, pages, chunks)
-        created = _write_chunks(conn, manual_id, chunks, meta["tags"])
+        created = _write_chunks(conn, manual_id, chunks, meta["tags"], set(ocr_read))
 
     with job._lock:
         job.chunks_created += created
@@ -390,8 +532,11 @@ def ingest_files(
     job: IngestionJob | None = None,
     force_reingest: bool = False,
     config: Config | None = None,
+    page_ocr: PageOcr | None | object = _AUTO_OCR,
 ) -> IngestionJob:
     """Ingest PDFs synchronously and return the job (state succeeded/failed/cancelled).
+
+    `page_ocr`: reads scanned pages. Default: Windows OCR when it can run here; None turns OCR off.
 
     `embedder`: document-side embedder. When None, one embedding-server probe decides; if the model is absent, chunks
     are stored with no vectors and `chunks_embedded` stays 0.
@@ -411,6 +556,7 @@ def ingest_files(
             job.add_note("embedding model unavailable: chunks stored without vectors (BM25-only search)")
 
     overrides_all = manual_overrides or {}
+    ocr_source = _OcrSource(page_ocr)
     succeeded = 0
     for path in files:
         if not job.wait_if_paused():
@@ -420,7 +566,7 @@ def ingest_files(
         try:
             outcome = _ingest_one(
                 path, conn=conn, job=job, embedder=embedder, overrides=overrides,
-                force_reingest=force_reingest,
+                force_reingest=force_reingest, ocr_source=ocr_source,
             )
             if outcome != "duplicate":
                 succeeded += 1

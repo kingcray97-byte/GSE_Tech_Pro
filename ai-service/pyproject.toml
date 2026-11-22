@@ -20,6 +20,16 @@ dependencies = [
     "cryptography>=42",  # pypdf needs it to open AES-encrypted manuals (owner-protected, empty user password)
     "pyyaml>=6.0",
     "numpy>=1.26",
+    # Phase 7.6 scanned-page OCR: pdfium renders the page (BSD-3/Apache-2.0, ADR-005), Windows.Media.Ocr reads it
+    # through pywinrt (MIT). OS-provided engine, nothing else to bundle; ingest reports pages as unread without them.
+    "pypdfium2>=4.30",
+    "winrt-runtime>=2.0; sys_platform == 'win32'",
+    "winrt-Windows.Foundation>=2.0; sys_platform == 'win32'",
+    "winrt-Windows.Foundation.Collections>=2.0; sys_platform == 'win32'",
+    "winrt-Windows.Globalization>=2.0; sys_platform == 'win32'",
+    "winrt-Windows.Graphics.Imaging>=2.0; sys_platform == 'win32'",
+    "winrt-Windows.Media.Ocr>=2.0; sys_platform == 'win32'",
+    "winrt-Windows.Storage.Streams>=2.0; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]

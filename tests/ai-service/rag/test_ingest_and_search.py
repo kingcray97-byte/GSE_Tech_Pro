@@ -79,12 +79,12 @@ def test_force_reingest_replaces_in_place_without_duplicates(conn, offline_confi
 
 def test_scanned_page_is_reported_not_skipped(conn, offline_config):
     scanned = require(SCHEMATICS_SCANNED)
-    job = ingest_files([scanned], conn=conn, config=offline_config)
-    ocr_errors = [e for e in job.errors if e.message == OCR_PENDING_MESSAGE]
+    job = ingest_files([scanned], conn=conn, config=offline_config, page_ocr=None)  # OCR off: see test_ocr_ingest
+    ocr_errors = [e for e in job.errors if e.message.startswith(OCR_PENDING_MESSAGE)]
     assert len(ocr_errors) == 7
     assert sorted(e.page for e in ocr_errors) == [1, 2, 3, 4, 5, 6, 7]
     assert job.chunks_created == 0
-    assert job.state == "succeeded"  # the file was processed; OCR is a separate, pending step
+    assert job.state == "succeeded"  # the file was processed; its scanned pages are reported, not fatal
 
 
 def test_bm25_retrieves_the_flexramp_lubrication_page(conn, offline_config, unavailable_embedder):
@@ -102,7 +102,9 @@ def test_bm25_retrieves_the_flexramp_lubrication_page(conn, offline_config, unav
     assert top["manual_title"] in top["citation"]
     assert set(top) == {
         "chunk_id", "manual_id", "manual_title", "page_start", "page_end", "section", "text", "score", "citation",
+        "ocr",
     }
+    assert top["ocr"] is False  # the 600i manual has a text layer on every page
 
 
 def test_soft_deleted_chunks_are_excluded(conn, offline_config, unavailable_embedder):

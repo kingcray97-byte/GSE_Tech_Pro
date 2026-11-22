@@ -3107,7 +3107,20 @@
                                                                     Visibility="{x:Bind FallbackBadgeVisibility}">
                                                                 <TextBlock Text="TEXT-ONLY" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" Foreground="{ThemeResource SimBadgeTextBrush}" />
                                                             </Border>
+                                                            <Border Background="{ThemeResource SimBadgeBackgroundBrush}"
+                                                                    BorderBrush="{ThemeResource SimBadgeBorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="{StaticResource BadgeCornerRadius}"
+                                                                    Padding="6,1"
+                                                                    Visibility="{x:Bind OcrBadgeVisibility}">
+                                                                <TextBlock Text="SCANNED (OCR)" FontSize="{StaticResource FontSizeSmall}" FontWeight="Bold" Foreground="{ThemeResource SimBadgeTextBrush}" />
+                                                            </Border>
                                                         </StackPanel>
+                                                        <TextBlock Text="{x:Bind OcrNote}"
+                                                                   Visibility="{x:Bind OcrBadgeVisibility}"
+                                                                   FontSize="{StaticResource FontSizeSmall}"
+                                                                   TextWrapping="Wrap"
+                                                                   Foreground="{ThemeResource AppTextSecondaryBrush}" />
                                                     </StackPanel>
                                                 </Button>
                                             </DataTemplate>
