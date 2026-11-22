@@ -153,6 +153,25 @@ class VisionInspectResponse(_Wire):
     model: Optional[str] = None
 
 
+# ---------------------------------------------------------------- voice (Phase 7.5a)
+
+
+class VoiceTranscribeRequest(BaseModel):
+    """POST /voice/transcribe. Matches Core VoiceTranscriptionRequest. The WAV is checked in voice.transcribe."""
+
+    audio_base64: str = Field(min_length=1, max_length=4_200_000)  # 3 MB of WAV, base64
+    format: Literal["wav"] = "wav"
+    is_simulated: bool = False
+
+
+class VoiceTranscribeResponse(_Wire):
+    text: str
+    notes: list[str] = Field(default_factory=list)
+    audio_seconds: float = 0.0
+    route: RouteName = "tablet"  # voice never leaves the tablet
+    model: Optional[str] = None
+
+
 # ---------------------------------------------------------------- search
 
 

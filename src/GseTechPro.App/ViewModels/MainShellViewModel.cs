@@ -29,6 +29,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     private readonly IDiagnosticAdapterFactory _adapterFactory;
     private readonly IScopeDeviceFactory _scopeDeviceFactory;
     private readonly ICameraSourceFactory _cameraSourceFactory;
+    private readonly IMicrophoneFactory _microphoneFactory;
     private readonly ITextRecognizer _textRecognizer;
     private readonly IAiClient _aiClient;
     private readonly AiServiceLauncher _aiLauncher;
@@ -81,13 +82,15 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         AiServiceStateService? aiStateService = null,
         IScopeDeviceFactory? scopeDeviceFactory = null,
         ICameraSourceFactory? cameraSourceFactory = null,
-        ITextRecognizer? textRecognizer = null)
+        ITextRecognizer? textRecognizer = null,
+        IMicrophoneFactory? microphoneFactory = null)
     {
         _dataServices = dataServices;
         _adapterFactory = adapterFactory;
         _scopeDeviceFactory = scopeDeviceFactory ?? new Scope.ScopeDeviceFactory();
         _cameraSourceFactory = cameraSourceFactory ?? new Services.WindowsCameraSourceFactory();
         _textRecognizer = textRecognizer ?? new Services.WindowsTextRecognizer();
+        _microphoneFactory = microphoneFactory ?? new Services.WindowsMicrophoneFactory();
         _dispatcherQueue = dispatcherQueue;
         _aiLauncher = aiLauncher ?? new AiServiceLauncher();
         _aiClient = aiClient ?? new AiServiceClient(
@@ -2263,6 +2266,8 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
                 BreadcrumbCategory = "AI Tech Chat";
                 BreadcrumbLeaf = "Technician Assistant & Citations";
                 EnsureWelcomeChatMessage();
+                if (Microphones.Count == 0)
+                    _ = RefreshMicrophonesAsync(); // 7.5a push-to-talk
                 break;
         }
 
@@ -5446,6 +5451,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         _uiThrottleTimer?.Stop();
         _playbackTimer?.Stop();
         await CloseCameraAsync();
+        await CloseMicrophoneAsync();
         AiState.StateUpdated -= OnAiStateUpdated;
         await AiState.DisposeAsync();
         if (_aiClient is IDisposable disposableClient)

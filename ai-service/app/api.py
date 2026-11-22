@@ -41,6 +41,8 @@ from app.models import (
     SearchResultOut,
     VisionInspectRequest,
     VisionInspectResponse,
+    VoiceTranscribeRequest,
+    VoiceTranscribeResponse,
 )
 from app.perf import log_event
 from app.prompts import load_prompt
@@ -52,6 +54,7 @@ from rag.db import connect
 from recommender import UnknownWorkOrderError, run_repair_history_search
 from tools.manuals import run_manual_search
 from vision.inspect import ImageError, decode_image, inspect_photo, manual_search_fn
+from voice.transcribe import AudioError, decode_audio, loudest_window_dbfs, transcribe
 
 router = APIRouter()
 log = logging.getLogger("gse.ai.guided")
@@ -470,3 +473,47 @@ def vision_inspect(body: VisionInspectRequest, request: Request) -> VisionInspec
         route=route,
         model=model_label or None,
     )
+
+
+# ---------------------------------------------------------------- voice (Phase 7.5a)
+
+VOICE_UNAVAILABLE_MESSAGE = (
+    "Voice input is unavailable: the audio part of the local model is not set up on this tablet. Type instead."
+)
+
+
+@router.post("/voice/transcribe", response_model=VoiceTranscribeResponse)
+def voice_transcribe(body: VoiceTranscribeRequest, request: Request) -> VoiceTranscribeResponse:
+    """Speech to text on the tablet's model (rules in voice/transcribe.py). Never a remote route: voice stays on the tablet."""
+    svc = _svc(request)
+    try:
+        data, info = decode_audio(body.audio_base64)
+    except AudioError as exc:
+        raise ApiError(400, "invalid_request", str(exc)) from exc
+    level = loudest_window_dbfs(data, info)
+    if not svc.warm.is_set():
+        raise ApiError(503, "ai_starting", "AI is starting.", detail="warm-up probe in progress")
+    if not tablet_vision_configured(svc.config):  # the same projector file carries image and audio input
+        raise ApiError(503, "ai_unavailable", VOICE_UNAVAILABLE_MESSAGE, detail="voice_unavailable: llama_server.mmproj is not set")
+    if svc.unloader is not None:
+        svc.unloader.touch()
+    with svc.chat_lock:
+        reason = svc.ensure_tablet_ready()
+        offline_message = svc.config.degradation.offline_chat_message
+        if reason == "model_loading":
+            raise ApiError(503, "ai_starting", "AI is starting.", detail="model_loading")
+        if reason is not None:
+            raise ApiError(503, "ai_unavailable", offline_message, detail=reason)
+        try:
+            result = transcribe(backend=svc.backend, system_prompt=load_prompt("asr.md"),
+                                audio_base64=body.audio_base64, seconds=info.seconds, is_simulated=body.is_simulated,
+                                level_dbfs=level)
+        except ChatUnavailable as exc:
+            raise ApiError(503, exc.code, offline_message if exc.code == "ai_unavailable" else "AI is starting.",
+                           detail=exc.detail) from exc
+    if svc.unloader is not None:
+        svc.unloader.touch()
+    log_event("voice_transcribe", audio_s=round(info.seconds, 2), model_ms=result.model_ms,
+              words=len(result.text.split()), refused=result.refused, level_dbfs=round(level, 1))
+    return VoiceTranscribeResponse(text=result.text, notes=result.notes, audio_seconds=round(info.seconds, 2),
+                                   route=TABLET, model=svc.config.models.chat)

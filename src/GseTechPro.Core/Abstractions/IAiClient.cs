@@ -41,6 +41,13 @@ public interface IAiClient
     Task<PhotoInspectionResponse> InspectPhotoAsync(PhotoInspectionRequest request, CancellationToken cancellationToken = default)
         => throw new NotImplementedException("InspectPhotoAsync is implemented in GseTechPro.App/Services/AiServiceClient.cs (Phase 7.4).");
 
+    /// <summary>
+    /// POST /voice/transcribe: speech to text on the tablet's model (Phase 7.5a). Default implementation throws so existing
+    /// implementers keep building; the HTTP call is in <c>GseTechPro.App/Services/AiServiceClient.cs</c>.
+    /// </summary>
+    Task<VoiceTranscriptionResponse> TranscribeAsync(VoiceTranscriptionRequest request, CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("TranscribeAsync is implemented in GseTechPro.App/Services/AiServiceClient.cs (Phase 7.5a).");
+
     /// <summary>GET /health — liveness + degradation probe (drives "warming up / ready / degraded" UI).</summary>
     Task<AiServiceHealth> HealthAsync(CancellationToken cancellationToken = default);
 

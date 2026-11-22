@@ -268,6 +268,19 @@ public sealed class AiServiceClient : IAiClient, IDisposable
             cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    public async Task<VoiceTranscriptionResponse> TranscribeAsync(
+        VoiceTranscriptionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return await SendAsync<VoiceTranscriptionResponse>(
+            HttpMethod.Post,
+            AiServiceProtocol.VoiceTranscribePath,
+            request,
+            cancellationToken).ConfigureAwait(false);
+    }
+
     private async Task<TResponse> SendAsync<TResponse>(
         HttpMethod method,
         string relativePathAndQuery,

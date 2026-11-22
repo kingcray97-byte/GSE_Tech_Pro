@@ -372,3 +372,30 @@ def test_photo_reaches_llama_server_as_an_image_part(make_client, seeded_db):
         user = sent[0]["messages"][-1]
         parts = {p["type"]: p for p in user["content"]}
         assert parts["image_url"]["image_url"]["url"] == f"data:image/jpeg;base64,{b64}"
+
+
+def test_voice_clip_reaches_llama_server_as_an_audio_part(make_client, seeded_db):
+    """Phase 7.5a: the real LiteLLM -> llama-server path keeps the OpenAI input_audio part (what --mmproj reads)."""
+    import base64
+    import io
+    import wave
+
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(16000)
+        w.writeframes(b"\x00\x40\x00\xc0" * 8000)  # loud square wave: silence never reaches the model
+    b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+    with FakeLlamaServer(reply="Next step.") as chat_srv, FakeLlamaServer() as embed_srv:
+        overrides = {"llama_server.port": chat_srv.port, "llama_server.embedding.port": embed_srv.port}
+        cfg = offline_config(**overrides)
+        client = make_client(db_path=seeded_db, probe_fn=probe_now, overrides=overrides,
+                             backend=LlamaCppChatBackend(cfg))
+        resp = client.post("/voice/transcribe", json={"audio_base64": b64})
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["text"] == "Next step."
+        sent = [p for path, p in chat_srv.requests if path == "/v1/chat/completions"]
+        part = sent[0]["messages"][-1]["content"][0]
+        assert part["type"] == "input_audio"
+        assert part["input_audio"] == {"data": b64, "format": "wav"}

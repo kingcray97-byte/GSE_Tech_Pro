@@ -47,6 +47,8 @@ public static class AiServiceProtocol
     public const string GuidedNextPath = "/guided/next";
     /// <summary>Phase 7.4 photo inspection (<see cref="PhotoInspectionRequest"/>).</summary>
     public const string VisionInspectPath = "/vision/inspect";
+    /// <summary>Phase 7.5a speech to text (<see cref="VoiceTranscriptionRequest"/>).</summary>
+    public const string VoiceTranscribePath = "/voice/transcribe";
 }
 
 /// <summary>Error codes returned in <see cref="AiError.Code"/> (mirrors <c>HostErrorCodes</c> style).</summary>

@@ -2106,21 +2106,62 @@
                                 </StackPanel>
                             </ScrollViewer>
 
+                            <!-- Push-to-talk (7.5a): the words go into the box below; nothing is sent until Send is tapped -->
                             <Grid ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" MaxWidth="520" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ComboBox MinHeight="{StaticResource MinTouchSize}" MinWidth="240" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Microphone"
+                                          ItemsSource="{x:Bind ViewModel.Microphones}"
+                                          SelectedItem="{x:Bind ViewModel.SelectedMicrophone, Mode=TwoWay}"
+                                          DisplayMemberPath="Name" />
+                                <TextBox Grid.Column="1" MinHeight="{StaticResource MinTouchSize}" VerticalContentAlignment="Center"
+                                         AutomationProperties.Name="Words the simulated microphone says"
+                                         PlaceholderText="Words the simulated microphone says"
+                                         Visibility="{x:Bind ViewModel.SimulatedVoicePhraseVisibility, Mode=OneWay}"
+                                         Text="{x:Bind ViewModel.SimulatedVoicePhrase, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <!-- A Grid, not a horizontal StackPanel: the status must wrap, not run off the right edge -->
+                                <Grid Grid.Column="2" ColumnSpacing="8" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Width="12" Height="12" Fill="#E53935" VerticalAlignment="Center"
+                                             Visibility="{x:Bind ViewModel.VoiceListeningVisibility, Mode=OneWay}" />
+                                    <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.VoiceStatusText, Mode=OneWay}" TextWrapping="Wrap" VerticalAlignment="Center"
+                                               FontSize="{StaticResource FontSizeSmall}" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                </Grid>
+                            </Grid>
+
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
-                                <TextBox Grid.Column="0"
+                                <Button Grid.Column="0" MinWidth="120" MinHeight="56" Style="{StaticResource AccentButtonStyle}"
+                                        AutomationProperties.Name="Push to talk"
+                                        ToolTipService.ToolTip="Tap, speak, tap again. The words go into the box; check them, then Send."
+                                        Command="{x:Bind ViewModel.ToggleTalkCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="{x:Bind ViewModel.TalkButtonGlyph, Mode=OneWay}" FontSize="20" />
+                                        <TextBlock Text="{x:Bind ViewModel.TalkButtonText, Mode=OneWay}" FontWeight="Bold" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <TextBox Grid.Column="1"
                                          MinHeight="{StaticResource MinTouchSize}"
                                          VerticalContentAlignment="Center"
                                          PlaceholderText="Ask the local AI technician assistant (e.g. hydraulic pressure port G3, SPN 94 FMI 3, or past repairs)…"
                                          Text="{x:Bind ViewModel.ChatInputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                          KeyDown="OnChatInputKeyDown" />
 
-                                <Button Grid.Column="1"
+                                <Button Grid.Column="2"
                                         Style="{StaticResource ActionTouchButtonStyle}"
                                         MinWidth="110"
                                         Command="{x:Bind ViewModel.SendChatMessageCommand}">
@@ -2130,7 +2171,7 @@
                                     </StackPanel>
                                 </Button>
 
-                                <Button Grid.Column="2"
+                                <Button Grid.Column="3"
                                         Style="{StaticResource ActionTouchButtonStyle}"
                                         Command="{x:Bind ViewModel.ClearChatHistoryCommand}"
                                         Content="Clear Chat" />
