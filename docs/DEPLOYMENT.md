@@ -9,12 +9,14 @@ This guide covers installing, upgrading, and managing GSE Tech Pro across multip
 | Component | Location | Purpose |
 |-----------|----------|---------|
 | **GSE Tech Pro App** (x64) | `C:\Program Files\GSE Tech Pro\` | Main WinUI 3 application |
-| **Device Host** (x86) | `C:\Program Files\GSE Tech Pro\DeviceHost32\` | 32-bit process for J2534/RP1210 vendor DLLs |
+| **Device Host** (x86) | `C:\Program Files\GSE Tech Pro\host32\` | 32-bit process for J2534/RP1210 vendor DLLs (the app looks only next to itself or in `host32\`) |
+| **Embedded Python** | `C:\Program Files\GSE Tech Pro\Python\` | Python 3.12.10 + every AI service package (no pip on the tablet) |
 | **Python AI Service** | `C:\Program Files\GSE Tech Pro\AiService\` | Local FastAPI service (RAG, tools, voice, vision) |
 | **llama.cpp runtime** | `C:\Program Files\GSE Tech Pro\llama.cpp\` | `llama-server.exe` (pinned CPU/AVX2 build, MIT). Started and stopped by the AI service on 127.0.0.1; no Windows service (ADR-012) |
-| **AI Models (GGUF)** | `C:\Program Files\GSE Tech Pro\models\` | lfm3-omni (~2.4 GB) + nomic-embed-text (~274 MB) |
+| **AI Models (GGUF)** | `C:\Program Files\GSE Tech Pro\models\` | `lfm3-omni.gguf` (LFM3-Omni-2B Q4_K_M, ~1.1 GB) + `nomic-embed-text.gguf` (v1.5), from `Reference\models\` at build time |
 | **AI service config** | `C:\Program Files\GSE Tech Pro\AiService\config\config.yaml` | Written by setup from `installer/ai-service-config.yaml` (bundled paths; cloud off; no keys) |
-| **Database & User Data** | `%APPDATA%\GSE Tech Pro\Data\` | SQLite DB, manuals, logs (per-user) |
+| **Default manuals, first-run config** | `C:\ProgramData\GSE Tech Pro\` | `Manuals\` (default library) and `first-run-config.json` (from `/CONFIG`), machine-wide |
+| **Database** | `%LOCALAPPDATA%\GseTechPro\gse-tech-pro.db` | Per Windows user, created by the app on first start; setup never writes or deletes it |
 
 ### Runtime Dependencies
 
@@ -54,7 +56,11 @@ For deploying to many tablets via USB or Intune:
 GSE-Tech-Pro-Setup.exe /SILENT /CONFIG="C:\path\to\config.ini"
 ```
 
-Create a config file from `installer/config-template.ini` with shop-specific values (shop name, technicians, devices). The installer reads this and pre-configures the app without user interaction.
+Create a config file from `installer/config-template.ini` with shop-specific values (shop name, technicians, devices). Setup writes them to `C:\ProgramData\GSE Tech Pro\first-run-config.json`. If the `/CONFIG` file does not exist, setup stops instead of installing with defaults. `install_local_model = false` skips the llama.cpp runtime and models.
+
+Useful extra switches: `/VERYSILENT /SUPPRESSMSGBOXES` (no windows at all), `/LOG="C:\path\setup.log"`, and `/COMPONENTS="app,device_host,ai_service,llama_cpp,llama_cpp\model_lfm3_omni,llama_cpp\model_nomic_embed,manuals_default"` (drop the ones you do not want; `/TYPE=core` installs only the app and device host).
+
+> **Not yet:** the app does not read `first-run-config.json` or handle `--first-run-wizard` yet, so the values are not applied on first start (see PLAN.md, installer notes).
 
 #### USB Deployment Example
 
@@ -89,9 +95,9 @@ If a silent install config file was provided, these values are pre-populated and
 To upgrade GSE Tech Pro:
 
 1. Run the new version's `GSE-Tech-Pro-Setup.exe`.
-2. The installer backs up the existing database before upgrading.
+2. Setup never opens, backs up or deletes the database; the app migrates it on its next start.
 3. **User data is preserved:** work orders, equipment records, manuals, and settings remain intact.
-4. Only application files are replaced; user data in `%APPDATA%\GSE Tech Pro\` is never deleted during an upgrade.
+4. Only application files in `C:\Program Files\GSE Tech Pro\` are replaced.
 
 ### USB Update Channel
 
@@ -108,7 +114,7 @@ To uninstall GSE Tech Pro:
 - **Via Settings:** Windows Settings → Apps → Installed apps → GSE Tech Pro → Uninstall
 - **Via Control Panel:** Programs and Features → GSE Tech Pro → Uninstall
 
-During uninstall, you are prompted whether to keep or remove user data (database, manuals, logs). Choose "Yes" to remove all data, "No" to keep it for potential reinstallation.
+Uninstall never deletes a technician's database (`%LOCALAPPDATA%\GseTechPro`). It asks whether to remove the default manuals and setup files in `C:\ProgramData\GSE Tech Pro` (default: No). A silent uninstall keeps them.
 
 ## Pre-Staging Manuals
 
@@ -166,6 +172,17 @@ Authenticode code signing is supported via environment variables. Set `SIGNTOOL_
 
 ### Runtime Bundling
 The installer bundles self-contained .NET 8 Desktop Runtime (both x64 and x86) and Windows App SDK, so no separate runtime installation is required on target tablets. This enables true offline deployment with zero prerequisites.
+
+### Building the Setup
+Needs Inno Setup 7, the .NET 8 SDK and uv on the build PC, plus these files in `Reference\` (git-ignored, see each `PINNED.txt`): `llama.cpp\`, `vcredist\vc_redist.x64.exe`, `python\python-3.12.10-embed-amd64.zip`, and `models\lfm3-omni.gguf` + `models\nomic-embed-text.gguf`.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File installer\build-installer.ps1
+```
+
+It publishes the app (win-x64) to `installer\build\app` and the device host (win-x86) to `installer\build\host32`, builds the embedded Python if it is missing, and writes `installer\Output\GSE-Tech-Pro-Setup-<version>.exe`. `-NoModels` builds a test setup without the GGUF files (a release build stops if they are missing). With `SIGNTOOL_CERT`/`SIGNTOOL_PASS` set it signs with signtool; otherwise it warns and builds unsigned.
+
+> **Licence:** Inno Setup 7.1.1 on the dev PC prints "Non-commercial use only" on every compile. Before shipping GSE Tech Pro commercially, check Inno Setup's licence terms (a commercial licence, or WiX instead): owner decision.
 
 ### Embedded Python for the AI Service
 `{app}\Python` is Python's official Windows embeddable package plus every package in `ai-service/pyproject.toml` (the OCR packages `pypdfium2` and `winrt-*` included). Setup never runs pip. Build it before compiling the installer:

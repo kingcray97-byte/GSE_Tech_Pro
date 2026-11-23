@@ -34,3 +34,6 @@ docs/logos/
 
 # Old draft of the spec: ignore
 docs/PROMPT.original.md
+# Installer build outputs (installer/build-installer.ps1)
+installer/build/
+installer/Output/
