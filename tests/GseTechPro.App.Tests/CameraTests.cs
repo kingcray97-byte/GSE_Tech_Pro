@@ -100,4 +100,53 @@ public sealed class CameraTests
         Assert.False(Assert.Single(vm.WorkOrderPhotos).IsSimulated);
         Assert.True(File.Exists(png)); // the original file is copied, never moved or changed
     }
+
+    [Fact]
+    public async Task SavedPhoto_CaptionCanBeEdited_KeepingTheSimulatedMark_AndListShowsAThumbnail()
+    {
+        var (vm, data) = await CreateAsync();
+        await using var _ = vm;
+        vm.SelectToolbarAction("Camera");
+        await vm.RefreshCameraSourcesAsync();
+        await vm.CreateActiveWorkOrderAsync();
+        await vm.TakePhotoAsync();
+        Assert.Equal(Visibility.Collapsed, vm.PhotoCaptionEditVisibility); // a new photo uses the Save-to-work-order caption box
+        vm.CameraCaption = "Leak";
+        var a = await vm.SavePhotoToWorkOrderAsync();
+
+        var row = Assert.Single(vm.WorkOrderPhotos);
+        Assert.NotNull(row.ThumbnailUri);
+        Assert.Equal(Visibility.Visible, row.ThumbnailVisibility);
+        Assert.Equal(Visibility.Collapsed, row.MissingThumbnailVisibility);
+
+        Assert.Equal(Visibility.Visible, vm.PhotoCaptionEditVisibility);
+        Assert.Equal(Visibility.Visible, vm.PhotoCaptionSimulatedVisibility);
+        Assert.Equal("Leak", vm.EditPhotoCaption); // shown without the SIMULATED mark
+        Assert.False(vm.SavePhotoCaptionCommand.CanExecute(null)); // unchanged
+
+        vm.EditPhotoCaption = "   ";
+        Assert.False(vm.SavePhotoCaptionCommand.CanExecute(null)); // blank
+
+        vm.EditPhotoCaption = "  Hydraulic leak at lift cylinder, left side ";
+        Assert.True(vm.SavePhotoCaptionCommand.CanExecute(null));
+        Assert.True(await vm.SavePhotoCaptionAsync());
+
+        var stored = await data.Attachments.GetByIdAsync(a!.Id);
+        Assert.Equal("SIMULATED Hydraulic leak at lift cylinder, left side", stored!.Caption);
+        Assert.Equal(a.FilePath, stored.FilePath); // the photo file is not touched
+        var updated = Assert.Single(vm.WorkOrderPhotos);
+        Assert.Equal(stored.Caption, updated.Caption);
+        Assert.True(updated.IsSimulated);
+        Assert.Same(updated, vm.SelectedWorkOrderPhoto); // selection kept
+        Assert.Equal(stored.Caption, vm.CameraPreviewTitle);
+        Assert.Equal("Hydraulic leak at lift cylinder, left side", vm.EditPhotoCaption);
+        Assert.Contains("Hydraulic leak", Assert.Single(vm.DiagnosticRecords, r => r.RecordType == "Photo").Preview);
+
+        // A missing file shows the placeholder instead of a thumbnail.
+        File.Delete(updated.FullPath);
+        await vm.ReloadWorkOrderAttachmentsAsync();
+        var missing = Assert.Single(vm.WorkOrderPhotos);
+        Assert.Null(missing.ThumbnailUri);
+        Assert.Equal(Visibility.Visible, missing.MissingThumbnailVisibility);
+    }
 }

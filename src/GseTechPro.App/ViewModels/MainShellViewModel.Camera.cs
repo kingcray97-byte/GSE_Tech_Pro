@@ -24,6 +24,11 @@ public sealed class WorkOrderPhotoRowViewModel(Attachment attachment, string ful
             : "";
     public bool FileExists => File.Exists(FullPath);
 
+    /// <summary>The photo file for the list thumbnail (decoded small by the list), or null when the file is missing.</summary>
+    public Uri? ThumbnailUri => FileExists ? new Uri(FullPath) : null;
+    public Visibility ThumbnailVisibility => FileExists ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility MissingThumbnailVisibility => FileExists ? Visibility.Collapsed : Visibility.Visible;
+
     /// <summary>"2 marks" when the photo has pen annotations (7.2), else "".</summary>
     public string MarksSummary => GseTechPro.Core.Contracts.PhotoAnnotations.Summary(
         GseTechPro.Core.Contracts.PhotoAnnotations.Deserialize(Attachment.AnnotationsJson).Count);
@@ -39,6 +44,7 @@ public sealed class WorkOrderPhotoRowViewModel(Attachment attachment, string ful
 public sealed partial class MainShellViewModel
 {
     public const string SimulatedCaptionPrefix = "SIMULATED ";
+    public const int MaxPhotoCaptionLength = 200;
     public const long MaxImportPhotoBytes = 40L * 1024 * 1024;
     public static IReadOnlyList<string> ImportablePhotoExtensions { get; } = [".jpg", ".jpeg", ".png"];
 
@@ -66,6 +72,7 @@ public sealed partial class MainShellViewModel
     [NotifyCanExecuteChangedFor(nameof(StartDataPlateReadingCommand))]
     [NotifyCanExecuteChangedFor(nameof(ReadDataPlateTextCommand))]
     [NotifyCanExecuteChangedFor(nameof(SaveDataPlateCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SavePhotoCaptionCommand))]
     private bool _isCameraBusy;
 
     [ObservableProperty]
@@ -81,6 +88,7 @@ public sealed partial class MainShellViewModel
     [NotifyPropertyChangedFor(nameof(AnnotateButtonVisibility))]
     [NotifyPropertyChangedFor(nameof(DataPlateButtonVisibility))]
     [NotifyPropertyChangedFor(nameof(InspectPhotoButtonVisibility))]
+    [NotifyPropertyChangedFor(nameof(PhotoCaptionEditVisibility))]
     [NotifyCanExecuteChangedFor(nameof(SavePhotoToWorkOrderCommand))]
     private CapturedPhoto? _pendingPhoto;
 
@@ -101,6 +109,18 @@ public sealed partial class MainShellViewModel
     [ObservableProperty]
     private WorkOrderPhotoRowViewModel? _selectedWorkOrderPhoto;
 
+    /// <summary>Caption of the selected saved photo, being edited (without the SIMULATED mark, which is kept on save).</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SavePhotoCaptionCommand))]
+    private string _editPhotoCaption = "";
+
+    /// <summary>The caption editor shows for a saved photo while no new photo waits to be saved.</summary>
+    public Visibility PhotoCaptionEditVisibility =>
+        PendingPhoto is null && SelectedWorkOrderPhoto is not null ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility PhotoCaptionSimulatedVisibility =>
+        SelectedWorkOrderPhoto is { IsSimulated: true } ? Visibility.Visible : Visibility.Collapsed;
+
     public Visibility NoWorkOrderPhotosVisibility => WorkOrderPhotos.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
     public string CameraWorkOrderText => ActiveWorkOrder is { } wo
@@ -118,6 +138,9 @@ public sealed partial class MainShellViewModel
     {
         LoadAnnotationsFor(value); // 7.2: the photo's saved marks (or none)
         EndDataPlateReading(discarded: true); // 7.3: a reading belongs to one photo
+        EditPhotoCaption = value is null ? "" : CaptionWithoutSimulatedMark(value.Attachment.Caption);
+        OnPropertyChanged(nameof(PhotoCaptionEditVisibility));
+        OnPropertyChanged(nameof(PhotoCaptionSimulatedVisibility));
         if (value is null)
             return;
         CameraPreviewPath = value.FileExists ? value.FullPath : null;
@@ -319,6 +342,56 @@ public sealed partial class MainShellViewModel
         {
             IsCameraBusy = false;
         }
+    }
+
+    /// <summary>The caption as the technician typed it (no SIMULATED mark).</summary>
+    public static string CaptionWithoutSimulatedMark(string? caption) =>
+        IsSimulatedCaption(caption) ? caption![SimulatedCaptionPrefix.Length..] : caption ?? "";
+
+    private bool CanSavePhotoCaption() =>
+        !IsCameraBusy && SelectedWorkOrderPhoto is { } p
+        && !string.IsNullOrWhiteSpace(EditPhotoCaption)
+        && EditPhotoCaption.Trim() != CaptionWithoutSimulatedMark(p.Attachment.Caption);
+
+    /// <summary>Changes a saved photo's caption. A simulator photo keeps its SIMULATED mark; the photo file is not touched.</summary>
+    [RelayCommand(CanExecute = nameof(CanSavePhotoCaption))]
+    public async Task<bool> SavePhotoCaptionAsync()
+    {
+        if (SelectedWorkOrderPhoto is not { } photo)
+            return false;
+        var text = EditPhotoCaption.Trim();
+        if (text.Length == 0)
+        {
+            CameraStatusText = "Type a caption first.";
+            return false;
+        }
+        if (text.Length > MaxPhotoCaptionLength)
+            text = text[..MaxPhotoCaptionLength];
+        var caption = (photo.IsSimulated ? SimulatedCaptionPrefix : "") + text;
+        var updated = photo.Attachment with { Caption = caption };
+
+        IsCameraBusy = true;
+        try
+        {
+            if (!await _dataServices.Attachments.UpdateAsync(updated))
+            {
+                CameraStatusText = "Could not save the caption: the photo record was not found.";
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            CameraStatusText = $"Could not save the caption: {ex.Message}";
+            return false;
+        }
+        finally
+        {
+            IsCameraBusy = false;
+        }
+
+        await ReloadWorkOrderAttachmentsAsync(photo.Attachment.TargetId); // keeps the selection, refreshes the list
+        CameraStatusText = $"Caption saved: {caption}";
+        return true;
     }
 
     /// <summary>Loads the work order's attachments: photos for the Camera page, photos and recordings for Integrated Diagnostics.</summary>
