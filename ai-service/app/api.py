@@ -32,6 +32,7 @@ from app.models import (
     GuidedStartRequest,
     GuidedStep,
     IngestAccepted,
+    ManualRemoved,
     IngestionStatus,
     IngestRequest,
     RepairHistorySearchRequest,
@@ -47,7 +48,8 @@ from app.models import (
 from app.perf import log_event
 from app.prompts import load_prompt
 from app.state import ServiceState
-from ingest.job import get_job
+from ingest.job import any_job_active, get_job
+from ingest.maintenance import soft_delete_manual
 from ingest.pipeline import start_ingest_job
 from rag.config import VEC0_DIM
 from rag.db import connect
@@ -289,6 +291,31 @@ def ingest(body: IngestRequest, request: Request) -> IngestAccepted:
     )
     log_event("ingest_start", paths=len(body.paths), force=body.force_reingest)
     return IngestAccepted(job_id=job.job_id)
+
+
+@router.delete("/manuals/{manual_id}", response_model=ManualRemoved)
+def remove_manual(manual_id: str, request: Request) -> ManualRemoved:
+    """Take a manual out of the library: its passages and vectors leave search and chat (soft delete, ADR rule 10:
+    the manuals row stays with deleted_at set and the stored PDF copy is kept). Importing the PDF again brings it back."""
+    svc = _svc(request)
+    if svc.db_path is None:
+        raise ApiError(500, "ingest_failed", "No database is configured.")
+    if len(manual_id) > 64:
+        raise ApiError(400, "invalid_request", "Unknown manual id.")
+    if any_job_active():
+        raise ApiError(409, "conflict", "A manual import is running. Remove the manual when it has finished.")
+    conn = connect(svc.db_path)
+    try:
+        row = conn.execute(
+            "SELECT id, title FROM manuals WHERE id = ? AND deleted_at IS NULL", (manual_id,)
+        ).fetchone()
+        if row is None:
+            raise ApiError(404, "not_found", "That manual is not in the library (it may already have been removed).")
+        removed = soft_delete_manual(conn, manual_id)
+    finally:
+        conn.close()
+    log_event("manual_removed", chunks=removed)
+    return ManualRemoved(manual_id=row["id"], title=row["title"], chunks_removed=removed)
 
 
 @router.get("/ingest/status", response_model=IngestionStatus)

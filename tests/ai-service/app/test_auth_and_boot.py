@@ -20,6 +20,7 @@ ENDPOINTS = [
     ("POST", "/search/manuals", {"query": "torque"}),
     ("POST", "/ingest", {"paths": ["C:/manuals"]}),
     ("GET", "/ingest/status?job_id=abc", None),
+    ("DELETE", "/manuals/abc", None),
     ("POST", "/guided/start", {"equipment_model_id": "m1"}),
     ("POST", "/guided/next", {"session_id": "s1"}),
     ("GET", "/no-such-route", None),  # unknown paths must not reveal routing either

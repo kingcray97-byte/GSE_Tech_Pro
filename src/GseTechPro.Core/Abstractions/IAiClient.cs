@@ -60,6 +60,10 @@ public interface IAiClient
     /// <summary>GET /ingest/status — progress for an ingestion job.</summary>
     Task<IngestionStatus> GetIngestStatusAsync(string jobId, CancellationToken cancellationToken = default);
 
+    /// <summary>DELETE /manuals/{manualId} — take a manual out of the library (soft delete; the PDF copy is kept).</summary>
+    Task<ManualRemoved> RemoveManualAsync(string manualId, CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("RemoveManualAsync is implemented in GseTechPro.App/Services/AiServiceClient.cs.");
+
     /// <summary>POST /guided/start — open a guided troubleshooting session (Phase 4 content).</summary>
     Task<GuidedStep> StartGuidedAsync(GuidedStartRequest request, CancellationToken cancellationToken = default);
 

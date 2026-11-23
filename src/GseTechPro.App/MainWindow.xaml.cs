@@ -59,6 +59,7 @@ public sealed partial class MainWindow : Window
         ViewModel.PickPhotoFileAsync = PickPhotoFileAsync;
         ViewModel.PickManualFilesAsync = PickManualFilesAsync;
         ViewModel.PickManualFolderAsync = PickManualFolderAsync;
+        ViewModel.ConfirmRemoveManualAsync = ConfirmRemoveManualAsync;
         HookAnnotationSurface();
         RootGrid.AddHandler(UIElement.KeyDownEvent, new KeyEventHandler(OnRootKeyDown), handledEventsToo: false);
 
@@ -136,6 +137,32 @@ public sealed partial class MainWindow : Window
         WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
         var folder = await picker.PickSingleFolderAsync();
         return folder?.Path;
+    }
+
+    private async void OnRemoveManualClick(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is ManualLibraryRowViewModel row)
+            await ViewModel.RemoveManualAsync(row);
+    }
+
+    /// <summary>Manual library › Remove: confirm before the manual leaves search and Tech Chat.</summary>
+    private async Task<bool> ConfirmRemoveManualAsync(ManualLibraryRowViewModel row)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "Remove this manual from the library?",
+            Content = new TextBlock
+            {
+                Text = $"{row.Title}\n\nIts passages will no longer appear in Manual Search or in Tech Chat answers. "
+                    + "The PDF copy on this tablet is kept, and you can import the PDF again to bring it back.",
+                TextWrapping = TextWrapping.Wrap,
+            },
+            PrimaryButtonText = "Remove",
+            CloseButtonText = "Keep it",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = RootGrid.XamlRoot,
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
     }
 
     private void ApplyScopeFullScreenPresenter(bool fullScreen)

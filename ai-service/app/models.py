@@ -252,6 +252,14 @@ class IngestAccepted(_Wire):
     job_id: str
 
 
+class ManualRemoved(_Wire):
+    """DELETE /manuals/{manual_id}: the manual left the library (soft delete; the PDF copy is kept)."""
+
+    manual_id: str
+    title: str
+    chunks_removed: int
+
+
 class IngestionErrorOut(_Wire):
     file: str
     message: str

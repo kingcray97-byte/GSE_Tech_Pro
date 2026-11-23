@@ -103,6 +103,12 @@ def register_job(job: IngestionJob) -> None:
             _REGISTRY.pop(next(iter(_REGISTRY)))
 
 
+def any_job_active() -> bool:
+    """True while an ingestion job is pending or running (a manual must not be removed under it)."""
+    with _REGISTRY_LOCK:
+        return any(job.state in ("pending", "running") for job in _REGISTRY.values())
+
+
 def get_job(job_id: str) -> IngestionJob:
     """Raises KeyError for unknown jobs (the endpoint maps this to 404 not_found)."""
     with _REGISTRY_LOCK:

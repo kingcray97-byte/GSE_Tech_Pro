@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using GseTechPro.App.Services;
 using GseTechPro.App.ViewModels;
 using GseTechPro.Core.Contracts;
+using GseTechPro.Core.Models;
 using GseTechPro.Data;
 using GseTechPro.Devices;
 using Microsoft.UI.Xaml;
@@ -170,6 +171,103 @@ public sealed class ManualImportTests
             new IngestionError { File = "", Message = "boom" },
         });
         Assert.Equal(new[] { "Ford.pdf, page 379: scanned page not searchable: OCR could not read it", "Import: boom" }, lines);
+    }
+
+    /// <summary>Answers DELETE /manuals/{id} like the service: soft-deletes the row in the shared database.</summary>
+    private sealed class RemoveHandler(Func<DataServices> data, HttpStatusCode status = HttpStatusCode.OK, string? errorBody = null) : HttpMessageHandler
+    {
+        public List<string> Requests { get; } = new();
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requests.Add($"{request.Method} {request.RequestUri!.AbsolutePath}");
+            if (status != HttpStatusCode.OK)
+                return new HttpResponseMessage(status) { Content = new StringContent(errorBody ?? "{}", Encoding.UTF8, "application/json") };
+            var id = Uri.UnescapeDataString(request.RequestUri.AbsolutePath["/manuals/".Length..]);
+            var manual = await data().Manuals.GetByIdAsync(id, cancellationToken);
+            await data().Manuals.SoftDeleteAsync(id, cancellationToken);
+            var body = $$"""{"manual_id":"{{id}}","title":"{{manual!.Title}}","chunks_removed":2030}""";
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
+        }
+    }
+
+    private static async Task<(MainShellViewModel Vm, DataServices Data)> CreateWithManualsAsync(Func<Func<DataServices>, HttpMessageHandler> handler)
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), $"gse-library-{Guid.NewGuid():N}", "gse.db");
+        Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+        var data = new DataServices(new DatabaseOptions { DatabasePath = dbPath });
+        await data.InitializeAsync();
+        await data.Manuals.AddAsync(new Manual
+        {
+            Id = "m-660", Title = "TUG Model 660-28 Maintenance and Parts Manual", Manufacturer = "TUG", ModelFamily = "660-28",
+            FilePath = "manuals/a.pdf", FileHash = "a", PageCount = 1724, ImportedAt = "2026-11-20T12:00:00Z",
+        });
+        await data.Manuals.AddAsync(new Manual
+        {
+            Id = "m-ford", Title = "Ford/EDI GCP Diagnostic Support Manual", FilePath = "manuals/b.pdf", FileHash = "b", PageCount = 1,
+        });
+        var client = new AiServiceClient(new HttpClient(handler(() => data)), Token);
+        var vm = new MainShellViewModel(data, new DiagnosticAdapterFactory(), aiClient: client);
+        await vm.ReloadDatabaseRecordsAsync();
+        return (vm, data);
+    }
+
+    [Fact]
+    public async Task Library_ListsManuals_RemoveAfterConfirm_DropsItFromListAndSearchHits()
+    {
+        RemoveHandler? handler = null;
+        var (vm, _) = await CreateWithManualsAsync(d => handler = new RemoveHandler(d));
+
+        Assert.Equal("Manual library (2 manuals)", vm.ManualLibraryHeader);
+        Assert.Equal(Visibility.Collapsed, vm.NoManualsVisibility);
+        Assert.Equal(new[] { "Ford/EDI GCP Diagnostic Support Manual", "TUG Model 660-28 Maintenance and Parts Manual" },
+            vm.ManualLibraryRows.Select(r => r.Title));
+        Assert.StartsWith("1 page · imported ", vm.ManualLibraryRows[0].Detail, StringComparison.Ordinal); // no maker or model on file
+        Assert.StartsWith("TUG · 660-28 · 1724 pages · imported 2026-11-2", vm.ManualLibraryRows[1].Detail, StringComparison.Ordinal);
+
+        vm.ManualSearchResults.Add(new ManualSearchResultViewModel(new SearchResult { ManualId = "m-660", ChunkId = "c1" }, false));
+        vm.ManualSearchResults.Add(new ManualSearchResultViewModel(new SearchResult { ManualId = "m-ford", ChunkId = "c2" }, false));
+        var row = vm.ManualLibraryRows[1];
+
+        ManualLibraryRowViewModel? asked = null;
+        vm.ConfirmRemoveManualAsync = r => { asked = r; return Task.FromResult(false); };
+        await vm.RemoveManualAsync(row);
+        Assert.Same(row, asked);
+        Assert.Empty(handler!.Requests); // "Keep it" sends nothing
+        Assert.Equal(2, vm.ManualLibraryRows.Count);
+
+        vm.ConfirmRemoveManualAsync = _ => Task.FromResult(true);
+        await vm.RemoveManualAsync(row);
+        Assert.Equal(new[] { "DELETE /manuals/m-660" }, handler.Requests);
+        Assert.Equal("Manual library (1 manual)", vm.ManualLibraryHeader);
+        Assert.Equal("m-ford", Assert.Single(vm.ManualLibraryRows).Id);
+        Assert.Equal("m-ford", Assert.Single(vm.ManualSearchResults).ManualId);
+        Assert.Equal("Removed \"TUG Model 660-28 Maintenance and Parts Manual\": 2030 passage(s) no longer appear in search or Tech Chat. "
+            + "The PDF copy is kept; import it again to bring it back.", vm.ManualLibraryStatusText);
+    }
+
+    [Fact]
+    public async Task Library_Remove_RefusedBusyAlreadyGoneAndServiceDown()
+    {
+        var (busy, _) = await CreateWithManualsAsync(_ => new RemoveHandler(() => null!, HttpStatusCode.Conflict,
+            """{"error":{"code":"conflict","message":"A manual import is running. Remove the manual when it has finished."}}"""));
+        busy.ConfirmRemoveManualAsync = _ => Task.FromResult(true);
+        await busy.RemoveManualAsync(busy.ManualLibraryRows[0]);
+        Assert.Equal("Could not remove \"Ford/EDI GCP Diagnostic Support Manual\": A manual import is running. Remove the manual when it has finished.",
+            busy.ManualLibraryStatusText);
+        Assert.Equal(2, busy.ManualLibraryRows.Count);
+
+        var (gone, _) = await CreateWithManualsAsync(_ => new RemoveHandler(() => null!, HttpStatusCode.NotFound,
+            """{"error":{"code":"not_found","message":"That manual is not in the library."}}"""));
+        gone.ConfirmRemoveManualAsync = _ => Task.FromResult(true);
+        await gone.RemoveManualAsync(gone.ManualLibraryRows[0]);
+        Assert.Equal("\"Ford/EDI GCP Diagnostic Support Manual\" was already removed.", gone.ManualLibraryStatusText);
+
+        var (down, _) = await CreateWithManualsAsync(_ => new ThrowingHandler());
+        down.ConfirmRemoveManualAsync = _ => Task.FromResult(true);
+        await down.RemoveManualAsync(down.ManualLibraryRows[0]);
+        Assert.StartsWith("AI service is not reachable", down.ManualLibraryStatusText, StringComparison.Ordinal);
+        Assert.Equal(2, down.ManualLibraryRows.Count);
     }
 
     private sealed class ThrowingHandler : HttpMessageHandler

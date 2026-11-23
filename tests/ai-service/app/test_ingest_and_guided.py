@@ -162,3 +162,51 @@ def test_guided_next_rejects_unknown_verdicts(make_client, empty_db, verdict):
 def test_seed_path_constant_points_at_the_real_manual():
     # Guards the fixture path: a moved manual should fail loudly here, not silently skip everything.
     assert MAINT_600I.name.endswith("(Delta).pdf")
+
+
+def test_remove_manual_takes_it_out_of_search_and_reimport_brings_it_back(make_client, empty_db):
+    """DELETE /manuals/{id}: soft delete (row and PDF copy kept), passages leave search; a second import restores."""
+    import sqlite3
+
+    from ingest import job as job_module
+
+    src = require_seed()
+    client = make_client(db_path=empty_db)
+    _wait_done(client, client.post("/ingest", json={"paths": [str(src)]}).json()["job_id"])
+    hit = client.post("/search/manuals", json={"query": "flexramp lubricate axle"}).json()["results"][0]
+    manual_id = hit["manual_id"]
+
+    # Refused while an import is running (a fill-in could be writing to this manual).
+    busy = job_module.IngestionJob()
+    busy.state = "running"
+    job_module.register_job(busy)
+    try:
+        conflict = client.delete(f"/manuals/{manual_id}")
+        assert conflict.status_code == 409 and conflict.json()["error"]["code"] == "conflict"
+    finally:
+        busy.state = "succeeded"
+
+    resp = client.delete(f"/manuals/{manual_id}")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["manual_id"] == manual_id and body["title"] == hit["manual_title"] and body["chunks_removed"] > 0
+    assert client.post("/search/manuals", json={"query": "flexramp lubricate axle"}).json()["results"] == []
+
+    conn = sqlite3.connect(empty_db)
+    try:
+        deleted_at, file_path = conn.execute("SELECT deleted_at, file_path FROM manuals WHERE id = ?", (manual_id,)).fetchone()
+        assert deleted_at is not None  # soft delete: the row stays
+        live = conn.execute(
+            "SELECT count(*) FROM manual_chunks WHERE manual_id = ? AND deleted_at IS NULL", (manual_id,)).fetchone()[0]
+        assert live == 0
+    finally:
+        conn.close()
+    assert (empty_db.parent / file_path).exists()  # the stored PDF copy is kept
+
+    again = client.delete(f"/manuals/{manual_id}")
+    assert again.status_code == 404 and again.json()["error"]["code"] == "not_found"
+    assert client.delete("/manuals/no-such-manual").status_code == 404
+
+    _wait_done(client, client.post("/ingest", json={"paths": [str(src)]}).json()["job_id"])
+    back = client.post("/search/manuals", json={"query": "flexramp lubricate axle"}).json()["results"]
+    assert back and back[0]["manual_id"] != manual_id  # imported again as a new library entry

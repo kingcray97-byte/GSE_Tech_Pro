@@ -3116,6 +3116,53 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </ScrollViewer>
+                            <!-- Manual library: what is imported, with Remove (soft delete through the AI service) -->
+                            <Expander HorizontalAlignment="Stretch"
+                                      HorizontalContentAlignment="Stretch"
+                                      MinHeight="{StaticResource MinTouchSize}"
+                                      Header="{x:Bind ViewModel.ManualLibraryHeader, Mode=OneWay}">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="No manuals are imported yet. Use Import PDFs… or Import folder…."
+                                               FontSize="{StaticResource FontSizeSmall}"
+                                               Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                               Visibility="{x:Bind ViewModel.NoManualsVisibility, Mode=OneWay}" />
+                                    <TextBlock Text="{x:Bind ViewModel.ManualLibraryStatusText, Mode=OneWay}"
+                                               Visibility="{x:Bind ViewModel.ManualLibraryStatusVisibility, Mode=OneWay}"
+                                               FontSize="{StaticResource FontSizeSmall}"
+                                               TextWrapping="Wrap"
+                                               Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                    <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{x:Bind ViewModel.ManualLibraryRows, Mode=OneWay}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:ManualLibraryRowViewModel">
+                                                    <Grid ColumnSpacing="10" Padding="0,4">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                                                            <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                            <TextBlock Text="{x:Bind Detail}"
+                                                                       FontSize="{StaticResource FontSizeSmall}"
+                                                                       TextWrapping="Wrap"
+                                                                       Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                        </StackPanel>
+                                                        <Button Grid.Column="1"
+                                                                Style="{StaticResource ActionTouchButtonStyle}"
+                                                                Click="OnRemoveManualClick"
+                                                                AutomationProperties.Name="Remove manual from library">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE74D;" FontSize="14" />
+                                                                <TextBlock Text="Remove" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </StackPanel>
+                            </Expander>
                         </StackPanel>
                     </Border>
 

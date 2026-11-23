@@ -4502,6 +4502,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
             {
                 ImportedManuals.Add(m);
             }
+            RefreshManualLibraryRows();
         }
         catch
         {

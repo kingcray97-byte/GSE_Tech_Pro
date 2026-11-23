@@ -158,6 +158,81 @@ public partial class MainShellViewModel
         return lines;
     }
 
+    // ---- Manual library: what is imported, and Remove ----
+
+    public ObservableCollection<ManualLibraryRowViewModel> ManualLibraryRows { get; } = new();
+
+    public string ManualLibraryHeader => ManualLibraryRows.Count == 1
+        ? "Manual library (1 manual)"
+        : $"Manual library ({ManualLibraryRows.Count} manuals)";
+
+    public Visibility NoManualsVisibility => ManualLibraryRows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    /// <summary>Set by MainWindow: asks the technician to confirm removing a manual (false = keep it).</summary>
+    public Func<ManualLibraryRowViewModel, Task<bool>>? ConfirmRemoveManualAsync { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ManualLibraryStatusVisibility))]
+    private string _manualLibraryStatusText = "";
+
+    public Visibility ManualLibraryStatusVisibility =>
+        string.IsNullOrWhiteSpace(ManualLibraryStatusText) ? Visibility.Collapsed : Visibility.Visible;
+
+    private void RefreshManualLibraryRows()
+    {
+        ManualLibraryRows.Clear();
+        foreach (var manual in ImportedManuals.OrderBy(m => m.Title, StringComparer.CurrentCultureIgnoreCase))
+            ManualLibraryRows.Add(new ManualLibraryRowViewModel(manual));
+        OnPropertyChanged(nameof(ManualLibraryHeader));
+        OnPropertyChanged(nameof(NoManualsVisibility));
+    }
+
+    /// <summary>Takes a manual out of the library through the AI service after the technician confirms. Soft delete:
+    /// its passages leave search and Tech Chat; the record and the stored PDF copy are kept, and importing the PDF again
+    /// brings it back.</summary>
+    public async Task RemoveManualAsync(ManualLibraryRowViewModel? row, CancellationToken cancellationToken = default)
+    {
+        if (row is null)
+            return;
+        if (IsManualImportRunning)
+        {
+            ManualLibraryStatusText = "Wait for the import to finish before removing a manual.";
+            return;
+        }
+        if (ConfirmRemoveManualAsync is null || !await ConfirmRemoveManualAsync(row))
+            return;
+
+        try
+        {
+            var removed = await _aiClient.RemoveManualAsync(row.Id, cancellationToken);
+            await ReloadManualsCatalogAsync();
+            for (var i = ManualSearchResults.Count - 1; i >= 0; i--)
+            {
+                if (string.Equals(ManualSearchResults[i].ManualId, row.Id, StringComparison.OrdinalIgnoreCase))
+                    ManualSearchResults.RemoveAt(i);
+            }
+            OnPropertyChanged(nameof(NoManualSearchResultsVisibility));
+            var title = string.IsNullOrWhiteSpace(removed.Title) ? row.Title : removed.Title;
+            ManualLibraryStatusText =
+                $"Removed \"{title}\": {removed.ChunksRemoved} passage(s) no longer appear in search or Tech Chat. "
+                + "The PDF copy is kept; import it again to bring it back.";
+        }
+        catch (AiServiceException ex) when (ex.Code == AiErrorCodes.NotFound)
+        {
+            await ReloadManualsCatalogAsync();
+            ManualLibraryStatusText = $"\"{row.Title}\" was already removed.";
+        }
+        catch (AiServiceException ex)
+        {
+            ManualLibraryStatusText = $"Could not remove \"{row.Title}\": {ex.Error.Message}";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            AiState.NotifyChatCallFailure(ex);
+            ManualLibraryStatusText = "AI service is not reachable — start the local AI service to remove a manual.";
+        }
+    }
+
     private static string DescribeFinishedImport(IngestionStatus status)
     {
         var problems = status.Errors.Count == 0 ? "" : " See the list below for what could not be read.";
@@ -173,5 +248,34 @@ public partial class MainShellViewModel
                 $"Import cancelled after {status.FilesDone} of {status.FilesTotal} file(s)." + problems,
             _ => "Import failed: no manual could be imported." + problems,
         };
+    }
+}
+
+/// <summary>One manual in the Manual Search library list.</summary>
+public sealed class ManualLibraryRowViewModel
+{
+    public ManualLibraryRowViewModel(GseTechPro.Core.Models.Manual manual)
+    {
+        Manual = manual ?? throw new ArgumentNullException(nameof(manual));
+    }
+
+    public GseTechPro.Core.Models.Manual Manual { get; }
+
+    public string Id => Manual.Id;
+
+    public string Title => string.IsNullOrWhiteSpace(Manual.Title) ? "Untitled manual" : Manual.Title;
+
+    /// <summary>"TUG · 660-28 · 1724 pages · imported 2026-11-20".</summary>
+    public string Detail
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(Manual.Manufacturer)) parts.Add(Manual.Manufacturer!);
+            if (!string.IsNullOrWhiteSpace(Manual.ModelFamily)) parts.Add(Manual.ModelFamily!);
+            if (Manual.PageCount is > 0) parts.Add(Manual.PageCount == 1 ? "1 page" : $"{Manual.PageCount} pages");
+            if (DateTimeOffset.TryParse(Manual.ImportedAt, out var at)) parts.Add($"imported {at.ToLocalTime():yyyy-MM-dd}");
+            return string.Join(" · ", parts);
+        }
     }
 }

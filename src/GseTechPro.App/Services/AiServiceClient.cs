@@ -230,6 +230,19 @@ public sealed class AiServiceClient : IAiClient, IDisposable
     }
 
     /// <inheritdoc />
+    public async Task<ManualRemoved> RemoveManualAsync(
+        string manualId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(manualId);
+        return await SendAsync<ManualRemoved>(
+            HttpMethod.Delete,
+            $"{AiServiceProtocol.ManualsPath}/{Uri.EscapeDataString(manualId)}",
+            requestBody: null,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<GuidedStep> StartGuidedAsync(
         GuidedStartRequest request,
         CancellationToken cancellationToken = default)

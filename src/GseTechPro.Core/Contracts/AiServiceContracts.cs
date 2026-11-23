@@ -43,6 +43,8 @@ public static class AiServiceProtocol
     public const string SearchRepairHistoryPath = "/search/repair-history";
     public const string IngestPath = "/ingest";
     public const string IngestStatusPath = "/ingest/status";
+    /// <summary>DELETE {ManualsPath}/{manual_id}: take a manual out of the library (<see cref="ManualRemoved"/>).</summary>
+    public const string ManualsPath = "/manuals";
     public const string GuidedStartPath = "/guided/start";
     public const string GuidedNextPath = "/guided/next";
     /// <summary>Phase 7.4 photo inspection (<see cref="PhotoInspectionRequest"/>).</summary>
@@ -214,6 +216,15 @@ public sealed record IngestionStatus
     /// <summary>File currently being processed (null unless <see cref="State"/> is running).</summary>
     public string? CurrentFile { get; init; }
     public IReadOnlyList<IngestionError> Errors { get; init; } = Array.Empty<IngestionError>();
+}
+
+/// <summary>DELETE /manuals/{manual_id} result. Soft delete: the manuals row stays (deleted_at set) and the stored PDF copy
+/// is kept; its passages and vectors leave search and chat. Importing the PDF again adds it back.</summary>
+public sealed record ManualRemoved
+{
+    public string ManualId { get; init; } = "";
+    public string Title { get; init; } = "";
+    public int ChunksRemoved { get; init; }
 }
 
 /// <summary>A per-file ingestion failure (non-fatal; reported in <see cref="IngestionStatus.Errors"/>).</summary>
