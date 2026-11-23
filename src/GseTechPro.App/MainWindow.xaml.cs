@@ -60,6 +60,7 @@ public sealed partial class MainWindow : Window
         ViewModel.PickManualFilesAsync = PickManualFilesAsync;
         ViewModel.PickManualFolderAsync = PickManualFolderAsync;
         ViewModel.ConfirmRemoveManualAsync = ConfirmRemoveManualAsync;
+        ViewModel.ConfirmDeletePhotoAsync = ConfirmDeletePhotoAsync;
         HookAnnotationSurface();
         RootGrid.AddHandler(UIElement.KeyDownEvent, new KeyEventHandler(OnRootKeyDown), handledEventsToo: false);
 
@@ -158,6 +159,26 @@ public sealed partial class MainWindow : Window
                 TextWrapping = TextWrapping.Wrap,
             },
             PrimaryButtonText = "Remove",
+            CloseButtonText = "Keep it",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = RootGrid.XamlRoot,
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+
+    /// <summary>Camera: confirms deleting a saved photo from the work order (soft delete; the file is kept).</summary>
+    private async Task<bool> ConfirmDeletePhotoAsync(WorkOrderPhotoRowViewModel row)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "Delete this photo from the work order?",
+            Content = new TextBlock
+            {
+                Text = $"{row.Caption}\n\nIt will no longer show on the Camera page or in Integrated Diagnostics, "
+                    + "and its marks go with it. The photo file is kept on this tablet.",
+                TextWrapping = TextWrapping.Wrap,
+            },
+            PrimaryButtonText = "Delete",
             CloseButtonText = "Keep it",
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = RootGrid.XamlRoot,

@@ -57,6 +57,9 @@ public sealed partial class MainShellViewModel
     /// <summary>Set by the window: shows a file picker and returns the chosen photo path, or null.</summary>
     public Func<Task<string?>>? PickPhotoFileAsync { get; set; }
 
+    /// <summary>Set by the window: asks the technician to confirm deleting a photo. Null means no dialog (tests).</summary>
+    public Func<WorkOrderPhotoRowViewModel, Task<bool>>? ConfirmDeletePhotoAsync { get; set; }
+
     public bool IsCameraViewVisible => ActiveSectionKey == "Camera";
     public Visibility CameraViewVisibility => IsCameraViewVisible ? Visibility.Visible : Visibility.Collapsed;
 
@@ -73,6 +76,7 @@ public sealed partial class MainShellViewModel
     [NotifyCanExecuteChangedFor(nameof(ReadDataPlateTextCommand))]
     [NotifyCanExecuteChangedFor(nameof(SaveDataPlateCommand))]
     [NotifyCanExecuteChangedFor(nameof(SavePhotoCaptionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DeletePhotoCommand))]
     private bool _isCameraBusy;
 
     [ObservableProperty]
@@ -141,6 +145,7 @@ public sealed partial class MainShellViewModel
         EditPhotoCaption = value is null ? "" : CaptionWithoutSimulatedMark(value.Attachment.Caption);
         OnPropertyChanged(nameof(PhotoCaptionEditVisibility));
         OnPropertyChanged(nameof(PhotoCaptionSimulatedVisibility));
+        DeletePhotoCommand.NotifyCanExecuteChanged();
         if (value is null)
             return;
         CameraPreviewPath = value.FileExists ? value.FullPath : null;
@@ -391,6 +396,60 @@ public sealed partial class MainShellViewModel
 
         await ReloadWorkOrderAttachmentsAsync(photo.Attachment.TargetId); // keeps the selection, refreshes the list
         CameraStatusText = $"Caption saved: {caption}";
+        return true;
+    }
+
+    private bool CanDeletePhoto() => !IsCameraBusy && SelectedWorkOrderPhoto is not null;
+
+    /// <summary>
+    /// Deletes the selected saved photo from the work order after the technician confirms. This is a soft
+    /// delete (the attachment row gets <c>deleted_at</c>): the photo file stays on disk and nothing is erased
+    /// (rule 10). The next photo in the list is selected, or the preview is cleared.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanDeletePhoto))]
+    public async Task<bool> DeletePhotoAsync()
+    {
+        if (SelectedWorkOrderPhoto is not { } photo)
+            return false;
+        if (ConfirmDeletePhotoAsync is not null && !await ConfirmDeletePhotoAsync(photo))
+            return false;
+
+        int index = WorkOrderPhotos.IndexOf(photo);
+        IsCameraBusy = true;
+        try
+        {
+            // The repository's delete is a soft delete on tables with deleted_at (sets it; never removes the row).
+            if (!await _dataServices.Attachments.DeleteAsync(photo.Id))
+            {
+                CameraStatusText = "Could not delete the photo: the photo record was not found.";
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            CameraStatusText = $"Could not delete the photo: {ex.Message}";
+            return false;
+        }
+        finally
+        {
+            IsCameraBusy = false;
+        }
+
+        // Leave any tool that was working on this photo.
+        IsAnnotating = false;
+        if (IsPhotoInspectionOpen)
+            ClosePhotoInspection();
+        SelectedWorkOrderPhoto = null;
+        await ReloadWorkOrderAttachmentsAsync(photo.Attachment.TargetId);
+        if (WorkOrderPhotos.Count > 0)
+            SelectedWorkOrderPhoto = WorkOrderPhotos[Math.Clamp(index, 0, WorkOrderPhotos.Count - 1)];
+        else
+        {
+            CameraPreviewPath = null;
+            CameraPreviewTitle = "No photo yet";
+        }
+        CameraStatusText = $"Deleted from the work order: {photo.Caption}";
+        StatusBannerMessage = CameraStatusText;
         return true;
     }
 

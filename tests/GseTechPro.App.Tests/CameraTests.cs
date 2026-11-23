@@ -149,4 +149,57 @@ public sealed class CameraTests
         Assert.Null(missing.ThumbnailUri);
         Assert.Equal(Visibility.Visible, missing.MissingThumbnailVisibility);
     }
+
+    [Fact]
+    public async Task DeletePhoto_AsksFirst_SoftDeletes_KeepsTheFile_AndSelectsTheNextPhoto()
+    {
+        var (vm, data) = await CreateAsync();
+        await using var _ = vm;
+        vm.SelectToolbarAction("Camera");
+        await vm.RefreshCameraSourcesAsync();
+        await vm.CreateActiveWorkOrderAsync();
+        Assert.False(vm.DeletePhotoCommand.CanExecute(null)); // nothing selected
+
+        var saved = new List<GseTechPro.Core.Models.Attachment>();
+        foreach (var caption in new[] { "First", "Second" })
+        {
+            await vm.TakePhotoAsync();
+            vm.CameraCaption = caption;
+            saved.Add((await vm.SavePhotoToWorkOrderAsync())!);
+        }
+        Assert.Equal(2, vm.WorkOrderPhotos.Count);
+        var target = vm.WorkOrderPhotos.Single(p => p.Id == saved[1].Id);
+        vm.SelectedWorkOrderPhoto = target;
+        Assert.True(vm.DeletePhotoCommand.CanExecute(null));
+
+        // Declined: nothing changes.
+        WorkOrderPhotoRowViewModel? asked = null;
+        vm.ConfirmDeletePhotoAsync = row => { asked = row; return Task.FromResult(false); };
+        Assert.False(await vm.DeletePhotoAsync());
+        Assert.Same(target, asked);
+        Assert.Equal(2, vm.WorkOrderPhotos.Count);
+        Assert.Null((await data.Attachments.GetByIdAsync(target.Id))!.DeletedAt);
+
+        // Confirmed: soft-deleted, file kept, gone from the list and Integrated Diagnostics, next photo selected.
+        vm.ConfirmDeletePhotoAsync = _ => Task.FromResult(true);
+        Assert.True(await vm.DeletePhotoAsync());
+        Assert.Null(await data.Attachments.GetByIdAsync(target.Id)); // soft-deleted rows are hidden from reads
+        Assert.True(File.Exists(target.FullPath)); // the photo file is kept
+        var left = Assert.Single(vm.WorkOrderPhotos);
+        Assert.Equal(saved[0].Id, left.Id);
+        Assert.Same(left, vm.SelectedWorkOrderPhoto);
+        Assert.Equal(left.FullPath, vm.CameraPreviewPath);
+        Assert.DoesNotContain(vm.DiagnosticRecords, r => r.RecordType == "Photo" && r.Preview.Contains("Second"));
+        Assert.Contains("Deleted", vm.CameraStatusText);
+
+        // Last photo: the preview is cleared.
+        Assert.True(await vm.DeletePhotoAsync());
+        Assert.Empty(vm.WorkOrderPhotos);
+        Assert.Null(vm.SelectedWorkOrderPhoto);
+        Assert.Null(vm.CameraPreviewPath);
+        Assert.Equal("No photo yet", vm.CameraPreviewTitle);
+        Assert.Equal(Visibility.Visible, vm.NoWorkOrderPhotosVisibility);
+        Assert.Equal(Visibility.Collapsed, vm.PhotoCaptionEditVisibility);
+        Assert.False(vm.DeletePhotoCommand.CanExecute(null));
+    }
 }

@@ -5923,6 +5923,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <Border Background="{ThemeResource SimBadgeBackgroundBrush}" BorderBrush="{ThemeResource SimBadgeBorderBrush}"
                                 BorderThickness="1" CornerRadius="{StaticResource BadgeCornerRadius}" Padding="6,2" VerticalAlignment="Bottom"
@@ -5938,6 +5939,14 @@
                         <Button Grid.Column="2" Style="{StaticResource ActionTouchButtonStyle}" VerticalAlignment="Bottom"
                                 Content="Save caption" AutomationProperties.Name="Save the caption of the selected photo"
                                 Command="{x:Bind ViewModel.SavePhotoCaptionCommand}" />
+                        <Button Grid.Column="3" MinHeight="{StaticResource MinTouchSize}" MinWidth="120" VerticalAlignment="Bottom"
+                                AutomationProperties.Name="Delete the selected photo from the work order"
+                                Command="{x:Bind ViewModel.DeletePhotoCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xE74D;" FontSize="16" />
+                                <TextBlock Text="Delete photo" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                     </Grid>
 
                     <Grid Grid.Row="2" ColumnSpacing="12">
