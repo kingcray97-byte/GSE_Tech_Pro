@@ -118,3 +118,19 @@ def test_service_host_must_be_loopback():
 )
 def test_token_matches_is_strict(provided, expected, ok):
     assert token_matches(provided, expected) is ok
+
+
+def test_without_config_arg_the_setup_written_config_wins(tmp_path, monkeypatch):
+    # Installed tablet: setup writes AiService\config\config.yaml and does not ship app\config.yaml.
+    import rag.config as rag_config
+    from app.main import parse_args
+
+    installed = tmp_path / "config" / "config.yaml"
+    installed.parent.mkdir()
+    installed.write_text("service:\n  port: 9431\n  token: from-setup\n", encoding="utf-8")
+    monkeypatch.setattr(rag_config, "_CONFIG_CANDIDATES", (installed, tmp_path / "app" / "config.yaml"))
+
+    args = parse_args([])
+    assert args.config is None
+    config = rag_config.load_config(args.config, overrides={"port": None, "token": None})
+    assert (config.service.port, config.service.token) == (9431, "from-setup")

@@ -20,6 +20,8 @@ __pycache__/
 *.pyc
 .venv/
 .pytest_cache/
+# Embedded Python built by installer/build-python-embedded.ps1 (large; rebuilt from the lock file)
+ai-service/dist/
 
 # Local data and logs
 *.db

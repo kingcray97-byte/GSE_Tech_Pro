@@ -167,6 +167,15 @@ Authenticode code signing is supported via environment variables. Set `SIGNTOOL_
 ### Runtime Bundling
 The installer bundles self-contained .NET 8 Desktop Runtime (both x64 and x86) and Windows App SDK, so no separate runtime installation is required on target tablets. This enables true offline deployment with zero prerequisites.
 
+### Embedded Python for the AI Service
+`{app}\Python` is Python's official Windows embeddable package plus every package in `ai-service/pyproject.toml` (the OCR packages `pypdfium2` and `winrt-*` included). Setup never runs pip. Build it before compiling the installer:
+
+1. Put `python-3.12.*-embed-amd64.zip` (python.org, "Windows embeddable package (64-bit)") in `Reference\python\` and its sha256 in `Reference\python\PINNED.txt` as `sha256 <hash>`.
+2. Run `powershell -ExecutionPolicy Bypass -File installer\build-python-embedded.ps1` (needs `uv` and PyPI access on the build PC). It installs `installer\python-requirements.lock.txt` (hash-pinned; `-UpdateLock` re-resolves it after a `pyproject.toml` change) into `ai-service\dist\python-embedded`.
+3. The script then copies the runtime and the service into a temp folder in the installed layout and runs `installer\check_embedded_python.py` with the embedded `python.exe`: imports, prompts, sqlite-vec, migrations on a new database, Windows OCR bindings, `python -m app.main --help`. A failed check fails the build.
+
+`{app}\AiService` mirrors `ai-service\` (`app\`, `tools\`, `rag\`, `ingest\`, `recommender\`, `voice\`, `vision\`, `prompts\`) plus `migrations\` (the app's SQL files, for the AI service's schema safety net) and `config\config.yaml` (written by setup). The dev `app\config.yaml` is not shipped. `python312._pth` puts `..\AiService` on the import path, so the service starts with `{app}\Python\python.exe -m app.main --config {app}\AiService\config\config.yaml`.
+
 ### Local Model Runtime (llama.cpp, Phase 10A)
 The full install bundles the pinned llama.cpp `llama-server.exe` and the GGUF models. There is **no Windows service**: the AI service starts `llama-server` on 127.0.0.1 when it starts, stops it after the idle timeout and on exit (ADR-012). The old `GSE-Ollama` service from 0.3.x is removed during upgrade and on uninstall.
 

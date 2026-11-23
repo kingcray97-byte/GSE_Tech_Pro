@@ -38,7 +38,6 @@ from tools.catalog import default_registry
 from tools.registry import ToolRegistry
 
 log = logging.getLogger("gse.ai")
-DEFAULT_CONFIG_PATH = Path(__file__).resolve().with_name("config.yaml")
 
 
 class RefuseToServe(RuntimeError):
@@ -115,7 +114,9 @@ def create_app(
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(prog="gse-ai", description="GSE Tech Pro local AI service (127.0.0.1 only).")
-    p.add_argument("--config", default=str(DEFAULT_CONFIG_PATH), help="path to config.yaml")
+    # No default here: load_config() then uses config/config.yaml (written by setup) when it exists, else the
+    # dev app/config.yaml. A --config given on the command line must exist.
+    p.add_argument("--config", default=None, help="path to config.yaml (default: config/config.yaml, else app/config.yaml)")
     p.add_argument("--port", type=int, default=None, help="override service.port")
     p.add_argument("--token", default=None, help="override service.token (per-install X-GSE-Token)")
     p.add_argument("--db", default=None, help="SQLite database path (default: GSE_TECH_PRO_DB or %%LOCALAPPDATA%%)")

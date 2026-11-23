@@ -76,17 +76,27 @@ Source: "..\src\GseTechPro.Devices.Host32\bin\x86\Release\net8.0-windows10.0.190
 ; AI SERVICE PAYLOAD — Embedded Python runtime + all packages
 ; ============================================================================
 
-; Embedded Python runtime (3.12) + all packages (no pip at install time)
+; Embedded Python runtime (3.12) + all packages (no pip at install time).
+; Built by installer\build-python-embedded.ps1 (pinned zip + every ai-service/pyproject.toml dependency,
+; OCR packages included). Its python312._pth puts ..\AiService on the import path, so the layout below
+; must stay {app}\Python next to {app}\AiService.
 Source: "..\ai-service\dist\python-embedded\*"; DestDir: "{app}\Python"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
 
-; AI service application code
-Source: "..\ai-service\app\*"; DestDir: "{app}\AiService"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
-Source: "..\ai-service\tools\*"; DestDir: "{app}\AiService\tools"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
-Source: "..\ai-service\rag\*"; DestDir: "{app}\AiService\rag"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
-Source: "..\ai-service\ingest\*"; DestDir: "{app}\AiService\ingest"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
-Source: "..\ai-service\recommender\*"; DestDir: "{app}\AiService\recommender"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
-Source: "..\ai-service\voice\*"; DestDir: "{app}\AiService\voice"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
-Source: "..\ai-service\vision\*"; DestDir: "{app}\AiService\vision"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
+; AI service code. {app}\AiService mirrors ai-service\ exactly: each folder is an import package
+; (python -m app.main), and app\prompts.py / rag\config.py find prompts\ and config\ beside them.
+; app\config.yaml is the dev default (dev token) and is not shipped: setup writes config\config.yaml.
+Source: "..\ai-service\app\*"; DestDir: "{app}\AiService\app"; Excludes: "__pycache__,*.pyc,config.yaml"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
+Source: "..\ai-service\tools\*"; DestDir: "{app}\AiService\tools"; Excludes: "__pycache__,*.pyc"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
+Source: "..\ai-service\rag\*"; DestDir: "{app}\AiService\rag"; Excludes: "__pycache__,*.pyc"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
+Source: "..\ai-service\ingest\*"; DestDir: "{app}\AiService\ingest"; Excludes: "__pycache__,*.pyc"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
+Source: "..\ai-service\recommender\*"; DestDir: "{app}\AiService\recommender"; Excludes: "__pycache__,*.pyc"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
+Source: "..\ai-service\voice\*"; DestDir: "{app}\AiService\voice"; Excludes: "__pycache__,*.pyc"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
+Source: "..\ai-service\vision\*"; DestDir: "{app}\AiService\vision"; Excludes: "__pycache__,*.pyc"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
+; Prompt files (system, vision, ASR). Without them chat, Inspect photo and Talk cannot start.
+Source: "..\ai-service\prompts\*"; DestDir: "{app}\AiService\prompts"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ai-service
+; Schema safety net (app\bootstrap.py) for a database the app has not migrated yet. The app itself
+; embeds these files; the AI service reads them from AiService\migrations.
+Source: "..\src\GseTechPro.Data\Migrations\*.sql"; DestDir: "{app}\AiService\migrations"; Flags: ignoreversion; Components: ai-service
 
 ; ============================================================================
 ; LLAMA.CPP PAYLOAD (ADR-012) — pinned CPU (AVX2) build of llama-server + GGUF models

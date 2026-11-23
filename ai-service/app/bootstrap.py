@@ -31,7 +31,11 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
 )
 VEC0_MIGRATION = 3
 MIGRATIONS_ENV = "GSE_TECH_PRO_MIGRATIONS"
-DEFAULT_MIGRATIONS_DIR = Path(__file__).resolve().parents[2] / "src" / "GseTechPro.Data" / "Migrations"
+_SERVICE_ROOT = Path(__file__).resolve().parents[1]  # ai-service/ (repo) or {app}\AiService (installed)
+# Installed: setup copies the SQL files to AiService\migrations. Repo: the C# data layer's folder.
+INSTALLED_MIGRATIONS_DIR = _SERVICE_ROOT / "migrations"
+REPO_MIGRATIONS_DIR = _SERVICE_ROOT.parent / "src" / "GseTechPro.Data" / "Migrations"
+DEFAULT_MIGRATIONS_DIR = INSTALLED_MIGRATIONS_DIR if INSTALLED_MIGRATIONS_DIR.is_dir() else REPO_MIGRATIONS_DIR
 
 
 def resolve_migrations_dir(explicit: str | Path | None = None) -> Path:
