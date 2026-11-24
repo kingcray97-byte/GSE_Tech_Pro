@@ -77,6 +77,10 @@ The order is one pure function in both languages: `AiRouting.Plan` (`src/GseTech
   nothing sent, plus "key present in Credential Manager".
 - **Fallback:** each route runs the whole tool loop; a `ChatUnavailable` from a remote route marks it down (until the
   next health check) and the next route runs from the start. The response is one JSON body, so two answers never mix.
+- **Verified 2026-11-24 on a tablet with the real model:** with `shop_server` and `cloud` both unconfigured, `mode:
+  prefer-cloud` and `mode: prefer-shop-server` still answered from the tablet and the response was tagged
+  `route: "tablet"`; `/health` listed both remote routes as "Not set up". A cloud route that is configured but offline
+  is still to be exercised (needs the owner's server URL and model).
 
 ## Cloud provider (owner's decision, 2026-11-19)
 

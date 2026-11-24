@@ -10,7 +10,7 @@ Local hybrid search needs an embedding model that runs on CPU, in an 8 GB tablet
 
 ## Decision
 
-Use **`nomic-embed-text`** (v1.5): 137M params, **768-d**, ~274 MB, Apache-2.0, 8,192-token context. Use its `search_document:` / `search_query:` task prefixes.
+Use **`nomic-embed-text`** (v1.5): 137M params, **768-d**, ~274 MB as the original model, **~146 MB as the Q8_0 GGUF** we ship (ADR-012), Apache-2.0, 8,192-token context. Use its `search_document:` / `search_query:` task prefixes.
 
 ## Alternatives considered
 
@@ -23,4 +23,4 @@ Use **`nomic-embed-text`** (v1.5): 137M params, **768-d**, ~274 MB, Apache-2.0, 
 - `embeddings.embedding` is `float[768]`; the vector dimension is fixed to 768.
 - Search uses the two prefixes; missing them silently degrades quality.
 - Changing models later requires a re-embed of `manual_chunks` (never mix dimensions).
-- ~300 MB transient RAM during indexing/query — negligible on the budget.
+- Measured 2026-11-24 on a tablet (Q8_0 GGUF on `llama-server --embedding --pooling mean`): 139.5 MB resident, 46–124 ms per request. Well inside the budget.

@@ -50,8 +50,9 @@ exists on `master`. The working API is ADR-008 (`AiServiceClient`), and this ADR
 
 The embedding model is still `nomic-embed-text` v1.5 (768-d, same `search_document:` / `search_query:` prefixes),
 now as a **GGUF** file served by `llama-server --embedding --pooling mean`. Vector dimension stays 768; a different
-model means a re-embed of every chunk (unchanged rule). **Still open (rag-ingest):** confirm the GGUF build runs on
-the pinned llama.cpp release, its license, and CPU speed on the 7220.
+model means a re-embed of every chunk (unchanged rule). **Checked 2026-11-24 on a tablet:** the GGUF runs on the pinned
+release, 768-d, 46–124 ms per request, 139.5 MB working set, license **Apache-2.0** (Hugging Face model card), so it can
+ship. Still open: the same check on the 7220 itself.
 
 ## Pinned build and tablet settings (2026-11-19)
 
@@ -67,25 +68,50 @@ the pinned llama.cpp release, its license, and CPU speed on the 7220.
 - **Our own choices (not from Liquid):** context `8192` (Liquid's server default is 4096; we need room for chat
   history plus tool results), threads = llama.cpp default. Liquid lists no thread, batch, mmap or flash-attention
   setting for LFM3 on CPU.
-- **Binary (checked 2026-11-19, zip hash verified, nothing executed):** b12359 ships `llama-server.exe` (and a
+- **Binary (zip hash verified 2026-11-19; run on a tablet 2026-11-24):** b12359 ships `llama-server.exe` (and a
   `llama.exe`), so `llama_server.subcommand` stays empty; it exists for builds that only ship `llama serve`. A string
   scan of `llama-common.dll` / `llama-server-impl.dll` finds every flag the service passes: `--model`, `--host`,
   `--port`, `--ctx-size`, `--threads`, `--alias`, `--mmproj`, `--embedding`, `--pooling`, `--reasoning`. The service
-  uses the long forms. Still to do on the tablet: one real start with `--reasoning off` and the GGUF.
+  uses the long forms. A real start with `--reasoning off` and the GGUF works (`version: 1.0.0-dev (build 12359,
+  commit b1b770d90)`).
 - **Runtime files:** `llama-server.exe` imports `llama-server-impl.dll`, `llama-common.dll`, `llama.dll`, `mtmd.dll`,
-  `ggml.dll`, `ggml-base.dll`, `libomp.dll`; ggml loads one `ggml-cpu-*.dll` for the CPU at run time. Only these
-  ship (`Reference\llama.cpp\PINNED.txt`). The zip has no llama.cpp LICENSE; it was taken from the same tag
-  (MIT). LLVM OpenMP's license ships too. **ggml needs the Microsoft VC++ 2015–2022 x64 runtime** (`MSVCP140.dll`,
-  `VCRUNTIME140.dll`). Setup bundles Microsoft's `vc_redist.x64.exe` and runs it silently with the llama.cpp
-  component (exit 0 / 1638 = fine, 3010 = restart at the end, anything else = a clear message; chat stays off until
-  it is installed, manual search still works).
+  `ggml.dll`, `ggml-base.dll`, `libomp.dll`; ggml loads one `ggml-cpu-*.dll` for the CPU at run time. These, the two
+  licenses and the VC++ runtime DLLs below ship (`Reference\llama.cpp\PINNED.txt`). The zip has no llama.cpp LICENSE; it
+  was taken from the same tag (MIT). LLVM OpenMP's license ships too. **ggml needs the Microsoft VC++ 2015–2022 x64
+  runtime** (`MSVCP140.dll`, `VCRUNTIME140.dll`). Setup bundles Microsoft's `vc_redist.x64.exe` and runs it silently with
+  the llama.cpp component (exit 0 / 1638 = fine, 3010 = restart at the end, anything else = a clear message; chat stays
+  off until it is installed, manual search still works). **2026-11-24 — an old runtime is not enough:** on a tablet whose
+  `System32\MSVCP140.dll` was still 14.0.23918.0 (2016), every llama.cpp tool that loads a `llama-*-impl.dll` exited
+  with `0xC0000005` at startup (`llama-gguf-split`, which does not, ran); the Windows Application log named
+  `MSVCP140.dll`. A silent `vc_redist.x64.exe /install` from a non-elevated shell did not replace it (the
+  process hung waiting for elevation). Shipping the
+  current **14.51.36247** `MSVCP140.dll`, `VCRUNTIME140.dll` and `VCRUNTIME140_1.dll` **app-local next to
+  `llama-server.exe`** (Microsoft-signed, supported app-local deployment) fixed it with no administrator rights, and
+  the installer now bundles those three files with the llama.cpp component; the redist run stays as a machine-wide
+  upgrade. Builds b12669 and b11960 crashed identically, so this is the runtime, not the pinned build.
 - **License:** `lfm3-omni` is under the LFM Open License v1.0 (model card: `lfm1.0`). **Owner approved bundling on
   2026-11-19.**
 
-## Still to check (not measured yet)
+## Measured 2026-11-24 (tablet in place of the 7220)
 
-- `lfm3-omni` Q4_K_M on b12359 on the 7220: RAM and tokens/s on an 8 GB 8th-gen i5, then image/audio via the projector.
-  Measure, don't quote.
+Machine: Panasonic CF-33 Toughbook, Intel **i7-7600U** (2 cores / 4 threads), **16 GB** RAM, Windows 10 Pro 19045 —
+the owner is using this tablet in place of the 7220 for Phase 10A acceptance. Models verified against their Hugging
+Face hashes (LFM3 `9f8d30e9…93e2`, nomic `3e243421…3b7`).
+
+- **Chat** (`--ctx-size 8192 --alias lfm3-omni --reasoning off`): `/health` 200 **2.1 s** after start (model file warm
+  in the OS cache; a reboot-cold load was not measured), working set **1,926.6 MB**, **8.2–8.3 tok/s** on a 20-token
+  answer at temperature 0. Through the AI service, a one-turn tool-enabled reply: first token **7.9–8.0 s**, **8.2 s**
+  total; a 3-model-turn / 2-tool-call question: **79.7 s** (14.2 s to first token).
+- **Embeddings** (`--embedding --pooling mean --ctx-size 2048`): `/health` **1.1 s**, working set **139.5 MB**,
+  **768-d**, **46 / 62 / 124 ms** per request. Both servers ≈ **2.07 GB** RAM total.
+- The AI service (0.4.0) spawned and owned both children, `/health` reported `model_runtime_reachable: true`, `/chat`
+  answered `route: "tablet"`, and `prefer-cloud` / `prefer-shop-server` (both unconfigured) fell back to the tablet.
+
+## Still to check
+
+- `lfm3-omni` Q4_K_M on b12359 on the **7220** (8 GB, 8th-gen i5): RAM and tokens/s. The 2026-11-24 run was on a
+  16 GB i7-7600U; measure, don't quote.
+- Image/audio through the projector (`mmproj`), not tested yet.
 
 ## Alternatives considered
 

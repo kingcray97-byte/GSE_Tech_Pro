@@ -187,7 +187,7 @@ public sealed partial class AiServiceStateService : ObservableObject, IAsyncDisp
         {
             if (_launcher is not null && !_launcher.IsServiceReachable && _client is AiServiceClient concreteClient)
             {
-                var reachable = await _launcher.ProbeExistingServiceAsync(concreteClient, cancellationToken).ConfigureAwait(false);
+                var reachable = await _launcher.EnsureServiceRunningAsync(concreteClient, cancellationToken).ConfigureAwait(false);
                 if (!reachable)
                 {
                     _configLoaded = false;

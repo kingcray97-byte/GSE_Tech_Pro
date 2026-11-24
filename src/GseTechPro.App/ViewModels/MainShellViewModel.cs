@@ -5468,6 +5468,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         (_speechOutput as IDisposable)?.Dispose();
         AiState.StateUpdated -= OnAiStateUpdated;
         await AiState.DisposeAsync();
+        _aiLauncher.Dispose();
         if (_aiClient is IDisposable disposableClient)
         {
             disposableClient.Dispose();

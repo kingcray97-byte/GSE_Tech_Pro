@@ -129,14 +129,22 @@ Source: "ai-service-config.yaml"; DestDir: "{tmp}"; Flags: deleteafterinstall; C
 ; llama-server.exe and its DLLs from the pinned llama.cpp Windows CPU release (MIT).
 ; PINNED: llama.cpp b12359 (= v1.0.0, 2026-11-13), asset llama-b12359-bin-win-cpu-x64.zip (25.1 MB),
 ;   sha256 837c1655e87df3b66989f4be33a792a1399c785bf259038dc75c900096683e69 (GitHub release digest).
-;   Reference\llama.cpp\ holds only llama-server.exe, the DLLs it imports, the ggml-cpu-*.dll
-;   variants (picked at run time) and the licenses; see Reference\llama.cpp\PINNED.txt. LFM3 needs b11960+.
+;   Reference\llama.cpp\ holds llama-server.exe, the DLLs it imports, the ggml-cpu-*.dll
+;   variants (picked at run time), the licenses and the VC++ runtime DLLs below. LFM3 needs b11960+.
 ; ggml.dll needs the Microsoft VC++ 2015-2022 x64 runtime (MSVCP140.dll, VCRUNTIME140.dll).
-; Microsoft's redistributable installer is bundled and run silently by InstallVcRuntime (see [Code]).
+; 2026-11-24: a tablet with the 2016 runtime (System32 MSVCP140.dll 14.0.23918.0) crashed every
+;   llama.cpp tool that loads llama-*-impl.dll with 0xC0000005 (llama-gguf-split still ran), and the
+;   silent redist run from a non-elevated shell did not replace it. The current runtime DLLs are
+;   therefore shipped app-local next to llama-server.exe (14.51.36247, Authenticode-signed by
+;   Microsoft: MSVCP140.dll, VCRUNTIME140.dll, VCRUNTIME140_1.dll). Windows loads them before
+;   System32 for this folder, so the model runs even on a tablet with an old machine-wide runtime.
+; Microsoft's redistributable installer is still bundled and run silently by InstallVcRuntime (see [Code])
+;   as a belt-and-braces upgrade of the machine-wide runtime.
 ; Put vc_redist.x64.exe (https://aka.ms/vs/17/release/vc_redist.x64.exe) in Reference\vcredist\.
 ; PINNED: 14.44.35211.0, sha256 cc0ff0eb1dc3f5188ae6300faef32bf5beeba4bdd6e8e445a9184072096b713b,
 ;   Authenticode-signed by Microsoft Corporation (see Reference\vcredist\PINNED.txt).
 Source: "..\Reference\vcredist\vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall; Components: llama_cpp; Check: WantLocalModel
+; The wildcard also ships the three app-local VC++ runtime DLLs described above.
 Source: "..\Reference\llama.cpp\*"; DestDir: "{app}\llama.cpp"; Excludes: "PINNED.txt"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: llama_cpp; Check: WantLocalModel
 ; MIT LICENSE goes into the third-party notices (ARCHITECTURE §7.1)
 Source: "..\Reference\llama.cpp\LICENSE"; DestDir: "{app}\third-party"; DestName: "llama.cpp-LICENSE.txt"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
@@ -148,7 +156,7 @@ Source: "..\Reference\llama.cpp\LICENSE-LLVM-OpenMP"; DestDir: "{app}\third-part
   #if !FileExists(SourcePath + "..\Reference\models\lfm3-omni.gguf") || !FileExists(SourcePath + "..\Reference\models\nomic-embed-text.gguf")
     #error Put lfm3-omni.gguf and nomic-embed-text.gguf in Reference\models\ (ADR-012), or build with /DNO_MODELS.
   #endif
-; lfm3-omni chat model, LFM3-Omni-2B Q4_K_M — LFM Open License v1.0 (revenue threshold; owner sign-off pending)
+; lfm3-omni chat model, LFM3-Omni-2B Q4_K_M — LFM Open License v1.0 (revenue threshold; owner approved 2026-11-19)
 Source: "..\Reference\models\lfm3-omni.gguf"; DestDir: "{app}\models"; Flags: ignoreversion; Components: llama_cpp\model_lfm3_omni; Check: WantLocalModel; BeforeInstall: ShowStatus('Installing the lfm3-omni chat model...')
 ; nomic-embed-text v1.5 embedding model, GGUF — Apache-2.0
 Source: "..\Reference\models\nomic-embed-text.gguf"; DestDir: "{app}\models"; Flags: ignoreversion; Components: llama_cpp\model_nomic_embed; Check: WantLocalModel; BeforeInstall: ShowStatus('Installing the nomic-embed-text embedding model...')
@@ -158,7 +166,7 @@ Source: "..\Reference\models\nomic-embed-text.gguf"; DestDir: "{app}\models"; Fl
 ; DEFAULT MANUAL LIBRARY — machine-wide, so it is there for whichever technician signs in.
 ; ============================================================================
 
-Source: "..\docs\Manuals\*"; DestDir: "{commonappdata}\GSE Tech Pro\Manuals"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: manuals_default
+Source: "..\docs\Manuals\*"; DestDir: "{commonappdata}\GSE Tech Pro\Manuals"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist; Components: manuals_default
 
 [Dirs]
 Name: "{commonappdata}\GSE Tech Pro"

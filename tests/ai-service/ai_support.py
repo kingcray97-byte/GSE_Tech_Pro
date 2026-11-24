@@ -66,10 +66,17 @@ def blocking_probe(gate):
 
 
 def offline_config(**overrides):
-    """The real app/config.yaml with llama-server pointed at closed ports (attach mode) and idle unload disabled."""
+    """The real app/config.yaml with llama-server pointed at closed ports (attach mode) and idle unload disabled.
+
+    The dev config may have llama_server.binary/model filled in (it does on a machine with the pinned
+    runtime), so attach mode is forced here; tests that exercise spawning override them.
+    """
     from rag.config import load_config
 
     values = {
+        "llama_server.binary": "",
+        "llama_server.model": "",
+        "llama_server.embedding.model": "",
         "llama_server.port": OFFLINE_CHAT_PORT,
         "llama_server.embedding.port": OFFLINE_EMBED_PORT,
         "idle_unload_minutes": 0,
