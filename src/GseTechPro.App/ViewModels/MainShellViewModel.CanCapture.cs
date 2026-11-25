@@ -126,6 +126,7 @@ public sealed partial class MainShellViewModel
         foreach (var device in CanFactory.Discover())
             CanDevices.Add(device);
         SelectedCanDevice = CanDevices.FirstOrDefault(d => keep is not null && d.Kind == keep.Kind && d.SerialNumber == keep.SerialNumber)
+            ?? CanDevices.FirstOrDefault(d => d.Kind == CanBusMonitorFactory.EcomKind && d.UnavailableReason is null)
             ?? CanDevices.FirstOrDefault();
         RefreshSavedCanCaptures();
     }

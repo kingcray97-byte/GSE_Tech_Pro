@@ -13,7 +13,7 @@ llama_server:
   binary: "../Reference/llama.cpp/llama-server.exe"  # dev: pinned llama.cpp b12359 (run from ai-service/); installer fills its own path
   subcommand: ""             # "serve" if the pinned build ships llama.exe with subcommands instead of llama-server.exe
   model: "../Reference/models/LFM3-Omni-2B-Q4_K_M.gguf"  # chat GGUF: LFM3-Omni-2B Q4_K_M (LiquidAI/LFM3-Omni-2B-GGUF, ~1.1 GB)
-  mmproj: ""                 # image/audio projector (mmproj-LFM3-Omni-2B-Q8_0.gguf); blank until Phase 7 uses it
+  mmproj: "../Reference/models/mmproj-LFM3-Omni-2B-Q8_0.gguf"  # image/audio projector (LFM3-Omni-2B Q8_0); needed for vision/voice
   port: 8081
   ctx: 8192                  # our choice (Liquid's serve default is 4096): room for history + tool results
   threads: 0                 # 0 = llama.cpp default (Liquid lists no thread setting)

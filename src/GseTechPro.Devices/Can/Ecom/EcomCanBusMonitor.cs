@@ -187,16 +187,13 @@ public sealed class EcomCanBusMonitor : CanBusMonitorBase
 /// <summary>Finds whether the ECOM driver library can be loaded in this process, and lists attached adapters.</summary>
 public static class EcomDriver
 {
-    /// <summary>Null when <c>ecommlib.dll</c> loads in this process; otherwise why not, in plain words.</summary>
+    /// <summary>Null when the vendor library loads in this process; otherwise why not, in plain words.</summary>
     public static string? CheckLibrary()
     {
         try
         {
-            if (NativeLibrary.TryLoad(EcomNative.LibraryName, typeof(EcomDriver).Assembly, null, out var lib))
-            {
-                NativeLibrary.Free(lib);
+            if (EcomNative.GetHandle() != 0)
                 return null;
-            }
             return UnavailableReason(new DllNotFoundException());
         }
         catch (BadImageFormatException ex)
@@ -239,6 +236,6 @@ public static class EcomDriver
     {
         BadImageFormatException =>
             "The installed ECOM driver library is 32-bit; this app needs the 64-bit library (32-bit host support for ECOM is not built yet).",
-        _ => "The ECOM driver library (64-bit ecommlib.dll) was not found. Install the vendor's ECOM driver on this tablet, then try again.",
+        _ => "The ECOM driver library (ecommlib64.dll or ecommlib.dll) was not found. Install the vendor's ECOM driver on this tablet, then try again.",
     };
 }

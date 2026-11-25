@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using GseTechPro.Core.Contracts;
 
@@ -19,7 +21,12 @@ public sealed class AiServiceLauncher
     public const string StandaloneDevToken = "dev-local-token";
     public const string AllowDevTokenEnvVar = "GSE_AI_ALLOW_DEV_TOKEN";
 
-    public AiServiceLauncher(int? port = null, string? token = null, bool? allowDevTokenFallback = null, AiServiceLaunchOptions? launchOptions = null)
+    public AiServiceLauncher(
+        int? port = null,
+        string? token = null,
+        bool? allowDevTokenFallback = null,
+        AiServiceLaunchOptions? launchOptions = null,
+        string? tokenFilePath = null)
     {
         var envPortText = Environment.GetEnvironmentVariable("GSE_AI_PORT");
         if (port is int explicitPort && explicitPort > 0)
@@ -35,6 +42,8 @@ public sealed class AiServiceLauncher
             Port = AiServiceProtocol.DefaultPort;
         }
 
+        TokenFilePath = ResolveTokenFilePath(tokenFilePath);
+
         var envToken = Environment.GetEnvironmentVariable("GSE_AI_TOKEN");
         if (!string.IsNullOrWhiteSpace(token))
         {
@@ -48,8 +57,17 @@ public sealed class AiServiceLauncher
         }
         else
         {
-            Token = GenerateInstallToken();
-            HasExplicitToken = false;
+            var persisted = TryReadPersistedToken();
+            if (!string.IsNullOrWhiteSpace(persisted))
+            {
+                Token = persisted!;
+                HasExplicitToken = false;
+            }
+            else
+            {
+                Token = GenerateInstallToken();
+                HasExplicitToken = false;
+            }
         }
 
         AllowDevTokenFallback = allowDevTokenFallback ?? IsDevTokenFallbackEnabledByDefault();
@@ -60,6 +78,12 @@ public sealed class AiServiceLauncher
     public int Port { get; private set; }
 
     public string Token { get; private set; }
+
+    /// <summary>
+    /// Optional path to a file that persists the per-install token across runs, so a service
+    /// orphaned by a crashed app can be re-attached (or cleaned up) instead of stranding port 8765.
+    /// </summary>
+    public string? TokenFilePath { get; }
 
     public bool HasExplicitToken { get; }
 
@@ -121,6 +145,77 @@ public sealed class AiServiceLauncher
         Span<byte> bytes = stackalloc byte[AiServiceProtocol.TokenBytes];
         RandomNumberGenerator.Fill(bytes);
         return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    private static string? ResolveTokenFilePath(string? requested)
+    {
+        if (!string.IsNullOrWhiteSpace(requested))
+        {
+            return requested.Trim();
+        }
+
+        var env = Environment.GetEnvironmentVariable("GSE_AI_TOKEN_FILE");
+        if (!string.IsNullOrWhiteSpace(env))
+        {
+            return env.Trim();
+        }
+
+        try
+        {
+            var root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (string.IsNullOrWhiteSpace(root))
+            {
+                return null;
+            }
+            return Path.Combine(root, "GseTechPro", "ai-service.token");
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private string? TryReadPersistedToken()
+    {
+        if (string.IsNullOrWhiteSpace(TokenFilePath) || !File.Exists(TokenFilePath))
+        {
+            return null;
+        }
+
+        try
+        {
+            var text = File.ReadAllText(TokenFilePath).Trim();
+            if (text.Length == AiServiceProtocol.TokenHexLength &&
+                text.All(c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')))
+            {
+                return text;
+            }
+        }
+        catch
+        {
+        }
+        return null;
+    }
+
+    private void PersistToken()
+    {
+        if (string.IsNullOrWhiteSpace(TokenFilePath))
+        {
+            return;
+        }
+
+        try
+        {
+            var dir = Path.GetDirectoryName(TokenFilePath);
+            if (!string.IsNullOrWhiteSpace(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+            File.WriteAllText(TokenFilePath, Token);
+        }
+        catch
+        {
+        }
     }
 
     /// <summary>
@@ -202,6 +297,13 @@ public sealed class AiServiceLauncher
         if (await ProbeExistingServiceAsync(client, cancellationToken).ConfigureAwait(false))
         {
             return true;
+        }
+
+        // A force-killed previous run may have left a python process holding port 8765 with a
+        // different token. Clean those up before trying to spawn our own (only in bundled mode).
+        if (LaunchOptions.Enabled)
+        {
+            CleanupStaleProcesses();
         }
 
         if (!LaunchOptions.Enabled)
@@ -303,6 +405,9 @@ public sealed class AiServiceLauncher
             logDir = Path.GetTempPath();
         }
         var logPath = Path.Combine(logDir, "ai-service.log");
+
+        // Persist the token before spawning so a crashed app can re-attach (or clean up) the orphan.
+        PersistToken();
 
         var psi = new ProcessStartInfo
         {
@@ -416,6 +521,100 @@ public sealed class AiServiceLauncher
             _ownedProcess = null;
             IsServiceReachable = false;
         }
+    }
+
+    /// <summary>
+    /// Kills any orphaned (stale) AI service process still listening on <see cref="Port"/>,
+    /// e.g. one left behind by a force-killed app. Only python processes are killed, so an
+    /// unrelated service on the port is left alone. Returns <c>true</c> if at least one process
+    /// was killed.
+    /// </summary>
+    public bool CleanupStaleProcesses()
+    {
+        if (!LaunchOptions.Enabled)
+        {
+            return false;
+        }
+
+        var killedAny = false;
+        foreach (var pid in GetListeningPids(Port))
+        {
+            try
+            {
+                using var proc = Process.GetProcessById(pid);
+                if (!proc.ProcessName.Contains("python", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                KillProcessTree(pid);
+                killedAny = true;
+            }
+            catch
+            {
+            }
+        }
+        return killedAny;
+    }
+
+    public bool CleanupStaleServiceProcesses() => CleanupStaleProcesses();
+
+    public bool KillStaleProcesses() => CleanupStaleProcesses();
+
+    public bool KillStaleServiceProcesses() => CleanupStaleProcesses();
+
+    public bool TryCleanupStaleProcesses() => CleanupStaleProcesses();
+
+    private IEnumerable<int> GetListeningPids(int port)
+    {
+        var result = new List<int>();
+        try
+        {
+            using var proc = Process.Start(new ProcessStartInfo
+            {
+                FileName = "netstat",
+                Arguments = "-ano -p tcp",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            });
+            if (proc is null)
+            {
+                return result;
+            }
+            proc.WaitForExit(5000);
+            var output = proc.StandardOutput.ReadToEnd();
+            foreach (var rawLine in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var parts = rawLine.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length < 5)
+                {
+                    continue;
+                }
+                if (!parts[0].Equals("TCP", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                if (!parts[3].Equals("LISTENING", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var localAddress = parts[1];
+                if (!localAddress.EndsWith(":" + port, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+                if (int.TryParse(parts[4], out var pid) && pid > 0 && pid != Environment.ProcessId)
+                {
+                    result.Add(pid);
+                }
+            }
+        }
+        catch
+        {
+        }
+        return result;
     }
 
     private static void KillProcessTree(int rootPid)

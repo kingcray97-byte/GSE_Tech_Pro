@@ -73,6 +73,7 @@ Name: "llama_cpp"; Description: "llama.cpp local model runtime (llama-server, CP
 #ifndef NO_MODELS
 Name: "llama_cpp\model_lfm3_omni"; Description: "lfm3-omni chat/vision/audio model, GGUF (LFM3-Omni-2B Q4_K_M, ~1.1 GB)"; Types: full
 Name: "llama_cpp\model_nomic_embed"; Description: "nomic-embed-text v1.5 embedding model, GGUF"; Types: full
+Name: "llama_cpp\model_mmproj"; Description: "LFM3-Omni image/audio projector, GGUF (~0.5 GB; needed for photo inspection and voice)"; Types: full
 #endif
 
 ; Content
@@ -144,8 +145,33 @@ Source: "ai-service-config.yaml"; DestDir: "{tmp}"; Flags: deleteafterinstall; C
 ; PINNED: 14.44.35211.0, sha256 cc0ff0eb1dc3f5188ae6300faef32bf5beeba4bdd6e8e445a9184072096b713b,
 ;   Authenticode-signed by Microsoft Corporation (see Reference\vcredist\PINNED.txt).
 Source: "..\Reference\vcredist\vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall; Components: llama_cpp; Check: WantLocalModel
-; The wildcard also ships the three app-local VC++ runtime DLLs described above.
-Source: "..\Reference\llama.cpp\*"; DestDir: "{app}\llama.cpp"; Excludes: "PINNED.txt"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: llama_cpp; Check: WantLocalModel
+; Explicit file list (no wildcard): only llama-server and the DLLs it imports are shipped.
+; The ggml-cpu-*.dll variants are selected by llama.cpp at run time for the host CPU.
+Source: "..\Reference\llama.cpp\ggml-base.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\ggml-cpu-alderlake.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\ggml-cpu-cannonlake.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\ggml-cpu-cascadelake.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\ggml-cpu-cooperlake.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\ggml-cpu-haswell.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\ggml-cpu-icelake.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\ggml-cpu-ivybridge.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\ggml-cpu-piledriver.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\ggml-cpu-sandybridge.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\ggml-cpu-sapphirerapids.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\ggml-cpu-skylakex.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\ggml-cpu-sse42.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\ggml-cpu-x64.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\ggml-cpu-zen4.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\ggml.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\libomp.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\llama-common.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\llama-server.exe"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\llama-server-impl.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\llama.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\mtmd.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\MSVCP140.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\vcruntime140.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
+Source: "..\Reference\llama.cpp\vcruntime140_1.dll"; DestDir: "{app}\llama.cpp"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
 ; MIT LICENSE goes into the third-party notices (ARCHITECTURE §7.1)
 Source: "..\Reference\llama.cpp\LICENSE"; DestDir: "{app}\third-party"; DestName: "llama.cpp-LICENSE.txt"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
 Source: "..\Reference\llama.cpp\LICENSE-LLVM-OpenMP"; DestDir: "{app}\third-party"; DestName: "llvm-openmp-LICENSE.txt"; Flags: ignoreversion; Components: llama_cpp; Check: WantLocalModel
@@ -160,6 +186,8 @@ Source: "..\Reference\llama.cpp\LICENSE-LLVM-OpenMP"; DestDir: "{app}\third-part
 Source: "..\Reference\models\lfm3-omni.gguf"; DestDir: "{app}\models"; Flags: ignoreversion; Components: llama_cpp\model_lfm3_omni; Check: WantLocalModel; BeforeInstall: ShowStatus('Installing the lfm3-omni chat model...')
 ; nomic-embed-text v1.5 embedding model, GGUF — Apache-2.0
 Source: "..\Reference\models\nomic-embed-text.gguf"; DestDir: "{app}\models"; Flags: ignoreversion; Components: llama_cpp\model_nomic_embed; Check: WantLocalModel; BeforeInstall: ShowStatus('Installing the nomic-embed-text embedding model...')
+; LFM3-Omni image/audio projector (mmproj). Optional: vision/voice need it; saves ~0.5 GB when omitted.
+Source: "..\Reference\models\mmproj-LFM3-Omni-2B-Q8_0.gguf"; DestDir: "{app}\models"; Flags: ignoreversion skipifsourcedoesntexist; Components: llama_cpp\model_mmproj; Check: WantLocalModel; BeforeInstall: ShowStatus('Installing the LFM3-Omni image/audio projector...')
 #endif
 
 ; ============================================================================
@@ -393,7 +421,7 @@ procedure WriteAiServiceConfig();
 var
   Template: AnsiString;
   Text: string;
-  Binary, ChatModel, EmbedModel: string;
+  Binary, ChatModel, EmbedModel, MmprojModel: string;
 begin
   if not LoadStringFromFile(ExpandConstant('{tmp}\ai-service-config.yaml'), Template) then
   begin
@@ -404,6 +432,7 @@ begin
   Binary := '';
   ChatModel := '';
   EmbedModel := '';
+  MmprojModel := '';
   if WizardIsComponentSelected('llama_cpp') and InstallLocalModel then
   begin
     Binary := ExpandConstant('{app}\llama.cpp\llama-server.exe');
@@ -412,11 +441,14 @@ begin
       ChatModel := ExpandConstant('{app}\models\lfm3-omni.gguf');
     if WizardIsComponentSelected('llama_cpp\model_nomic_embed') then
       EmbedModel := ExpandConstant('{app}\models\nomic-embed-text.gguf');
+    if WizardIsComponentSelected('llama_cpp\model_mmproj') then
+      MmprojModel := ExpandConstant('{app}\models\mmproj-LFM3-Omni-2B-Q8_0.gguf');
 #endif
   end;
   StringChangeEx(Text, '@LLAMA_SERVER@', YamlPath(Binary), True);
   StringChangeEx(Text, '@CHAT_MODEL@', YamlPath(ChatModel), True);
   StringChangeEx(Text, '@EMBED_MODEL@', YamlPath(EmbedModel), True);
+  StringChangeEx(Text, '@MMPROJ@', YamlPath(MmprojModel), True);
   StringChangeEx(Text, '@SHOP_SERVER_URL@', YamlPath(ShopServerUrl), True);
   if ShopServerUrl <> '' then
     StringChangeEx(Text, '@SHOP_SERVER_ENABLED@', 'true', True)

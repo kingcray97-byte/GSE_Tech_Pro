@@ -9,13 +9,20 @@ namespace GseTechPro.Devices.Can.Ecom;
 /// <c>Reference/GSE diagnostic apps/ECOM/</c>). Only the receive/enumerate calls we need are declared, plus the
 /// constants they use. No transmit call is declared on purpose: the monitor is listen-only.
 /// <para>
+/// The 64-bit driver library is named <c>ecommlib64.dll</c> (the vendor driver's x64 folder and System32); the
+/// 32-bit one is <c>ecommlib.dll</c>. <see cref="LibraryNames"/> tries the 64-bit name first and, when it does not
+/// load in this process, the 32-bit name. Exports are resolved through the loaded library handle
+/// (<see cref="GetFunction{T}"/>) rather than DllImport, so a call uses the library that actually loaded.
+/// </para>
+/// <para>
 /// Handles are pointer-sized (<c>HANDLE</c> in the C sample). The vendor C# sample uses <c>UInt32</c>, which only
 /// works when the DLL is 32-bit; <c>nint</c> is right for either bitness.
 /// </para>
 /// </summary>
 internal static class EcomNative
 {
-    public const string LibraryName = "ecommlib.dll";
+    /// <summary>Candidate library names, most specific first (the 64-bit DLL is called <c>ecommlib64.dll</c>).</summary>
+    public static readonly string[] LibraryNames = { "ecommlib64.dll", "ecommlib.dll" };
 
     // Return codes (vendor sample).
     public const byte EciNoError = 0x00;
@@ -93,35 +100,74 @@ internal static class EcomNative
         public byte Reserved2;
     }
 
-    [DllImport(LibraryName)]
-    public static extern nint CANOpen(uint serial, byte baud, ref byte error);
+    private static IntPtr _handle;
 
-    [DllImport(LibraryName)]
-    public static extern byte CANReceiveMessageEx(nint deviceHandle, ref EffMessage message);
+    /// <summary>The handle of the first vendor library name that loads in this process (cached), 0 when none do.</summary>
+    internal static IntPtr GetHandle()
+    {
+        if (_handle != 0)
+            return _handle;
+        foreach (var name in LibraryNames)
+        {
+            if (NativeLibrary.TryLoad(name, typeof(EcomNative).Assembly, null, out var lib))
+            {
+                _handle = lib;
+                return lib;
+            }
+        }
+        return 0;
+    }
 
-    [DllImport(LibraryName)]
-    public static extern byte CANReceiveMessage(nint deviceHandle, ref SffMessage message);
+    /// <summary>The export <paramref name="name"/> of the loaded library, as a delegate.</summary>
+    private static T GetFunction<T>(string name) where T : Delegate
+    {
+        var handle = GetHandle();
+        if (handle == 0)
+            throw new DllNotFoundException($"No ECOM driver library could be loaded ({string.Join(", ", LibraryNames)}).");
+        return Marshal.GetDelegateForFunctionPointer<T>(NativeLibrary.GetExport(handle, name));
+    }
 
-    [DllImport(LibraryName)]
-    public static extern byte GetErrorMessage(nint deviceHandle, ref ErrorMessage message);
+    public static nint CANOpen(uint serial, byte baud, ref byte error) =>
+        GetFunction<CANOpenDelegate>("CANOpen")(serial, baud, ref error);
 
-    [DllImport(LibraryName)]
-    public static extern byte GetDeviceInfo(nint deviceHandle, ref DeviceInfo deviceInfo);
+    public static byte CANReceiveMessageEx(nint deviceHandle, ref EffMessage message) =>
+        GetFunction<CANReceiveMessageExDelegate>("CANReceiveMessageEx")(deviceHandle, ref message);
 
-    [DllImport(LibraryName)]
-    public static extern byte CloseDevice(nint deviceHandle);
+    public static byte CANReceiveMessage(nint deviceHandle, ref SffMessage message) =>
+        GetFunction<CANReceiveMessageDelegate>("CANReceiveMessage")(deviceHandle, ref message);
 
-    [DllImport(LibraryName, CharSet = CharSet.Ansi)]
-    public static extern void GetFriendlyErrorMessage(byte error, StringBuilder buffer, int bufferSize);
+    public static byte GetErrorMessage(nint deviceHandle, ref ErrorMessage message) =>
+        GetFunction<GetErrorMessageDelegate>("GetErrorMessage")(deviceHandle, ref message);
 
-    [DllImport(LibraryName)]
-    public static extern nint StartDeviceSearch(byte flag);
+    public static byte GetDeviceInfo(nint deviceHandle, ref DeviceInfo deviceInfo) =>
+        GetFunction<GetDeviceInfoDelegate>("GetDeviceInfo")(deviceHandle, ref deviceInfo);
 
-    [DllImport(LibraryName)]
-    public static extern byte CloseDeviceSearch(nint searchHandle);
+    public static byte CloseDevice(nint deviceHandle) =>
+        GetFunction<CloseDeviceDelegate>("CloseDevice")(deviceHandle);
 
-    [DllImport(LibraryName)]
-    public static extern byte FindNextDevice(nint searchHandle, ref DeviceInfo deviceInfo);
+    public static void GetFriendlyErrorMessage(byte error, StringBuilder buffer, int bufferSize) =>
+        GetFunction<GetFriendlyErrorMessageDelegate>("GetFriendlyErrorMessage")(error, buffer, bufferSize);
+
+    public static nint StartDeviceSearch(byte flag) =>
+        GetFunction<StartDeviceSearchDelegate>("StartDeviceSearch")(flag);
+
+    public static byte CloseDeviceSearch(nint searchHandle) =>
+        GetFunction<CloseDeviceSearchDelegate>("CloseDeviceSearch")(searchHandle);
+
+    public static byte FindNextDevice(nint searchHandle, ref DeviceInfo deviceInfo) =>
+        GetFunction<FindNextDeviceDelegate>("FindNextDevice")(searchHandle, ref deviceInfo);
+
+    // Export delegates for GetFunction.
+    private delegate nint CANOpenDelegate(uint serial, byte baud, ref byte error);
+    private delegate byte CANReceiveMessageExDelegate(nint deviceHandle, ref EffMessage message);
+    private delegate byte CANReceiveMessageDelegate(nint deviceHandle, ref SffMessage message);
+    private delegate byte GetErrorMessageDelegate(nint deviceHandle, ref ErrorMessage message);
+    private delegate byte GetDeviceInfoDelegate(nint deviceHandle, ref DeviceInfo deviceInfo);
+    private delegate byte CloseDeviceDelegate(nint deviceHandle);
+    private delegate void GetFriendlyErrorMessageDelegate(byte error, StringBuilder buffer, int bufferSize);
+    private delegate nint StartDeviceSearchDelegate(byte flag);
+    private delegate byte CloseDeviceSearchDelegate(nint searchHandle);
+    private delegate byte FindNextDeviceDelegate(nint searchHandle, ref DeviceInfo deviceInfo);
 
     public static string FriendlyError(byte code)
     {
