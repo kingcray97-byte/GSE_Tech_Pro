@@ -61,8 +61,19 @@ public sealed class Hantek6074BeDevice : IScopeDevice
     {
         [7] = 124,
         [8] = 126,
-        [9] = 125,
+        [9] = 124,
         [10] = 127,
+    };
+
+    // Gain per volts/div index so the CAL output (50 % duty square, 0 V low) reads 2.038 V peak-to-peak. The reference
+    // is a DMM DC reading of 1.0191 V (average = high / 2) taken on 2026-11-26 with the scope's 50.00 % duty. Measured
+    // on CH1 of one 6074BE; applied on top of dsoHTSetAmpCalibrate, which left the range errors at −4 % to +8 %.
+    private static readonly IReadOnlyDictionary<ushort, double> AmpGainByVoltDivIndex = new Dictionary<ushort, double>
+    {
+        [7] = 1.0393,
+        [8] = 1.0478,
+        [9] = 1.0149,
+        [10] = 0.9281,
     };
 
     // Table 1 of SDK_HTHardDLL-EN.pdf: timebase (s/div) per index (0..35)
@@ -498,14 +509,14 @@ public sealed class Hantek6074BeDevice : IScopeDevice
                 ushort zeroCode = 127;
 
                 // Hardware amplitude calibration is applied by dsoHTSetAmpCalibrate during capture setup
-                // (SDK_HTHardDLL-EN.pdf §26, Table 4); do not double-apply software gain here.
+                // (SDK_HTHardDLL-EN.pdf §26, Table 4); AmpGainByVoltDivIndex corrects the residual error on top of it.
                 var (volts, clipped) = ConvertRawCountsToVolts(
                     rawArrays[chIdx],
                     requestedSampleCount,
                     zeroCode: zeroCode,
                     channelVoltDivs[chIdx],
                     channelProbeScales[chIdx],
-                    amplitudeCalibrationFactor: 1.0);
+                    amplitudeCalibrationFactor: AmpGainByVoltDivIndex.TryGetValue(relay.nCHVoltDIV[chIdx], out var ampGain) ? ampGain : 1.0);
 
                 resultChannels[chCfg.Channel] = volts;
                 if (clipped)
