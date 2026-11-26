@@ -89,6 +89,18 @@ Source: "build\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs cre
 ; Shortcut icon (our own brand mark, brand\cta.ico)
 Source: "..\brand\cta.ico"; DestDir: "{app}"; Flags: ignoreversion; Components: app
 
+; Hantek 6074BE oscilloscope SDK (x64). Shipped app-local next to the app exe because
+; Hantek6074BeDevice.IsSdkPresent() looks in AppContext.BaseDirectory first. Without these
+; the scope shows "SDK not installed" even when the USB driver is present.
+; LICENSE CAVEAT: redistribution rights for the Hantek SDK are still UNVERIFIED (Phase 6/8
+; open item). Bundled at the owner's explicit request. If the license forbids redistribution,
+; remove these four entries and fall back to "shop installs the vendor SDK".
+; The USB driver (Hantek6000B*.sys/inf/cat) is NOT bundled: the shop must install it from
+; the maker, as reported by ReportMissingDrivers().
+Source: "..\Reference\HT6074BE_SDK\Dll\x64\HTHardDll.dll"; DestDir: "{app}"; Flags: ignoreversion; Components: app
+Source: "..\Reference\HT6074BE_SDK\Dll\x64\HTSoftDll.dll"; DestDir: "{app}"; Flags: ignoreversion; Components: app
+Source: "..\Reference\HT6074BE_SDK\Dll\x64\HTDisplayDll.dll"; DestDir: "{app}"; Flags: ignoreversion; Components: app
+Source: "..\Reference\HT6074BE_SDK\Dll\x64\MeasDll.dll"; DestDir: "{app}"; Flags: ignoreversion; Components: app
 ; 32-bit device host (x86, self-contained) — loads J2534/RP1210 vendor DLLs. Published to installer\build\host32.
 ; Must be {app}\host32: HostProcess looks next to the app or in host32\, nowhere else.
 Source: "build\host32\*"; DestDir: "{app}\host32"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: device_host

@@ -1,7 +1,7 @@
 ---
 description: Manual ingestion and search engineer. Builds PDF repair manual import (text, tables, diagrams, OCR for scans), chunking, embeddings, and hybrid search (FTS5 + sqlite-vec) for retrieval augmented generation. Use for anything about manuals or search quality.
 mode: subagent
-model: lmstudio/nvidia/nemotron-3-nano-omni
+model: opencode-go/claude-haiku-5-5
 color: "#E3008C"
 permissions:
   - action: edit

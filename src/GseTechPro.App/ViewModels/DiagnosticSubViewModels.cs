@@ -18,6 +18,16 @@ namespace GseTechPro.App.ViewModels;
 public sealed record SidebarItem(string Key, string Label, string Glyph, string? ParentKey = null)
 {
     public IReadOnlyList<SidebarItem> Children { get; init; } = Array.Empty<SidebarItem>();
+
+    /// <summary>When true, selecting the entry runs a command (see <see cref="ActionKey"/>) instead of navigating to a page.</summary>
+    public bool IsAction { get; init; } = false;
+
+    /// <summary>Command key for an action entry; falls back to <see cref="Key"/> when null.</summary>
+    public string? ActionKey { get; init; } = null;
+
+    /// <summary>Creates an action entry (runs a command, never navigates) that lives under <paramref name="parentKey"/>.</summary>
+    public static SidebarItem Action(string key, string label, string glyph, string parentKey, string? actionKey = null) =>
+        new(key, label, glyph, parentKey) { IsAction = true, ActionKey = actionKey ?? key };
 }
 
 public sealed record OpenWorkOrderTab(string Id, string Title, string AssetNumber, string StatusText);

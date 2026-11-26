@@ -1,7 +1,7 @@
 ---
 description: Installer and deployment engineer. Builds GSE-Tech-Pro-Setup.exe (app, runtimes, Python AI service, llama.cpp, lfm3-omni GGUF model, database, default manuals), silent install for many tablets, upgrades, updates, and the IT deployment guide. Use for packaging, installing, updating, or deploying.
 mode: subagent
-model: lmstudio/nvidia/nemotron-3-nano-omni
+model: opencode/big-pickle
 color: "#004E8C"
 permissions:
   - action: edit

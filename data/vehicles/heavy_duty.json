@@ -1,0 +1,247 @@
+{
+  "schemaVersion": 1,
+  "region": "heavy_duty",
+  "years": [
+    2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013,
+    2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 2004, 2003, 2002, 2001, 2000
+  ],
+  "heavy_duty_brands": [
+    "Freightliner",
+    "Kenworth",
+    "Peterbilt",
+    "Volvo",
+    "International",
+    "Mack",
+    "Western Star",
+    "Isuzu",
+    "Hino",
+    "TUG Technologies",
+    "TLD",
+    "Eagle Tugs",
+    "Harlan Global Manufacturing"
+  ],
+  "makes": [
+    {
+      "name": "Freightliner",
+      "years": [
+        2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013,
+        2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 2004, 2003, 2002, 2001, 2000
+      ],
+      "models": [
+        "Cascadia",
+        "Coronado",
+        "Columbia",
+        "Century Class",
+        "M2 106",
+        "M2 112",
+        "108SD",
+        "114SD",
+        "122SD",
+        "Argosy"
+      ]
+    },
+    {
+      "name": "Kenworth",
+      "years": [
+        2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013,
+        2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 2004, 2003, 2002, 2001, 2000
+      ],
+      "models": [
+        "T680",
+        "T880",
+        "T800",
+        "T660",
+        "T600",
+        "W900",
+        "T370",
+        "T270",
+        "K370",
+        "C500"
+      ]
+    },
+    {
+      "name": "Peterbilt",
+      "years": [
+        2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013,
+        2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 2004, 2003, 2002, 2001, 2000
+      ],
+      "models": [
+        "579",
+        "389",
+        "567",
+        "520",
+        "348",
+        "365",
+        "367",
+        "386",
+        "387",
+        "337"
+      ]
+    },
+    {
+      "name": "Volvo",
+      "years": [
+        2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013,
+        2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 2004, 2003, 2002, 2001, 2000
+      ],
+      "models": [
+        "VNL",
+        "VNR",
+        "VHD",
+        "VNX",
+        "VNM",
+        "FM",
+        "FH",
+        "FMX",
+        "FE",
+        "FL"
+      ]
+    },
+    {
+      "name": "International",
+      "years": [
+        2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013,
+        2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 2004, 2003, 2002, 2001, 2000
+      ],
+      "models": [
+        "LT",
+        "RH",
+        "HX",
+        "HV",
+        "MV",
+        "CV",
+        "DuraStar",
+        "WorkStar",
+        "ProStar",
+        "TranStar"
+      ]
+    },
+    {
+      "name": "Mack",
+      "years": [
+        2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013,
+        2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 2004, 2003, 2002, 2001, 2000
+      ],
+      "models": [
+        "Anthem",
+        "Pinnacle",
+        "Granite",
+        "TerraPro",
+        "LR",
+        "MD",
+        "CH",
+        "CX",
+        "Vision",
+        "RD"
+      ]
+    },
+    {
+      "name": "Western Star",
+      "years": [
+        2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013,
+        2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 2004, 2003, 2002, 2001, 2000
+      ],
+      "models": [
+        "4700",
+        "4800",
+        "4900",
+        "5700XE",
+        "49X",
+        "47X",
+        "6900",
+        "6900XD",
+        "6900TS"
+      ]
+    },
+    {
+      "name": "Isuzu",
+      "years": [
+        2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013,
+        2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 2004, 2003, 2002, 2001, 2000
+      ],
+      "models": [
+        "NPR",
+        "NPR-HD",
+        "NPR-XD",
+        "NQR",
+        "NRR",
+        "FTR",
+        "FVR",
+        "Reach"
+      ]
+    },
+    {
+      "name": "Hino",
+      "years": [
+        2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013,
+        2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 2004, 2003, 2002, 2001, 2000
+      ],
+      "models": [
+        "155",
+        "195",
+        "238",
+        "258",
+        "268",
+        "338",
+        "358",
+        "L6",
+        "L7",
+        "XL8"
+      ]
+    },
+    {
+      "name": "TUG Technologies",
+      "years": [],
+      "models": [
+        "660",
+        "660-28",
+        "GT-35",
+        "MA50-28",
+        "MR"
+      ],
+      "notes": "GSE equipment model, not a standard vehicle. Production years are not asserted in this seed."
+    },
+    {
+      "name": "TLD",
+      "years": [],
+      "models": [
+        "JST-25",
+        "TMX-150",
+        "TMX-250",
+        "TMX-450",
+        "JET-16"
+      ],
+      "notes": "GSE equipment model, not a standard vehicle. Production years are not asserted in this seed."
+    },
+    {
+      "name": "Eagle Tugs",
+      "years": [],
+      "models": [
+        "TT-4",
+        "TT-5",
+        "TT-6",
+        "TT-8",
+        "eTT-8X",
+        "eTT-16"
+      ],
+      "notes": "GSE equipment model, not a standard vehicle. Production years are not asserted in this seed."
+    },
+    {
+      "name": "Harlan Global Manufacturing",
+      "years": [],
+      "models": [
+        "HT30",
+        "HT40",
+        "HT50",
+        "HT60",
+        "HTA30",
+        "HTA40",
+        "HTA50",
+        "HTA60",
+        "HTA70",
+        "HTA80"
+      ],
+      "notes": "GSE equipment model, not a standard vehicle. Production years are not asserted in this seed."
+    }
+  ]
+}

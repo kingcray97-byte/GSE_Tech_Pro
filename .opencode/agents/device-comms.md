@@ -1,7 +1,7 @@
 ---
 description: Vehicle/equipment communications engineer. Builds the device abstraction layer, J2534 (TOPDON RLink X3), RP1210, ECOM v2 cable, the 32-bit device host, protocol decoders (J1939, J1708/J1587, ISO 15765, UDS, HD-OBD, OBD II), and the simulator. Use for anything that talks to hardware or decodes bus data.
 mode: subagent
-model: opencode-go/deepseek-v4-pro
+model: opencode-go/kimi-k2.7-code
 color: "#107C10"
 permissions:
   - action: edit

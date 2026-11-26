@@ -10,6 +10,7 @@ This guide covers installing, upgrading, and managing GSE Tech Pro across multip
 |-----------|----------|---------|
 | **GSE Tech Pro App** (x64) | `C:\Program Files\GSE Tech Pro\` | Main WinUI 3 application |
 | **Device Host** (x86) | `C:\Program Files\GSE Tech Pro\host32\` | 32-bit process for J2534/RP1210 vendor DLLs (the app looks only next to itself or in `host32\`) |
+| **Hantek 6074BE scope SDK DLLs** (x64) | `C:\Program Files\GSE Tech Pro\` | `HTHardDll.dll`, `HTSoftDll.dll`, `HTDisplayDll.dll`, `MeasDll.dll` from the Hantek 6074BE SDK, shipped app-local so `Hantek6074BeDevice` finds them via `AppContext.BaseDirectory` |
 | **Embedded Python** | `C:\Program Files\GSE Tech Pro\Python\` | Python 3.12.10 + every AI service package (no pip on the tablet) |
 | **Python AI Service** | `C:\Program Files\GSE Tech Pro\AiService\` | Local FastAPI service (RAG, tools, voice, vision) |
 | **llama.cpp runtime** | `C:\Program Files\GSE Tech Pro\llama.cpp\` | `llama-server.exe` (pinned CPU/AVX2 build, MIT). Started and stopped by the AI service on 127.0.0.1; no Windows service (ADR-012) |
@@ -17,7 +18,6 @@ This guide covers installing, upgrading, and managing GSE Tech Pro across multip
 | **AI service config** | `C:\Program Files\GSE Tech Pro\AiService\config\config.yaml` | Written by setup from `installer/ai-service-config.yaml` (bundled paths; cloud off; no keys) |
 | **Default manuals, first-run config** | `C:\ProgramData\GSE Tech Pro\` | `Manuals\` (default library) and `first-run-config.json` (from `/CONFIG`), machine-wide |
 | **Database** | `%LOCALAPPDATA%\GseTechPro\gse-tech-pro.db` | Per Windows user, created by the app on first start; setup never writes or deletes it |
-
 ### Runtime Dependencies
 
 The installer bundles or installs these runtimes:
@@ -27,10 +27,9 @@ The installer bundles or installs these runtimes:
 - **Windows App SDK** — for WinUI 3 controls and Mica/notifications
 - **Microsoft Visual C++ 2015–2022 runtime (x64)** — needed by `llama-server.exe` (llama.cpp's `ggml.dll` loads `MSVCP140.dll` / `VCRUNTIME140.dll`). Setup runs Microsoft's `vc_redist.x64.exe /install /quiet /norestart` whenever the llama.cpp component is installed. A newer runtime already on the tablet is left alone; if the redistributable asks for a restart, setup asks for one at the end. The current runtime DLLs (14.51.36247: `MSVCP140.dll`, `VCRUNTIME140.dll`, `VCRUNTIME140_1.dll`, Microsoft-signed) also ship **app-local** in `llama.cpp\` next to `llama-server.exe`, so the model starts even when the tablet's machine-wide runtime is old (2026-11-24: a 2016 `MSVCP140.dll` crashed every llama.cpp tool with `0xC0000005`, and a silent redist run without administrator rights did not replace it).
 
-> **Note:** Vendor diagnostic drivers (TOPDON RLink X3, Nexiq USB-Link, Noregon DLA+, PicoScope, Hantek) must be installed separately by the shop. They are not bundled due to proprietary licensing.
+> **Note:** Vendor diagnostic *drivers* (TOPDON RLink X3, Nexiq USB-Link, Noregon DLA+, PicoScope, Hantek USB driver) must be installed separately by the shop — they are not bundled due to proprietary licensing. The exception is the Hantek 6074BE *SDK DLLs* (`HTHardDll.dll`, `HTSoftDll.dll`, `HTDisplayDll.dll`, `MeasDll.dll`), which are bundled app-local (see "What Gets Installed"). The Hantek USB driver itself (`Hantek6000B*.sys/inf/cat`) is still required and is NOT bundled; `ReportMissingDrivers()` reminds the user. **Caveat:** redistribution rights for the Hantek SDK are still unverified (Phase 6/8 open item). Bundling is at the owner's explicit request; if the license turns out to forbid redistribution, fall back to "shop installs the vendor SDK" and remove the four `[Files]` entries from `installer/GSE-Tech-Pro-Setup.iss`.
 
 ## System Requirements
-
 | Requirement | Minimum | Recommended |
 |-------------|---------|-------------|
 | OS | Windows 11 (64-bit) | Windows 11 Pro |
@@ -174,7 +173,7 @@ Authenticode code signing is supported via environment variables. Set `SIGNTOOL_
 The installer bundles self-contained .NET 8 Desktop Runtime (both x64 and x86) and Windows App SDK, so no separate runtime installation is required on target tablets. This enables true offline deployment with zero prerequisites.
 
 ### Building the Setup
-Needs Inno Setup 7, the .NET 8 SDK and uv on the build PC, plus these files in `Reference\` (git-ignored, see each `PINNED.txt`): `llama.cpp\`, `vcredist\vc_redist.x64.exe`, `python\python-3.12.10-embed-amd64.zip`, and `models\lfm3-omni.gguf` + `models\nomic-embed-text.gguf`.
+Needs Inno Setup 7, the .NET 8 SDK and uv on the build PC, plus these files in `Reference\` (git-ignored, see each `PINNED.txt`): `llama.cpp\`, `vcredist\vc_redist.x64.exe`, `python\python-3.12.10-embed-amd64.zip`, `models\lfm3-omni.gguf` + `models\nomic-embed-text.gguf`, and `HT6074BE_SDK\Dll\x64\` (`HTHardDll.dll`, `HTSoftDll.dll`, `HTDisplayDll.dll`, `MeasDll.dll`).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File installer\build-installer.ps1

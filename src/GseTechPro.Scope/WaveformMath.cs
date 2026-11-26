@@ -15,6 +15,29 @@ public static class WaveformMath
     public const string UnitSecond = "s";
     public const string UnitAmpere = "A";
 
+    /// <summary>
+    /// Minimum peak-to-peak swing as a fraction of the channel's configured <see cref="ScopeChannelConfig.VoltageRangeVolts"/>
+    /// required before cyclic/edge measurements (<see cref="MeasurementKind.Frequency"/>, <see cref="MeasurementKind.DutyCycle"/>,
+    /// <see cref="MeasurementKind.RiseTime"/>) are evaluated.
+    /// <para>
+    /// Rationale: An 8-bit USB oscilloscope (e.g. Hantek 6074BE) has 255 counts across the full 8-division vertical span
+    /// (<c>2 × VoltageRangeVolts</c> peak-to-peak for a bipolar <c>±VoltageRangeVolts</c> setting), so 1 LSB is
+    /// <c>2 / 255 ≈ 0.78%</c> of <c>VoltageRangeVolts</c> (or <c>1 / 255 ≈ 0.39%</c> of a unipolar span). An unconnected
+    /// input exhibits ~5–7 LSB of ADC quantization/thermal noise (e.g. ~0.188 Vpp on an 8 V range, ~2.35% of
+    /// <c>VoltageRangeVolts</c>). At 5% of <c>VoltageRangeVolts</c> (~6.4 LSB bipolar / ~12.8 LSB unipolar, with a
+    /// <see cref="MinActiveSignalAbsoluteVolts"/> floor of 20 mV matching <see cref="AutoSetup.FlatSignalVolts"/>),
+    /// baseline ADC noise is rejected as <see cref="ScopeMeasurementStatus.FlatSignal"/> while small real signals
+    /// (such as a 200 mVpp alternator ripple on a 1 V AC range, which is 20% of range) are measured normally.
+    /// </para>
+    /// </summary>
+    public const double MinActiveSignalRangeFraction = 0.05;
+
+    /// <summary>
+    /// Absolute minimum peak-to-peak voltage swing (20 mV, matching <see cref="AutoSetup.FlatSignalVolts"/>) required
+    /// for cyclic/edge measurements when <see cref="ScopeChannelConfig.VoltageRangeVolts"/> is very small or unset.
+    /// </summary>
+    public const double MinActiveSignalAbsoluteVolts = 0.02;
+
     private static readonly MeasurementKind[] AllMeasurementKinds =
     [
         MeasurementKind.Frequency,
@@ -184,11 +207,13 @@ public static class WaveformMath
             };
 
         // 5 & 6. Frequency and DutyCycle from rising/falling 50% crossings of vMid = (min + max) / 2
+        double minActiveVpp = ComputeMinimumActiveVpp(config.VoltageRangeVolts);
         var (frequencyMeasurement, dutyCycleMeasurement) = ComputeFrequencyAndDutyCycle(
             samples,
             sampleRateHz,
             vMin,
             vMax,
+            minActiveVpp,
             channel,
             isSimulated);
 
@@ -198,6 +223,7 @@ public static class WaveformMath
             sampleRateHz,
             vMin,
             vMax,
+            minActiveVpp,
             channel,
             isSimulated);
 
@@ -214,6 +240,19 @@ public static class WaveformMath
     }
 
     /// <summary>
+    /// Computes the minimum peak-to-peak swing (V) required before a trace is treated as an active cyclic/edge
+    /// signal rather than baseline ADC noise (<see cref="ScopeMeasurementStatus.FlatSignal"/>).
+    /// Equals <c>max(MinActiveSignalAbsoluteVolts, VoltageRangeVolts × MinActiveSignalRangeFraction)</c>.
+    /// </summary>
+    public static double ComputeMinimumActiveVpp(double voltageRangeVolts)
+    {
+        double rangeThreshold = double.IsFinite(voltageRangeVolts) && voltageRangeVolts > 0.0
+            ? voltageRangeVolts * MinActiveSignalRangeFraction
+            : 0.0;
+        return Math.Max(MinActiveSignalAbsoluteVolts, rangeThreshold);
+    }
+
+    /// <summary>
     /// Compares computed measurements against reference expectations per ADR-011 §5.
     /// </summary>
     public static ScopeComparisonResult CompareMeasurements(
@@ -227,17 +266,20 @@ public static class WaveformMath
         double sampleRateHz,
         double vMin,
         double vMax,
+        double minActiveVpp,
         int channel,
         bool isSimulated)
     {
         double vpp = vMax - vMin;
-        const double FlatAmplitudeEpsilon = 1e-9;
 
-        if (vpp <= FlatAmplitudeEpsilon)
+        if (vpp < minActiveVpp)
         {
+            string detail = vpp <= 1e-9
+                ? "Signal amplitude is zero (flat signal)."
+                : FormattableString.Invariant($"Signal swing ({vpp:0.####} Vpp) is below the active-signal noise floor ({minActiveVpp:0.####} Vpp).");
             return (
-                BuildFlat(MeasurementKind.Frequency, UnitHz, channel, isSimulated, "Signal amplitude is zero (flat signal)."),
-                BuildFlat(MeasurementKind.DutyCycle, UnitPercent, channel, isSimulated, "Signal amplitude is zero (flat signal)."));
+                BuildFlat(MeasurementKind.Frequency, UnitHz, channel, isSimulated, detail),
+                BuildFlat(MeasurementKind.DutyCycle, UnitPercent, channel, isSimulated, detail));
         }
 
         double vMid = 0.5 * (vMin + vMax);
@@ -357,15 +399,18 @@ public static class WaveformMath
         double sampleRateHz,
         double vMin,
         double vMax,
+        double minActiveVpp,
         int channel,
         bool isSimulated)
     {
         double vpp = vMax - vMin;
-        const double FlatAmplitudeEpsilon = 1e-9;
 
-        if (vpp <= FlatAmplitudeEpsilon)
+        if (vpp < minActiveVpp)
         {
-            return BuildFlat(MeasurementKind.RiseTime, UnitSecond, channel, isSimulated, "Signal amplitude is zero (flat signal).");
+            string detail = vpp <= 1e-9
+                ? "Signal amplitude is zero (flat signal)."
+                : FormattableString.Invariant($"Signal swing ({vpp:0.####} Vpp) is below the active-signal noise floor ({minActiveVpp:0.####} Vpp).");
+            return BuildFlat(MeasurementKind.RiseTime, UnitSecond, channel, isSimulated, detail);
         }
 
         double v10 = vMin + 0.10 * vpp;

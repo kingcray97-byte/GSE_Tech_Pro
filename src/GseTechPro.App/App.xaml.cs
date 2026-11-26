@@ -26,6 +26,10 @@ public partial class App : Application
         DataServices = new DataServices();
         AdapterFactory = new DiagnosticAdapterFactory();
         ScopeDeviceFactory = new ScopeDeviceFactory();
+        var oemModules = new OemModuleRegistry();
+        // Specific OEM modules register before this; the generic fallback is always last.
+        oemModules.Register(new GenericOemModule());
+        OemModules = oemModules;
         AiLauncher = new AiServiceLauncher();
         AiClient = new AiServiceClient(
             new AiServiceConfig { BaseUrl = AiLauncher.BaseUrl },
@@ -40,13 +44,15 @@ public partial class App : Application
 
     public IScopeDeviceFactory ScopeDeviceFactory { get; }
 
+    public IOemModuleRegistry OemModules { get; }
+
     public AiServiceLauncher AiLauncher { get; }
 
     public IAiClient AiClient { get; }
 
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
-        _window = new MainWindow(DataServices, AdapterFactory, AiClient, AiLauncher, ScopeDeviceFactory);
+        _window = new MainWindow(DataServices, AdapterFactory, AiClient, AiLauncher, ScopeDeviceFactory, OemModules);
         _window.Activate();
         await _window.InitializeShellAsync();
     }

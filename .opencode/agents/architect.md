@@ -1,7 +1,7 @@
 ---
 description: Software architect. Designs the overall architecture, folder structure, database design, process boundaries (WinUI app, 32-bit device host, Python AI service), and shared contracts in GseTechPro.Core. Use before building any new subsystem or when two parts need to talk to each other.
 mode: subagent
-model: lmstudio/nvidia/nemotron-3-nano-omni
+model: opencode-go/deepseek-v4-pro
 color: "#5C2D91"
 permissions:
   - action: edit
@@ -12,6 +12,9 @@ permissions:
     effect: allow
   - action: edit
     resource: docs/decisions/**
+    effect: allow
+  - action: edit
+    resource: docs/PLAN-vci-vehicle-selection.md
     effect: allow
   - action: edit
     resource: src/GseTechPro.Core/**

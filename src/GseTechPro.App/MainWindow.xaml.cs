@@ -24,7 +24,8 @@ public sealed partial class MainWindow : Window
         IDiagnosticAdapterFactory adapterFactory,
         IAiClient? aiClient = null,
         AiServiceLauncher? aiLauncher = null,
-        IScopeDeviceFactory? scopeDeviceFactory = null)
+        IScopeDeviceFactory? scopeDeviceFactory = null,
+        IOemModuleRegistry? oemModuleRegistry = null)
     {
         ViewModel = new MainShellViewModel(
             dataServices,
@@ -33,7 +34,8 @@ public sealed partial class MainWindow : Window
             aiClient,
             aiLauncher,
             aiStateService: null,
-            scopeDeviceFactory: scopeDeviceFactory);
+            scopeDeviceFactory: scopeDeviceFactory,
+            oemModuleRegistry: oemModuleRegistry);
         InitializeComponent();
 
         RootGrid.DataContext = ViewModel;

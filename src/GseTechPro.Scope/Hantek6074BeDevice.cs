@@ -296,15 +296,6 @@ public sealed class Hantek6074BeDevice : IScopeDevice
                 throw new InvalidOperationException("Hantek 6074BE device not found (unplugged before capture).");
             }
 
-            int derivedSamples = request.SampleCount ?? (int)Math.Round(
-                request.TimebaseSecondsPerDivision * 10.0 * request.SampleRateHz,
-                MidpointRounding.AwayFromZero);
-
-            int maxPerChannel = WaveformFile.MaxTotalSamples / Math.Max(1, request.Channels.Count);
-            int requestedSampleCount = Math.Clamp(derivedSamples, 512, maxPerChannel);
-            // HTHardDll.h line 25: nBufferLen must be an integer multiple of 512
-            uint alignedBufferLen = (uint)(((requestedSampleCount + 511) / 512) * 512);
-
             ushort timeDivIndex = SelectTimeDivIndex(request.TimebaseSecondsPerDivision);
             ushort trigChannelZeroBased = (ushort)Math.Clamp(request.TriggerChannel - 1, 0, MaxChannelCount - 1);
             ushort trigSlope = request.TriggerMode == ScopeTriggerMode.Falling ? TriggerSlopeFall : TriggerSlopeRise;
@@ -340,7 +331,7 @@ public sealed class Hantek6074BeDevice : IScopeDevice
                     double probeScale = double.IsFinite(cfg.ProbeMultiplier) && cfg.ProbeMultiplier > 0.0
                         ? cfg.ProbeMultiplier
                         : 1.0;
-                    double bncRange = Math.Max(0.016, cfg.VoltageRangeVolts / probeScale);
+                    double bncRange = Math.Max(0.008, cfg.VoltageRangeVolts / probeScale);
                     ushort voltDivIdx = SelectVoltDivIndex(bncRange);
 
                     relay.bCHEnable[i] = enabled ? 1u : 0u;
@@ -364,6 +355,14 @@ public sealed class Hantek6074BeDevice : IScopeDevice
                 channelProbeScales[trigChannelZeroBased],
                 GetCalibratedLeverPos(trigChannelZeroBased, relay.nCHVoltDIV[trigChannelZeroBased]));
 
+            // Seed with the requested sample rate before dsoHTSetSampleRate; re-derive from the actual
+            // hardware rate once dsoHTSetSampleRate reports the timebase-locked ADC rate.
+            var (initialSampleCount, initialAlignedBufferLen) = ResolveCaptureSampleCounts(
+                request.SampleCount,
+                request.TimebaseSecondsPerDivision,
+                request.SampleRateHz,
+                request.Channels.Count);
+
             var control = new HantekControlData
             {
                 nCHSet = chMask == 0 ? (ushort)0x0F : chMask,
@@ -372,8 +371,8 @@ public sealed class Hantek6074BeDevice : IScopeDevice
                 nHTriggerPos = 50,
                 nVTriggerPos = trigPos,
                 nTriggerSlope = trigSlope,
-                nBufferLen = alignedBufferLen,
-                nReadDataLen = alignedBufferLen,
+                nBufferLen = initialAlignedBufferLen,
+                nReadDataLen = initialAlignedBufferLen,
                 nAlreadyReadLen = 0,
                 nALT = 0,
                 nETSOpen = 0,
@@ -384,8 +383,17 @@ public sealed class Hantek6074BeDevice : IScopeDevice
 
             _ = NativeMethods.dsoHTSetSampleRate(_deviceIndex, YtNormal, ref relay, ref control);
             // The hardware rate follows the time/div step, not the requested rate (SDK_HTHardDLL-EN, Table 1).
-            // Stamp the capture with what the device reports so frequency/timing measurements are right.
+            // Stamp the capture with what the device reports so frequency/timing measurements are right, and
+            // derive the 10-division sample count from the actual rate when request.SampleCount is null.
             int actualSampleRateHz = ResolveSampleRateHz(TryGetDeviceSampleRate(_deviceIndex), request.SampleRateHz);
+            var (requestedSampleCount, alignedBufferLen) = ResolveCaptureSampleCounts(
+                request.SampleCount,
+                request.TimebaseSecondsPerDivision,
+                actualSampleRateHz,
+                request.Channels.Count);
+            control.nBufferLen = alignedBufferLen;
+            control.nReadDataLen = alignedBufferLen;
+
             _ = NativeMethods.dsoHTSetCHAndTrigger(_deviceIndex, ref relay, timeDivIndex);
             _ = NativeMethods.dsoHTSetRamAndTrigerControl(_deviceIndex, timeDivIndex, control.nCHSet, trigChannelZeroBased, 0);
             _ = NativeMethods.dsoHTSetHTriggerLength(_deviceIndex, ref control, MaxChannelCount);
@@ -655,13 +663,42 @@ public sealed class Hantek6074BeDevice : IScopeDevice
         }
     }
 
-    private static ushort SelectVoltDivIndex(double bncFullScaleRangeVolts)
+    /// <summary>
+    /// Derives the per-channel sample count and 512-sample-aligned SDK buffer length (<c>nBufferLen</c>).
+    /// When <paramref name="explicitSampleCount"/> is null, derives a 10-division sweep from
+    /// <paramref name="timebaseSecondsPerDivision"/> and <paramref name="actualSampleRateHz"/> (the hardware-reported
+    /// sample rate after <c>dsoHTSetSampleRate</c>). Clamped to <c>[512, WaveformFile.MaxTotalSamples / enabledChannelCount]</c>.
+    /// </summary>
+    internal static (int RequestedSampleCount, uint AlignedBufferLen) ResolveCaptureSampleCounts(
+        int? explicitSampleCount,
+        double timebaseSecondsPerDivision,
+        int actualSampleRateHz,
+        int enabledChannelCount)
     {
-        // Full scale across 8 vertical divisions = 8 * VoltDiv
-        double targetVoltDiv = Math.Max(0.002, bncFullScaleRangeVolts / 8.0);
+        long rawSamples = explicitSampleCount ?? (long)Math.Round(
+            timebaseSecondsPerDivision * 10.0 * actualSampleRateHz,
+            MidpointRounding.AwayFromZero);
+
+        int maxPerChannel = WaveformFile.MaxTotalSamples / Math.Max(1, enabledChannelCount);
+        int requestedSampleCount = (int)Math.Clamp(rawSamples, 512, maxPerChannel);
+        // HTHardDll.h line 25: nBufferLen must be an integer multiple of 512
+        uint alignedBufferLen = (uint)(((requestedSampleCount + 511) / 512) * 512);
+        return (requestedSampleCount, alignedBufferLen);
+    }
+
+    /// <summary>
+    /// Selects the Hantek V/div index (0..11 in <see cref="VoltDivTable"/>) for a BNC-referred bipolar
+    /// range (<c>±bncBipolarRangeVolts</c>, i.e. <c>2 × bncBipolarRangeVolts</c> peak-to-peak across 8 vertical
+    /// divisions = <c>4</c> divisions per polarity). Therefore <c>targetVoltDiv = bncBipolarRangeVolts / 4.0</c>,
+    /// so e.g. ±5 V selects 2 V/div (±8 V full span) rather than 1 V/div (±4 V, which would clip between 4–5 V).
+    /// </summary>
+    internal static ushort SelectVoltDivIndex(double bncBipolarRangeVolts)
+    {
+        // Bipolar ±Range across 8 vertical divisions (±4 divisions from mid-scale zero) => 2 * Range / 8 = Range / 4
+        double targetVoltDiv = Math.Max(0.002, bncBipolarRangeVolts / 4.0);
         for (ushort i = 0; i < VoltDivTable.Length; i++)
         {
-            if (VoltDivTable[i] >= targetVoltDiv)
+            if (VoltDivTable[i] >= targetVoltDiv - 1e-12)
                 return i;
         }
         return (ushort)(VoltDivTable.Length - 1);

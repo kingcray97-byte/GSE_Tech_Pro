@@ -20,6 +20,8 @@
                       LogicalName="GseTechPro.Data.Content.Dtc.%(Filename)%(Extension)" />
     <EmbeddedResource Include="..\..\data\troubleshooting\*.json"
                       LogicalName="GseTechPro.Data.Content.Troubleshooting.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\data\vehicles\*.json"
+                      LogicalName="GseTechPro.Data.Content.Vehicles.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!-- Official sqlite-vec v0.1.9 (MIT / Apache-2.0); provenance and hashes: Native/README.md. -->

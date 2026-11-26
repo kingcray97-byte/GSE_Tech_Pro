@@ -153,10 +153,29 @@ public sealed record DeviceInfo
 {
     public string Id { get; init; } = "";
     public string Name { get; init; } = "";
-    /// <summary>Device class: "j2534" | "rp1210" | "simulator".</summary>
+    /// <summary>Device class, one of <see cref="DeviceKinds"/> ("j2534" | "rp1210" | "simulator").</summary>
     public string Kind { get; init; } = "";
     public IReadOnlyList<ProtocolType> Protocols { get; init; } = Array.Empty<ProtocolType>();
     public bool IsSimulated { get; init; }
+}
+
+/// <summary>
+/// Device-class codes for <see cref="DeviceInfo.Kind"/>. Kept as strings (matching the
+/// <see cref="HostStreamKinds"/> pattern) rather than an enum: <see cref="DeviceInfo.Kind"/> is a
+/// string on the wire (ADR-007) and these values must round-trip losslessly between the host's
+/// <c>list-devices</c>, the app's VCI settings (<see cref="DefaultVciSelection.Kind"/>), and any
+/// future device class added by device-comms. An enum would add a mapping layer with no benefit here.
+/// </summary>
+public static class DeviceKinds
+{
+    /// <summary>J2534 pass-thru (light-duty OBD-II, e.g. TOPDON RLink X3).</summary>
+    public const string J2534 = "j2534";
+
+    /// <summary>RP1210 heavy-duty adapter (e.g. Nexiq USB-Link, Noregon DLA+).</summary>
+    public const string Rp1210 = "rp1210";
+
+    /// <summary>The built-in simulator (always present; simulator-first rule).</summary>
+    public const string Simulator = "simulator";
 }
 
 // ---- Command parameter/result records (typed shapes for Params/Result) ----

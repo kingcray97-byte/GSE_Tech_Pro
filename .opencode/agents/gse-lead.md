@@ -1,7 +1,7 @@
 ---
 description: Lead for GSE Tech Pro. Plans each build phase, splits work into tasks, hands them to the right subagent, and checks results. Start every work session with this agent.
 mode: primary
-model: lmstudio/nvidia/nemotron-3-nano-omni
+model: opencode/deepseek-v4.1-flash-free
 color: "#0078D4"
 permissions:
   - action: subagent
@@ -54,6 +54,9 @@ permissions:
     effect: allow
   - action: edit
     resource: AGENTS.md
+    effect: allow
+  - action: edit
+    resource: docs/PLAN-vci-vehicle-selection.md
     effect: allow
   - action: shell
     resource: "*"

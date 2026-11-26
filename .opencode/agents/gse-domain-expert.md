@@ -1,7 +1,7 @@
 ---
 description: Ground Support Equipment and heavy-duty diagnostics expert. Writes troubleshooting decision trees, symptom and complaint lists, test point definitions, DTC/SPN-FMI description files, and safety warnings. Reviews other agents' work for real-world shop accuracy. Use for any diagnostic content or "how would a tech actually do this" question.
 mode: subagent
-model: lmstudio/nvidia/nemotron-3-nano-omni
+model: opencode-go/kimi-k3
 color: "#FFB900"
 permissions:
   - action: edit
@@ -18,6 +18,9 @@ permissions:
     effect: allow
   - action: edit
     resource: data/safety/**
+    effect: allow
+  - action: edit
+    resource: data/vehicles/**
     effect: allow
   - action: shell
     resource: "*"

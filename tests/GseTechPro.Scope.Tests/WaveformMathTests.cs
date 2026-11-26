@@ -202,6 +202,96 @@ public sealed class WaveformMathTests
         Assert.Equal(ScopeMeasurementStatus.NotConfigured, GetByKind(results, MeasurementKind.Current).Status);
     }
 
+    [Fact]
+    public void ComputeMeasurements_SubThresholdAdcNoiseOnUnconnectedChannel_ReturnsFlatSignalForFrequencyDutyAndRiseTime()
+    {
+        // Real-hardware Hantek 6074BE case: unconnected CH1 on 8 V range has ~6 LSB of 8-bit ADC noise
+        // (min 0.0627 V, max 0.2510 V, Vpp ≈ 0.1883 V < 5% of 8 V = 0.40 V noise floor).
+        const int sampleCount = 1_000;
+        const double sampleRateHz = 250_000.0;
+        double[] levels = [0.0627, 0.0941, 0.1255, 0.1569, 0.1882, 0.2196, 0.2510];
+        var rng = new Random(42);
+        double[] samples = new double[sampleCount];
+        for (int i = 0; i < sampleCount; i++)
+            samples[i] = levels[rng.Next(levels.Length)];
+        // Guarantee exact min and max from the hardware capture
+        samples[0] = 0.0627;
+        samples[1] = 0.2510;
+
+        var config = new ScopeChannelConfig
+        {
+            Channel = 1,
+            VoltageRangeVolts = 8.0,
+            Coupling = ScopeCoupling.Dc,
+            ProbeMultiplier = 1.0,
+            CurrentScaleAmpsPerVolt = 0.0,
+        };
+
+        ScopeMeasurement[] results = WaveformMath.ComputeMeasurements(samples, sampleRateHz, config, channel: 1);
+
+        var freq = GetByKind(results, MeasurementKind.Frequency);
+        Assert.Equal(ScopeMeasurementStatus.FlatSignal, freq.Status);
+        Assert.Null(freq.Value);
+
+        var duty = GetByKind(results, MeasurementKind.DutyCycle);
+        Assert.Equal(ScopeMeasurementStatus.FlatSignal, duty.Status);
+        Assert.Null(duty.Value);
+
+        var rise = GetByKind(results, MeasurementKind.RiseTime);
+        Assert.Equal(ScopeMeasurementStatus.FlatSignal, rise.Status);
+        Assert.Null(rise.Value);
+
+        // Static amplitude measurements (Peak, PeakToPeak, Ripple) remain Computed with actual measured values
+        var peak = GetByKind(results, MeasurementKind.Peak);
+        Assert.Equal(ScopeMeasurementStatus.Computed, peak.Status);
+        Assert.Equal(0.2510, peak.Value!.Value, precision: 4);
+
+        var vpp = GetByKind(results, MeasurementKind.PeakToPeak);
+        Assert.Equal(ScopeMeasurementStatus.Computed, vpp.Status);
+        Assert.Equal(0.2510 - 0.0627, vpp.Value!.Value, precision: 4);
+
+        var ripple = GetByKind(results, MeasurementKind.Ripple);
+        Assert.Equal(ScopeMeasurementStatus.Computed, ripple.Status);
+        Assert.NotNull(ripple.Value);
+    }
+
+    [Fact]
+    public void ComputeMeasurements_SmallRealSignalAboveNoiseFloor_StillComputesFrequencyDutyAndRiseTime()
+    {
+        // 200 mVpp (0.10 V amplitude) 300 Hz alternator ripple on a 1.0 V AC range:
+        // Vpp = 0.20 V >= max(0.02 V, 0.05 * 1.0 V = 0.05 V), so cyclic/edge measurements are computed.
+        const double sampleRateHz = 100_000.0;
+        const double freqHz = 300.0;
+        const double amplitude = 0.10; // 0.20 Vpp
+        const int sampleCount = 10_000;
+
+        double[] samples = new double[sampleCount];
+        for (int i = 0; i < sampleCount; i++)
+            samples[i] = amplitude * Math.Sin(2.0 * Math.PI * freqHz * (i / sampleRateHz));
+
+        var config = new ScopeChannelConfig
+        {
+            Channel = 1,
+            VoltageRangeVolts = 1.0,
+            Coupling = ScopeCoupling.Ac,
+            ProbeMultiplier = 1.0,
+        };
+
+        ScopeMeasurement[] results = WaveformMath.ComputeMeasurements(samples, sampleRateHz, config, channel: 1);
+
+        var freq = GetByKind(results, MeasurementKind.Frequency);
+        Assert.Equal(ScopeMeasurementStatus.Computed, freq.Status);
+        Assert.InRange(freq.Value!.Value, 299.0, 301.0);
+
+        var duty = GetByKind(results, MeasurementKind.DutyCycle);
+        Assert.Equal(ScopeMeasurementStatus.Computed, duty.Status);
+        Assert.InRange(duty.Value!.Value, 49.5, 50.5);
+
+        var rise = GetByKind(results, MeasurementKind.RiseTime);
+        Assert.Equal(ScopeMeasurementStatus.Computed, rise.Status);
+        Assert.NotNull(rise.Value);
+    }
+
     private static ScopeMeasurement GetByKind(IEnumerable<ScopeMeasurement> measurements, MeasurementKind kind) =>
         measurements.Single(m => m.Kind == kind);
 }

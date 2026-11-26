@@ -1,7 +1,7 @@
 ---
 description: Code reviewer. Read-only review of changes for bugs, safety, offline rules, tablet performance, folder ownership, and AI safety rules. Use on any change touching devices, the database, AI, installer, or safety content.
 mode: subagent
-model: lmstudio/nvidia/nemotron-3-nano-omni
+model: opencode/nemotron-3.5-lightning-free
 color: "#A4262C"
 permissions:
   - action: edit

@@ -1,7 +1,7 @@
 ---
 description: Repair history learning engineer. Builds the self-learning recommendation engine that finds similar past failures, tracks outcomes and comebacks, and ranks repairs by success rate. Use for anything about repair history matching or repair recommendations.
 mode: subagent
-model: lmstudio/nvidia/nemotron-3-nano-omni
+model: opencode/beam-free
 color: "#498205"
 permissions:
   - action: edit

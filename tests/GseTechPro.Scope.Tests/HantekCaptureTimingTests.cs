@@ -26,4 +26,69 @@ public sealed class HantekCaptureTimingTests
     [InlineData(double.NaN, 2.0)]
     public void CaptureTimeout_CoversTwoSweepsPlusMargin(double secondsPerDiv, double expectedSeconds) =>
         Assert.Equal(expectedSeconds, Hantek6074BeDevice.CaptureTimeout(secondsPerDiv).TotalSeconds, 6);
+
+    [Theory]
+    [InlineData(0.008, 0)]  // ±8 mV -> 2 mV/div (index 0)
+    [InlineData(1.0, 7)]    // ±1 V  -> 250 mV/div needed -> 500 mV/div (index 7, ±2 V span)
+    [InlineData(4.0, 8)]    // ±4 V  -> 1 V/div (index 8, ±4 V span)
+    [InlineData(5.0, 9)]    // ±5 V  -> 1.25 V/div needed -> 2 V/div (index 9, ±8 V span; avoids clipping 4..5 V)
+    [InlineData(8.0, 9)]    // ±8 V  -> 2 V/div (index 9, ±8 V span)
+    [InlineData(20.0, 10)]  // ±20 V -> 5 V/div (index 10, ±20 V span)
+    [InlineData(40.0, 11)]  // ±40 V -> 10 V/div (index 11, ±40 V span)
+    [InlineData(100.0, 11)] // clamps to widest 10 V/div (index 11)
+    public void SelectVoltDivIndex_BipolarRange_DividesByFourSoFullPlusMinusRangeFitsWithoutClipping(
+        double bncBipolarRangeVolts,
+        ushort expectedVoltDivIndex) =>
+        Assert.Equal(expectedVoltDivIndex, Hantek6074BeDevice.SelectVoltDivIndex(bncBipolarRangeVolts));
+
+    [Fact]
+    public void ResolveCaptureSampleCounts_WhenSampleCountNull_DerivesTenDivisionsFromActualHardwareSampleRate()
+    {
+        // At 1 ms/div (10 ms total sweep) when requested was 100 kHz but Hantek reports actual 250 kHz:
+        // 10 ms * 250 kHz = 2,500 samples; aligned buffer length = 2,560 (5 * 512).
+        var (sampleCount, alignedLen) = Hantek6074BeDevice.ResolveCaptureSampleCounts(
+            explicitSampleCount: null,
+            timebaseSecondsPerDivision: 0.001,
+            actualSampleRateHz: 250_000,
+            enabledChannelCount: 1);
+
+        Assert.Equal(2_500, sampleCount);
+        Assert.Equal(2_560u, alignedLen);
+        Assert.Equal(0u, alignedLen % 512u);
+    }
+
+    [Fact]
+    public void ResolveCaptureSampleCounts_HonorsExplicitSampleCountAndEnforces512AlignmentAndMaxCap()
+    {
+        // Explicit sample count is honored rather than derived from timebase * actualSampleRateHz
+        var (explicitCount, explicitAligned) = Hantek6074BeDevice.ResolveCaptureSampleCounts(
+            explicitSampleCount: 1_000,
+            timebaseSecondsPerDivision: 0.001,
+            actualSampleRateHz: 250_000,
+            enabledChannelCount: 1);
+
+        Assert.Equal(1_000, explicitCount);
+        Assert.Equal(1_024u, explicitAligned);
+
+        // Sub-512 count clamps up to 512 minimum
+        var (minCount, minAligned) = Hantek6074BeDevice.ResolveCaptureSampleCounts(
+            explicitSampleCount: 100,
+            timebaseSecondsPerDivision: 0.001,
+            actualSampleRateHz: 10_000,
+            enabledChannelCount: 1);
+
+        Assert.Equal(512, minCount);
+        Assert.Equal(512u, minAligned);
+
+        // Very slow timebase / high rate clamps to WaveformFile.MaxTotalSamples / enabledChannelCount
+        var (maxCount, maxAligned) = Hantek6074BeDevice.ResolveCaptureSampleCounts(
+            explicitSampleCount: null,
+            timebaseSecondsPerDivision: 10.0,
+            actualSampleRateHz: 1_000_000,
+            enabledChannelCount: 4);
+
+        Assert.Equal(WaveformFile.MaxTotalSamples / 4, maxCount);
+        Assert.True(maxAligned >= (uint)maxCount);
+        Assert.Equal(0u, maxAligned % 512u);
+    }
 }

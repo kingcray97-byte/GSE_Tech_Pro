@@ -293,6 +293,18 @@
                 <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
             </Style>
 
+            <!-- Vehicle selector dialog: Years / Makes / Models list rows (glove friendly, 44 px minimum) -->
+            <Style x:Key="VehicleSelectorItemStyle" TargetType="ListViewItem">
+                <Setter Property="MinHeight" Value="{StaticResource MinTouchSize}" />
+                <Setter Property="Padding" Value="12,6" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+                <Setter Property="FontSize" Value="{StaticResource FontSizeSubtitle}" />
+            </Style>
+
+            <x:Double x:Key="VehicleSelectorDialogWidth">520</x:Double>
+            <x:Double x:Key="VehicleSelectorListHeight">360</x:Double>
+
             <Style x:Key="VcrTransportButtonStyle" TargetType="Button">
                 <Setter Property="MinHeight" Value="{StaticResource MinTouchSize}" />
                 <Setter Property="MinWidth" Value="{StaticResource MinTouchSize}" />

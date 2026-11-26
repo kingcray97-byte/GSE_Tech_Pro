@@ -24,7 +24,7 @@ Each folder has one owning agent. Only the owner edits it, unless `gse-lead` ass
 | Path | Owner |
 |---|---|
 | `docs/ARCHITECTURE.md`, `docs/decisions/` | `architect` |
-| `docs/PLAN.md`, `AGENTS.md` | `gse-lead` |
+| `docs/PLAN.md`, `docs/PLAN-vci-vehicle-selection.md`, `AGENTS.md` | `gse-lead` |
 | `src/GseTechPro.App/` (WinUI screens, styles, view models) | `ui-winui` |
 | `src/GseTechPro.Core/` (shared models, interfaces) | `architect` (others propose changes) |
 | `src/GseTechPro.Data/` (SQLite, migrations, repositories) | `database` |
@@ -33,7 +33,7 @@ Each folder has one owning agent. Only the owner edits it, unless `gse-lead` ass
 | `ai-service/app/`, `ai-service/tools/`, `ai-service/voice/`, `ai-service/vision/` | `ai-engineer` |
 | `ai-service/rag/`, `ai-service/ingest/` | `rag-ingest` |
 | `ai-service/recommender/` | `recommender` |
-| `data/troubleshooting/`, `data/dtc/`, `data/specs/` | `gse-domain-expert` |
+| `data/troubleshooting/`, `data/dtc/`, `data/specs/`, `data/vehicles/` | `gse-domain-expert` |
 | `installer/`, `docs/DEPLOYMENT.md` | `installer-deploy` |
 | `tests/` | `tester` (owners may add tests for their own code) |
 

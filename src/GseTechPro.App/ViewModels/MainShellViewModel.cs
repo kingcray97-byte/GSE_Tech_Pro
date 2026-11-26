@@ -85,9 +85,15 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         ICameraSourceFactory? cameraSourceFactory = null,
         ITextRecognizer? textRecognizer = null,
         IMicrophoneFactory? microphoneFactory = null,
-        ISpeechOutput? speechOutput = null)
+        ISpeechOutput? speechOutput = null,
+        IOemModuleRegistry? oemModuleRegistry = null,
+        IVehicleIdentifier? vehicleIdentifier = null,
+        IVehicleCatalog? vehicleCatalog = null)
     {
         _dataServices = dataServices;
+        _vehicleCatalog = vehicleCatalog ?? new GseTechPro.Data.VehicleCatalog();
+        _vehicleIdentifier = vehicleIdentifier ?? new GseTechPro.Devices.VehicleIdentifier();
+        OemModules = oemModuleRegistry ?? CreateDefaultOemModuleRegistry();
         _adapterFactory = adapterFactory;
         _scopeDeviceFactory = scopeDeviceFactory ?? new Scope.ScopeDeviceFactory();
         _cameraSourceFactory = cameraSourceFactory ?? new Services.WindowsCameraSourceFactory();
@@ -644,6 +650,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     public async Task ReloadDatabaseRecordsAsync()
     {
         await LoadAiRoutingSettingsAsync();
+        await LoadVciSettingsAsync();
         await LoadVoicePreferencesAsync(); // 7.5c
 
         var shops = await _dataServices.Shops.GetAllAsync();
@@ -762,6 +769,11 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
             Debug.WriteLine($"[GSE Tech Pro] Host32 device discovery fallback to in-proc simulator: {ex.Message}");
             AppendDiagnosticLog($"32-bit device host discovery note: {ex.Message} (In-process simulator active).");
         }
+        finally
+        {
+            // Settings > Vehicle interfaces lists are built from the same discovery result.
+            RebuildVciChoices();
+        }
     }
 
     [RelayCommand]
@@ -811,7 +823,18 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
             NotifyProvenanceChanged();
 
             var vehicleInfo = await _activeAdapter.GetVehicleInfoAsync();
-            VehicleVinText = $"VIN: {vehicleInfo.Vin ?? "<unknown>"}";
+            var decoded = VinDecoder.Decode(vehicleInfo.Vin);
+            SetActiveVehicle(new VehicleProfile
+            {
+                Vin = vehicleInfo.Vin,
+                Make = decoded?.Make,
+                Model = null,
+                Engine = decoded?.Engine,
+                Region = decoded?.Region,
+                Year = decoded?.Year,
+                Protocol = vehicleInfo.Protocol,
+                Source = VehicleProfileSource.Auto,
+            });
 
             DiscoveredEcus.Clear();
             foreach (var ecu in vehicleInfo.Ecus)
@@ -870,7 +893,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         AdapterDeviceName = "No Adapter Connected";
         ConnectionStatusText = "No Connection";
         ActiveProtocolText = "Protocol: None";
-        VehicleVinText = "VIN: <not connected>";
+        SetActiveVehicle(null);
         MilStatusText = "OFF";
         NotifyProvenanceChanged();
 
@@ -2051,6 +2074,8 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         OnPropertyChanged(nameof(ModuleNavTitle));
         OnPropertyChanged(nameof(ModuleNavGlyph));
         OnPropertyChanged(nameof(ModuleNavVisibility));
+        OnPropertyChanged(nameof(ProtocolDropdownVisibility));
+        _lastPageNavKey = null;
         SyncModuleNavSelection(null);
     }
 
@@ -2066,7 +2091,22 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         SidebarSections.FirstOrDefault(s => s.Key == CurrentSidebarSectionKey);
 
     /// <summary>Pages of the active module, shown in the navy left menu. Empty for screens without sub-pages.</summary>
-    public IReadOnlyList<SidebarItem> CurrentModuleNavItems => CurrentSection?.Children ?? Array.Empty<SidebarItem>();
+    public IReadOnlyList<SidebarItem> CurrentModuleNavItems
+    {
+        get
+        {
+            var baseItems = CurrentSection?.Children ?? Array.Empty<SidebarItem>();
+            if (CurrentSidebarSectionKey != "Diagnostics")
+                return baseItems;
+
+            // Step 8: HD / OEM modes append their action entries under the standard Diagnostics pages.
+            var modeItems = GetModeSidebarItems();
+            return modeItems.Count == 0 ? baseItems : baseItems.Concat(modeItems).ToList();
+        }
+    }
+
+    /// <summary>Key of the last page (non-action) opened from the module menu; restored after an action entry runs.</summary>
+    private string? _lastPageNavKey;
 
     public string ModuleNavTitle => CurrentSection?.Label ?? string.Empty;
 
@@ -2137,6 +2177,15 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     /// </summary>
     public async Task SelectSidebarItemAsync(SidebarItem item)
     {
+        if (item.IsAction)
+        {
+            await OnSidebarActionAsync(item.ActionKey ?? item.Key);
+            // Actions don't navigate: put the highlight back on the page the technician is still viewing.
+            if (ReferenceEquals(SelectedModuleNavItem, item))
+                SyncModuleNavSelection(_lastPageNavKey);
+            return;
+        }
+
         if (item.ParentKey is null)
         {
             SelectToolbarAction(item.Key);
@@ -2149,6 +2198,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         }
 
         await SelectNavRailItem(item.Key);
+        _lastPageNavKey = item.Key;
         SyncModuleNavSelection(item.Key);
     }
 
@@ -2221,16 +2271,26 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
             case "J2534":
                 SelectedProtocol = ProtocolType.J1939;
                 ActivateDiagnosticTool("J2534", "J2534 Pass-Thru Diagnostics", "Equipment Health");
+                _ = EnterVciModeAsync(VehicleInterfaceSlot.LightDuty);
+                break;
+
+            case "OemDiagnostics":
+                // The VCI tile: OEM screen on the saved J2534 device.
+                SelectedProtocol = ProtocolType.J1939;
+                ActivateDiagnosticTool("OemDiagnostics", "OEM Diagnostics", "Equipment Health");
+                _ = EnterVciModeAsync(VehicleInterfaceSlot.LightDuty);
                 break;
 
             case "HeavyDuty":
                 SelectedProtocol = ProtocolType.J1939;
                 ActivateDiagnosticTool("Heavy Duty", "Heavy Duty (J1939 / J1708)", "Equipment Health");
+                _ = EnterVciModeAsync(VehicleInterfaceSlot.HeavyDuty);
                 break;
 
             case "OBDII":
                 SelectedProtocol = ProtocolType.OBD2;
                 ActivateDiagnosticTool("OBD II", "Global OBD II Diagnostics", "Vehicle Health");
+                _ = EnterVciModeAsync(VehicleInterfaceSlot.LightDuty, runIdentifier: true);
                 break;
 
             case "Scope":
@@ -2513,7 +2573,7 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     {
         ActiveTool = toolName;
         ActiveSectionKey = "Diagnostics";
-        BreadcrumbRoot = "Equipment Selection";
+        BreadcrumbRoot = DefaultBreadcrumbRoot;
         BreadcrumbCategory = category;
         BreadcrumbLeaf = leaf;
     }

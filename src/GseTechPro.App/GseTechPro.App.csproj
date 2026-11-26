@@ -41,6 +41,7 @@
 
   <ItemGroup>
     <Page Include="MainWindow.xaml" />
+    <Page Include="VehicleSelectorDialog.xaml" />
     <Content Include="Themes\**\*.xaml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
