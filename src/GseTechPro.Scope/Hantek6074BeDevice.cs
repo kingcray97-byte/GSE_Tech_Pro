@@ -54,6 +54,17 @@ public sealed class Hantek6074BeDevice : IScopeDevice
         10.00, // 11: 10 V/div  (80.0 V)
     ];
 
+    // Lever position (0..255) that puts the 0 V level on the zero code (127) per volts/div index, measured on
+    // CH1 of one 6074BE with the CAL output (1 kHz, 0 to +2 V) on 2026-11-26. Ranges not listed use DefaultLeverPos.
+    // 0.5 V/div (±2 V) = 124, 1 V/div (±4 V) = 126, 2 V/div (±5 V) = 125, 5 V/div (±10 V) = 127.
+    private static readonly IReadOnlyDictionary<ushort, ushort> ZeroLeverByVoltDivIndex = new Dictionary<ushort, ushort>
+    {
+        [7] = 124,
+        [8] = 126,
+        [9] = 125,
+        [10] = 127,
+    };
+
     // Table 1 of SDK_HTHardDLL-EN.pdf: timebase (s/div) per index (0..35)
     private static readonly double[] TimeDivTable =
     [
@@ -412,7 +423,7 @@ public sealed class Hantek6074BeDevice : IScopeDevice
             ushort[] chPosArray = new ushort[MaxChannelCount];
             for (ushort ch = 0; ch < MaxChannelCount; ch++)
             {
-                ushort leverPos = DefaultLeverPos;
+                ushort leverPos = ZeroLeverByVoltDivIndex.TryGetValue(relay.nCHVoltDIV[ch], out var zeroLever) ? zeroLever : DefaultLeverPos;
                 chPosArray[ch] = leverPos;
                 _ = NativeMethods.dsoHTSetCHPos(_deviceIndex, relay.nCHVoltDIV[ch], leverPos, ch, MaxChannelCount);
             }
@@ -483,7 +494,7 @@ public sealed class Hantek6074BeDevice : IScopeDevice
             foreach (var chCfg in request.Channels)
             {
                 int chIdx = chCfg.Channel - 1;
-                // Factory zero-level calibration is applied in hardware by dsoHTSetCHPos (16-bit DAC endpoints in _calibrationLevels, blocks at offsets 60/61, 96/97, 132/133). The residual ADC offset (~5 counts / 0.31 V at 2 V/div) is the factory's tolerance and cannot be corrected from this table. Software zeroCode defaults to 127.
+                // dsoHTSetCHPos maps the lever position (see ZeroLeverByVoltDivIndex) to the DAC; the 0 V level then sits on code 127.
                 ushort zeroCode = 127;
 
                 // Hardware amplitude calibration is applied by dsoHTSetAmpCalibrate during capture setup
