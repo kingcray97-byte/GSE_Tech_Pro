@@ -209,13 +209,13 @@ public sealed class ScopeDeviceAndPresetTests
     [Fact]
     public void Hantek6074BeDevice_ConvertRawCountsToVolts_AppliesCalibrationAndProbeMultiplier()
     {
-        // LeverPos = 128 -> zeroCode = 255 - 128 = 127
+        // zeroCode = 127 (default fallback 255 - 128)
         // At 1.0 V/div, 10x probe, raw = 127 -> 0.0 V; raw = 255 -> (128 * 8 * 1.0 / 255) * 10.0 = 40.15686 V
         ushort[] raw = [127, 191, 255];
         var (volts, clipped) = Hantek6074BeDevice.ConvertRawCountsToVolts(
             raw,
             sampleCount: 3,
-            leverPos: 128,
+            zeroCode: 127,
             voltDivVolts: 1.0,
             probeMultiplier: 10.0,
             amplitudeCalibrationFactor: 1.0);

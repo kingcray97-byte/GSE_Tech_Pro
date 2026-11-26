@@ -358,13 +358,13 @@ public sealed class Hantek6074BeDevice : IScopeDevice
                 }
             }
 
-            // Same zero level the samples are converted with (calibrated per channel and V/div), so the trigger
+            // Same zero level the samples are converted with (255 - DefaultLeverPos = 127), so the trigger
             // threshold lands where the displayed voltage says it does.
             ushort trigPos = ComputeTriggerLevelCounts(
                 request.TriggerLevelVolts,
                 channelVoltDivs[trigChannelZeroBased],
                 channelProbeScales[trigChannelZeroBased],
-                GetCalibratedLeverPos(trigChannelZeroBased, relay.nCHVoltDIV[trigChannelZeroBased]));
+                zeroCode: 127);
 
             // Seed with the requested sample rate before dsoHTSetSampleRate; re-derive from the actual
             // hardware rate once dsoHTSetSampleRate reports the timebase-locked ADC rate.
@@ -412,7 +412,7 @@ public sealed class Hantek6074BeDevice : IScopeDevice
             ushort[] chPosArray = new ushort[MaxChannelCount];
             for (ushort ch = 0; ch < MaxChannelCount; ch++)
             {
-                ushort leverPos = GetCalibratedLeverPos(ch, relay.nCHVoltDIV[ch]);
+                ushort leverPos = DefaultLeverPos;
                 chPosArray[ch] = leverPos;
                 _ = NativeMethods.dsoHTSetCHPos(_deviceIndex, relay.nCHVoltDIV[ch], leverPos, ch, MaxChannelCount);
             }
@@ -483,15 +483,15 @@ public sealed class Hantek6074BeDevice : IScopeDevice
             foreach (var chCfg in request.Channels)
             {
                 int chIdx = chCfg.Channel - 1;
-                ushort voltDivIdx = relay.nCHVoltDIV[chIdx];
-                ushort leverPos = GetCalibratedLeverPos((ushort)chIdx, voltDivIdx);
+                // Factory zero-level calibration is applied in hardware by dsoHTSetCHPos (16-bit DAC endpoints in _calibrationLevels, blocks at offsets 60/61, 96/97, 132/133). The residual ADC offset (~5 counts / 0.31 V at 2 V/div) is the factory's tolerance and cannot be corrected from this table. Software zeroCode defaults to 127.
+                ushort zeroCode = 127;
 
                 // Hardware amplitude calibration is applied by dsoHTSetAmpCalibrate during capture setup
                 // (SDK_HTHardDLL-EN.pdf §26, Table 4); do not double-apply software gain here.
                 var (volts, clipped) = ConvertRawCountsToVolts(
                     rawArrays[chIdx],
                     requestedSampleCount,
-                    leverPos,
+                    zeroCode: zeroCode,
                     channelVoltDivs[chIdx],
                     channelProbeScales[chIdx],
                     amplitudeCalibrationFactor: 1.0);
@@ -584,19 +584,20 @@ public sealed class Hantek6074BeDevice : IScopeDevice
 
     /// <summary>
     /// Converts raw Hantek 8-bit/WORD ADC counts (0..255) to probe-corrected volts using the
-    /// SDK formula <c>(raw - (255 - leverPos)) * 8 * VoltDiv / 255 * ampCalibration * ProbeMultiplier</c>.
+    /// calibrated 0 V ADC midpoint <paramref name="zeroCode"/>:
+    /// <c>(raw - zeroCode) * 8 * VoltDiv / 255 * ampCalibration * ProbeMultiplier</c>.
     /// </summary>
     public static (double[] Volts, bool Clipped) ConvertRawCountsToVolts(
         ReadOnlySpan<ushort> rawCounts,
         int sampleCount,
-        ushort leverPos,
+        ushort zeroCode,
         double voltDivVolts,
         double probeMultiplier,
         double amplitudeCalibrationFactor = 1.0)
     {
         int count = Math.Min(sampleCount, rawCounts.Length);
         double[] volts = new double[count];
-        double zeroCode = 255.0 - leverPos;
+        double zeroCodeVal = zeroCode;
         double scalePerCount = (8.0 * voltDivVolts / 255.0)
             * (double.IsFinite(amplitudeCalibrationFactor) && amplitudeCalibrationFactor > 0.0 ? amplitudeCalibrationFactor : 1.0)
             * (double.IsFinite(probeMultiplier) && probeMultiplier > 0.0 ? probeMultiplier : 1.0);
@@ -608,12 +609,13 @@ public sealed class Hantek6074BeDevice : IScopeDevice
             if (raw == 0 || raw == 255)
                 clipped = true;
 
-            volts[i] = (raw - zeroCode) * scalePerCount;
+            volts[i] = (raw - zeroCodeVal) * scalePerCount;
         }
 
         return (volts, clipped);
     }
 
+    // Superseded by GetCalibratedZeroCode (retained for reference).
     private ushort GetCalibratedLeverPos(ushort chZeroBased, ushort voltDivIndex)
     {
         lock (_sync)
@@ -740,11 +742,11 @@ public sealed class Hantek6074BeDevice : IScopeDevice
         double triggerLevelVolts,
         double voltDiv,
         double probeMultiplier,
-        ushort leverPos)
+        ushort zeroCode)
     {
         double bncTriggerVolts = triggerLevelVolts / (probeMultiplier > 0.0 ? probeMultiplier : 1.0);
         double offsetCounts = (bncTriggerVolts * 255.0) / (8.0 * Math.Max(0.002, voltDiv));
-        int pos = (int)Math.Round((255 - leverPos) + offsetCounts, MidpointRounding.AwayFromZero);
+        int pos = (int)Math.Round(zeroCode + offsetCounts, MidpointRounding.AwayFromZero);
         return (ushort)Math.Clamp(pos, 0, 255);
     }
 

@@ -117,14 +117,14 @@ public sealed class HantekCaptureTimingTests
         var (voltsDefault, clippedDefault) = Hantek6074BeDevice.ConvertRawCountsToVolts(
             raw,
             sampleCount: 3,
-            leverPos: 128,
+            zeroCode: 127,
             voltDivVolts: 1.0,
             probeMultiplier: 1.0);
 
         var (voltsUnity, clippedUnity) = Hantek6074BeDevice.ConvertRawCountsToVolts(
             raw,
             sampleCount: 3,
-            leverPos: 128,
+            zeroCode: 127,
             voltDivVolts: 1.0,
             probeMultiplier: 1.0,
             amplitudeCalibrationFactor: 1.0);
