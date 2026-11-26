@@ -91,4 +91,20 @@ public sealed class HantekCaptureTimingTests
         Assert.True(maxAligned >= (uint)maxCount);
         Assert.Equal(0u, maxAligned % 512u);
     }
+
+    [Fact]
+    public void HantekCalibration_BufferLength_AtLeast578()
+    {
+        // Guard against shrinking _calibrationLevels back to DefMacro.h's stale NEW_CAL_LEVEL_LEN (400):
+        // HTHardDll.dll writes ~577 ushorts (CHS SDK PDF requires 577; SDK VB demo allocates CalLevel(578)).
+        Assert.True(
+            Hantek6074BeDevice.CalibrationLevelLen >= 578,
+            $"CalibrationLevelLen ({Hantek6074BeDevice.CalibrationLevelLen}) must be >= 578 to prevent HTHardDll.dll heap overrun.");
+        Assert.True(
+            Hantek6074BeDevice.CalibrationLevelRequestLen <= Hantek6074BeDevice.CalibrationLevelLen,
+            "CalibrationLevelRequestLen must not exceed CalibrationLevelLen.");
+        Assert.True(
+            Hantek6074BeDevice.AmpCalibrationLen >= 578,
+            $"AmpCalibrationLen ({Hantek6074BeDevice.AmpCalibrationLen}) must be >= 578.");
+    }
 }

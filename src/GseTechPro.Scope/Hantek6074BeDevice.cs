@@ -28,8 +28,14 @@ public sealed class Hantek6074BeDevice : IScopeDevice
     private const ushort TriggerSlopeFall = 1;
     private const ushort YtNormal = 0;
     private const ushort DefaultLeverPos = 128; // Mid-scale zero level (0..255)
-    private const ushort CalibrationLevelLen = 400; // NEW_CAL_LEVEL_LEN in DefMacro.h
-    private const ushort AmpCalibrationLen = 578;   // Start.bas pAmpLevel length
+    // DefMacro.h defines NEW_CAL_LEVEL_LEN = 400 (the nLen request argument passed to dsoHTReadCalibrationData),
+    // but the CHS SDK PDF documents that the zero-level calibration buffer requires length 577, the SDK VB demo
+    // (DeclareGlobalVal.bas:53) declares CalLevel(578) (579 elements), and the x64 HTHardDll.dll writes ~577
+    // ushorts even when nLen = 400 is passed. Allocate 600 ushorts so the native write can never overrun the
+    // managed heap while still passing the documented 400 request length.
+    internal const ushort CalibrationLevelRequestLen = 400; // NEW_CAL_LEVEL_LEN in DefMacro.h
+    internal const ushort CalibrationLevelLen = 600;        // >= 578 (SDK demo CalLevel(578) / 577 in CHS SDK doc)
+    internal const ushort AmpCalibrationLen = 578;          // Start.bas pAmpLevel length
 
     // Table 3 of SDK_HTHardDLL-EN.pdf: V/div per voltage base index (0..11) at 1:1 probe
     private static readonly double[] VoltDivTable =
@@ -223,7 +229,12 @@ public sealed class Hantek6074BeDevice : IScopeDevice
 
                 lock (_sync)
                 {
-                    _ = NativeMethods.dsoHTReadCalibrationData(_deviceIndex, _calibrationLevels, CalibrationLevelLen);
+                    // Pass the documented request length (400 <= _calibrationLevels.Length = 600) into the
+                    // oversized buffer so HTHardDll.dll's ~577-ushort calibration write cannot overflow.
+                    _ = NativeMethods.dsoHTReadCalibrationData(
+                        _deviceIndex,
+                        _calibrationLevels,
+                        Math.Min(CalibrationLevelRequestLen, (ushort)_calibrationLevels.Length));
                     _ = NativeMethods.dsoHTRDAmpCali(_deviceIndex, _ampCalibration, AmpCalibrationLen);
                     _isConnected = true;
                 }
