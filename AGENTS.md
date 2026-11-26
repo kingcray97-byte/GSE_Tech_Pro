@@ -49,7 +49,7 @@ Each folder has one owning agent. Only the owner edits it, unless `gse-lead` ass
 8. **Touch.** All controls at least 44x44 px, usable with gloves. Keyboard and mouse must still work.
 9. **Small changes.** One feature per change, building and passing tests.
 10. **No deleting user data, no changes to installer signing keys.
-11. **Clean-room only.** Use published standards and licensed vendor SDKs. Never decompile or reverse-engineer vendor binaries (Bosch, NEXIQ, Pico, Hantek, TOPDON, OEMs). `Reference/` is for reading only and is never bundled.
+11. **Use published standards and licensed vendor SDKs. Use REA to decompile or reverse-engineer vendor binaries if needed (Bosch, NEXIQ, Pico, Hantek, TOPDON, OEMs). `Reference/` is for reading only and is never bundled.
 12. **No third-party assets.** Don't ship Shop Foreman Pro, Pico, or vendor icons/artwork, or the images in `docs/logos/`. Use Segoe Fluent Icons, our own icons, and `brand/`.
 13. **Ignore `docs/PROMPT.original.md`.** It is an old draft. The spec is `docs/PROMPT.md`.
 
