@@ -409,11 +409,15 @@ public sealed class Hantek6074BeDevice : IScopeDevice
             _ = NativeMethods.dsoHTSetRamAndTrigerControl(_deviceIndex, timeDivIndex, control.nCHSet, trigChannelZeroBased, 0);
             _ = NativeMethods.dsoHTSetHTriggerLength(_deviceIndex, ref control, MaxChannelCount);
 
+            ushort[] chPosArray = new ushort[MaxChannelCount];
             for (ushort ch = 0; ch < MaxChannelCount; ch++)
             {
                 ushort leverPos = GetCalibratedLeverPos(ch, relay.nCHVoltDIV[ch]);
+                chPosArray[ch] = leverPos;
                 _ = NativeMethods.dsoHTSetCHPos(_deviceIndex, relay.nCHVoltDIV[ch], leverPos, ch, MaxChannelCount);
             }
+
+            _ = NativeMethods.dsoHTSetAmpCalibrate(_deviceIndex, control.nCHSet, timeDivIndex, relay.nCHVoltDIV, chPosArray);
 
             _ = NativeMethods.dsoHTSetVTriggerLevel(_deviceIndex, trigPos, 4);
             _ = NativeMethods.dsoHTSetTrigerMode(_deviceIndex, TriggerModeEdge, trigSlope, CouplingDc);
@@ -481,15 +485,16 @@ public sealed class Hantek6074BeDevice : IScopeDevice
                 int chIdx = chCfg.Channel - 1;
                 ushort voltDivIdx = relay.nCHVoltDIV[chIdx];
                 ushort leverPos = GetCalibratedLeverPos((ushort)chIdx, voltDivIdx);
-                double ampScale = GetAmplitudeCalibrationFactor(chIdx, voltDivIdx);
 
+                // Hardware amplitude calibration is applied by dsoHTSetAmpCalibrate during capture setup
+                // (SDK_HTHardDLL-EN.pdf §26, Table 4); do not double-apply software gain here.
                 var (volts, clipped) = ConvertRawCountsToVolts(
                     rawArrays[chIdx],
                     requestedSampleCount,
                     leverPos,
                     channelVoltDivs[chIdx],
                     channelProbeScales[chIdx],
-                    ampScale);
+                    amplitudeCalibrationFactor: 1.0);
 
                 resultChannels[chCfg.Channel] = volts;
                 if (clipped)
@@ -845,6 +850,14 @@ public sealed class Hantek6074BeDevice : IScopeDevice
             ushort nPos,
             ushort nCH,
             ushort nCHMode);
+
+        [DllImport(HardDllName, CallingConvention = CallingConvention.Winapi, ExactSpelling = true)]
+        public static extern ushort dsoHTSetAmpCalibrate(
+            ushort nDeviceIndex,
+            ushort nCHSet,
+            ushort nTimeDIV,
+            ushort[] nVoltDiv,
+            ushort[] pCHPos);
 
         [DllImport(HardDllName, CallingConvention = CallingConvention.Winapi, ExactSpelling = true)]
         public static extern ushort dsoHTSetVTriggerLevel(

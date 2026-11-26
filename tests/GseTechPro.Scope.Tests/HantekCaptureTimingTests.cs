@@ -107,4 +107,35 @@ public sealed class HantekCaptureTimingTests
             Hantek6074BeDevice.AmpCalibrationLen >= 578,
             $"AmpCalibrationLen ({Hantek6074BeDevice.AmpCalibrationLen}) must be >= 578.");
     }
+
+    [Fact]
+    public void ConvertRawCountsToVolts_DefaultSoftwareGainIsUnity_WhenHardwareAmpCalibrateIsUsed()
+    {
+        // Since dsoHTSetAmpCalibrate applies factory gain trim in hardware during capture setup,
+        // sample conversion defaults amplitudeCalibrationFactor to 1.0 so gain is not double-applied.
+        ushort[] raw = [127, 159, 191];
+        var (voltsDefault, clippedDefault) = Hantek6074BeDevice.ConvertRawCountsToVolts(
+            raw,
+            sampleCount: 3,
+            leverPos: 128,
+            voltDivVolts: 1.0,
+            probeMultiplier: 1.0);
+
+        var (voltsUnity, clippedUnity) = Hantek6074BeDevice.ConvertRawCountsToVolts(
+            raw,
+            sampleCount: 3,
+            leverPos: 128,
+            voltDivVolts: 1.0,
+            probeMultiplier: 1.0,
+            amplitudeCalibrationFactor: 1.0);
+
+        Assert.False(clippedDefault);
+        Assert.False(clippedUnity);
+        Assert.Equal(voltsUnity, voltsDefault);
+        Assert.Equal(0.0, voltsDefault[0], precision: 6);
+        // 32 counts at 1 V/div (8 V / 255 counts) = 32 * 8 / 255 = 1.00392157 V
+        Assert.Equal(32.0 * 8.0 / 255.0, voltsDefault[1], precision: 6);
+        // 64 counts at 1 V/div = 64 * 8 / 255 = 2.00784314 V
+        Assert.Equal(64.0 * 8.0 / 255.0, voltsDefault[2], precision: 6);
+    }
 }
