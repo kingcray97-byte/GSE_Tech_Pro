@@ -7,7 +7,8 @@ public readonly record struct J2534DeviceDescriptor(string Id, string Name, stri
 /// Pure parser for the J2534 registry convention (SAE J2534-1 install): each subkey under
 /// <c>HKLM\SOFTWARE\PassThruSupport.04.04</c>/<c>.05.00</c> names a device whose default value is the
 /// pass-thru DLL path. This class is hardware- and platform-free so it is unit-testable in the AnyCPU
-/// assembly; the actual registry read lives in the x86 host (<c>J2534Discovery</c>).
+/// assembly; the raw registry enumeration lives in <see cref="J2534RegistryDiscovery"/>, and the x86
+/// host (<c>J2534Discovery</c>) selects only the 32-bit view so it never tries to load a 64-bit DLL.
 /// </summary>
 public static class J2534RegistryParser
 {

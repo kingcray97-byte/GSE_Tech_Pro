@@ -1,5 +1,7 @@
+using System.Runtime.Versioning;
 using GseTechPro.Core.Enums;
 using GseTechPro.Devices.Discovery;
+using Microsoft.Win32;
 using Xunit;
 
 namespace GseTechPro.Devices.Tests;
@@ -10,6 +12,7 @@ namespace GseTechPro.Devices.Tests;
 /// need no hardware, no vendor DLL, and no x86 runtime. The actual registry/INI file read and vendor
 /// DLL loading live in the x86 host and are integration-only.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class J2534Rp1210DiscoveryTests
 {
     // ---- J2534 registry parsing (SAE J2534-1 install convention) ----
@@ -44,6 +47,50 @@ public class J2534Rp1210DiscoveryTests
         var device = Assert.Single(devices);
         Assert.Equal("j2534:Good", device.Id);
         Assert.Equal("Good", device.Name); // falls back to key name when no friendly name
+    }
+
+    // ---- J2534 registry discovery (x86 host view selection) ----
+
+    /// <summary>
+    /// The x86 host can only load 32-bit vendor DLLs, so device discovery must read only the 32-bit
+    /// registry view (WOW6432Node). This test compares a 32-bit-only discovery against an explicit
+    /// read of <see cref="RegistryView.Registry32"/>.
+    /// </summary>
+    [Fact]
+    public void J2534_Discovery_Uses32BitViewOnly()
+    {
+        var from32 = new List<(string KeyName, string DllPath, string? FriendlyName)>();
+        J2534RegistryDiscovery.CollectFromView(RegistryView.Registry32, from32);
+        var expectedIds = J2534RegistryParser.Parse(from32).Select(d => d.Id).OrderBy(id => id);
+
+        var actual = J2534RegistryDiscovery.Discover(RegistryView.Registry32);
+        var actualIds = actual.Select(d => d.Id).OrderBy(id => id);
+
+        Assert.Equal(expectedIds, actualIds);
+    }
+
+    /// <summary>
+    /// When multiple registry views are supplied, duplicate device key names are deduplicated and
+    /// the first view wins. This prevents a 64-bit DLL descriptor from shadowing its 32-bit
+    /// counterpart on machines where both views contain the same device key.
+    /// </summary>
+    [Fact]
+    public void J2534_Discovery_DeduplicatesByKeyName_FirstViewWins()
+    {
+        var from64 = new List<(string KeyName, string DllPath, string? FriendlyName)>();
+        J2534RegistryDiscovery.CollectFromView(RegistryView.Registry64, from64);
+        if (from64.Count == 0)
+            return; // nothing to deduplicate on this machine
+
+        var result = J2534RegistryDiscovery.Discover(RegistryView.Registry64, RegistryView.Registry32);
+
+        // Every 64-bit key must be present, and any key shared with the 32-bit view must keep the
+        // 64-bit DLL because the 64-bit view was supplied first.
+        foreach (var (keyName, dllPath, _) in from64)
+        {
+            var device = result.Single(d => d.Id == $"j2534:{keyName}");
+            Assert.Equal(dllPath, device.DllPath);
+        }
     }
 
     // ---- RP1210 INI parsing (TMC RP1210 install convention) ----
