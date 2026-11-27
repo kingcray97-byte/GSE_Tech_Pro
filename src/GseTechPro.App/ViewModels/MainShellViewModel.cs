@@ -500,9 +500,15 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         !IsCanMonitorViewVisible &&
         !IsCameraViewVisible;
 
-    // Section-filtering inside Diagnostics / Equipment Health (Screenshot 04 shows all; sub-nav focuses or shows all)
+    // Section-filtering inside Diagnostics / Equipment Health (Screenshot 04 shows all; sub-nav focuses).
+    // Live Data / Current Data show only the live data card, so they never duplicate Equipment Health.
+    public bool IsLiveDataOnlyPage => ActiveSectionKey is "LiveData" or "CurrentData";
+
     public Visibility DtcSectionVisibility =>
-        ActiveSectionKey is "Diagnostics" or "DTCs" or "LiveData" or "CurrentData" ? Visibility.Visible : Visibility.Collapsed;
+        ActiveSectionKey is "Diagnostics" or "DTCs" ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility DiagnosticLogSectionVisibility =>
+        IsLiveDataOnlyPage ? Visibility.Collapsed : Visibility.Visible;
 
     public Visibility LiveDataSectionVisibility =>
         ActiveSectionKey is "Diagnostics" or "LiveData" or "CurrentData" ? Visibility.Visible : Visibility.Collapsed;
@@ -1090,6 +1096,9 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         ApplyPidBatchOnUiThread(batch);
     }
 
+    /// <summary>Applies one frame of live PID values (UI thread). Same path the adapter stream uses.</summary>
+    public void ApplyLivePidFrame(IReadOnlyList<PidValue> batch) => ApplyPidBatchOnUiThread(batch);
+
     private void ApplyPidBatchOnUiThread(IReadOnlyList<PidValue> batch, long? explicitSeq = null, double? explicitElapsedSec = null)
     {
         var seq = explicitSeq ?? Interlocked.Increment(ref _liveSampleSequence);
@@ -1160,16 +1169,33 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         }
     }
 
+    /// <summary>
+    /// Brings <see cref="SnaplistPids"/> in line with <see cref="LivePids"/> and the snaplist filter.
+    /// Updates in place (insert/remove only what changed) so rows are not torn down and rebuilt on
+    /// every live-data frame, which made the page jump while the technician was scrolling.
+    /// </summary>
     public void RefreshSnaplistCollection()
     {
-        SnaplistPids.Clear();
-        foreach (var pid in LivePids)
+        var wanted = LivePids.Where(p => !OnlyShowSnaplistPids || p.IsSelectedInSnaplist).ToList();
+
+        for (int i = SnaplistPids.Count - 1; i >= 0; i--)
         {
-            if (!OnlyShowSnaplistPids || pid.IsSelectedInSnaplist)
-            {
-                SnaplistPids.Add(pid);
-            }
+            if (!wanted.Contains(SnaplistPids[i]))
+                SnaplistPids.RemoveAt(i);
         }
+
+        for (int i = 0; i < wanted.Count; i++)
+        {
+            if (i < SnaplistPids.Count && ReferenceEquals(SnaplistPids[i], wanted[i]))
+                continue;
+
+            var existing = SnaplistPids.IndexOf(wanted[i]);
+            if (existing >= 0)
+                SnaplistPids.Move(existing, i);
+            else
+                SnaplistPids.Insert(i, wanted[i]);
+        }
+
         SnaplistName = OnlyShowSnaplistPids
             ? $"Custom Snaplist ({SnaplistPids.Count} of {LivePids.Count} Parameters)"
             : $"Standard Snaplist 'All Parameters' ({LivePids.Count})";
@@ -1194,6 +1220,14 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
     [RelayCommand]
     public void SaveAndReturnSnaplist()
     {
+        if (!LivePids.Any(p => p.IsSelectedInSnaplist))
+        {
+            StatusBannerMessage = LivePids.Count == 0
+                ? "No parameters to choose yet. Connect to the vehicle so it can report its parameters."
+                : "Check at least one parameter for the Custom Snaplist, then click 'Save & Return'.";
+            return;
+        }
+
         OnlyShowSnaplistPids = true;
         RefreshSnaplistCollection();
         SelectedLiveDataMode = LiveDataDisplayMode.List;
@@ -1231,6 +1265,10 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
 
     public void RefreshGraphGeometry()
     {
+        // Only draw while the Line Graph is on screen; switching to it calls this again.
+        if (SelectedLiveDataMode != LiveDataDisplayMode.LineGraph)
+            return;
+
         var pid = SelectedGraphPid ?? LivePids.FirstOrDefault();
         if (pid is null || pid.History.Count == 0)
         {
@@ -2622,6 +2660,8 @@ public sealed partial class MainShellViewModel : ObservableObject, IAsyncDisposa
         OnPropertyChanged(nameof(LiveDataSectionVisibility));
         OnPropertyChanged(nameof(FreezeFrameSectionVisibility));
         OnPropertyChanged(nameof(ReadinessSectionVisibility));
+        OnPropertyChanged(nameof(IsLiveDataOnlyPage));
+        OnPropertyChanged(nameof(DiagnosticLogSectionVisibility));
         NotifyLiveDataModeVisibilityChanged();
     }
 

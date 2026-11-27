@@ -924,8 +924,8 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" Spacing="2">
-                                            <TextBlock Text="Custom Snaplist Parameter Editor (Matches Screenshot 14)" FontSize="16" FontWeight="Bold" />
-                                            <TextBlock Text="Check parameters to include in your Custom Snaplist, then click 'Save &amp; Return'." FontSize="12" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                            <TextBlock Text="Custom Snaplist Parameter Editor" FontSize="16" FontWeight="Bold" />
+                                            <TextBlock Text="These are the parameters the connected vehicle reports. None are selected to start: check the ones you want, then click 'Save &amp; Return'." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource AppTextSecondaryBrush}" />
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                                             <Button Style="{StaticResource ActionTouchButtonStyle}"
@@ -1097,8 +1097,13 @@
                                             <ComboBox MinWidth="240"
                                                       MinHeight="44"
                                                       ItemsSource="{x:Bind ViewModel.LivePids, Mode=OneWay}"
-                                                      SelectedItem="{x:Bind ViewModel.SelectedGraphPid, Mode=TwoWay}"
-                                                      DisplayMemberPath="Name" />
+                                                      SelectedItem="{x:Bind ViewModel.SelectedGraphPid, Mode=TwoWay}">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:LivePidRowViewModel">
+                                                        <TextBlock Text="{x:Bind Name}" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
                                         </StackPanel>
 
                                         <!-- Cursor Delta Header (Matches top of Screenshot 16) -->
@@ -1135,7 +1140,7 @@
                                                 <Line X1="0" Y1="165" X2="720" Y2="165" Stroke="{ThemeResource AppSubtleBorderBrush}" StrokeThickness="1" />
 
                                                 <!-- Live Waveform Polyline -->
-                                                <Polyline Points="{Binding GraphPoints}"
+                                                <Polyline Points="{x:Bind ViewModel.GraphPoints, Mode=OneWay}"
                                                           Stroke="{ThemeResource AppAccentBrush}"
                                                           StrokeThickness="2.5" />
 
@@ -1354,7 +1359,8 @@
                         <Border Background="{ThemeResource AppSurfaceBrush}"
                                 BorderBrush="{ThemeResource AppSubtleBorderBrush}"
                                 BorderThickness="1"
-                                CornerRadius="{StaticResource CardCornerRadius}">
+                                CornerRadius="{StaticResource CardCornerRadius}"
+                                Visibility="{x:Bind ViewModel.DiagnosticLogSectionVisibility, Mode=OneWay}">
                             <StackPanel>
                                 <Grid Background="{ThemeResource AppToolbarBrush}" Padding="12,10" BorderBrush="{ThemeResource AppSubtleBorderBrush}" BorderThickness="0,0,0,1">
                                     <Grid.ColumnDefinitions>

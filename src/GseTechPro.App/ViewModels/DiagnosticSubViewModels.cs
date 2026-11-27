@@ -306,9 +306,12 @@ public sealed partial class LivePidRowViewModel : ObservableObject
 
     public Visibility SimulatedBadgeVisibility => IsSimulated ? Visibility.Visible : Visibility.Collapsed;
 
-    /// <summary>Whether this PID is included in the custom Snaplist (screens 13–14).</summary>
+    /// <summary>
+    /// Whether this PID is included in the custom Snaplist (screens 13–14). Unselected by default:
+    /// the technician picks the parameters they want from what the connected vehicle reports.
+    /// </summary>
     [ObservableProperty]
-    private bool _isSelectedInSnaplist = true;
+    private bool _isSelectedInSnaplist;
 
     /// <summary>Per-reading unit override: "Shop Default" or a specific unit string (e.g. "psi", "bar", "kPa", "Pa").</summary>
     [ObservableProperty]
